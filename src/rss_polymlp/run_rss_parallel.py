@@ -10,11 +10,14 @@ import numpy as np
 from pypolymlp.calculator.str_opt.optimization import GeometryOptimization
 from pypolymlp.core.interface_vasp import Poscar
 from pypolymlp.utils.spglib_utils import SymCell
+from rss_polymlp import variable
+from rss_polymlp.initial_str import GenerateInitialStructure
+from rss_polymlp.sorting_str import SortStructure
 
 np.set_printoptions(legacy="1.21")
 
 
-def optimization_run(poscat_path, args):
+def run_optimization(poscat_path, args):
     poscar_name = poscat_path.split("/")[-1]
     output_file = f"log/{poscar_name}.log"
 
@@ -135,7 +138,10 @@ if __name__ == "__main__":
     import argparse
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("-p", "--poscar", type=str, default=None, help="poscar directory")
+    parser.add_argument("--elements", type=str, nargs="+", default=None)
+    parser.add_argument("--n_atoms", type=int, nargs="+", default=None)
+    parser.add_argument("--max_str", type=int, default=1000)
+    parser.add_argument("--least_distance", type=float, default=0.5)
     parser.add_argument(
         "--pot",
         nargs="*",
@@ -149,17 +155,41 @@ if __name__ == "__main__":
     parser.add_argument("--symmetry", action="store_true", help="Consider symmetry")
     args = parser.parse_args()
 
+    os.makedirs("initial_str", exist_ok=True)
     os.makedirs("optimized_str", exist_ok=True)
     os.makedirs("log", exist_ok=True)
 
-    poscar_path_all = glob.glob(args.poscar + "/*")
+    max_str = args.max_str
+    pre_str_count = len(glob.glob("initial_str/*"))
+
+    if max_str > pre_str_count:
+        elements = args.elements
+        atomic_length = None
+        for element in elements:
+            _atomic_length = variable.atom_variable(element)
+            if atomic_length is None:
+                atomic_length = _atomic_length
+            elif atomic_length < _atomic_length:
+                atomic_length = _atomic_length
+
+        gen_str = GenerateInitialStructure(
+            elements,
+            args.n_atoms,
+            max_str,
+            atomic_length=atomic_length,
+            least_distance=args.least_distance,
+            pre_str_count=pre_str_count,
+        )
+        gen_str.random_structure()
+
+    poscar_path_all = glob.glob("initial_str/*")
     poscar_path_all = sorted(poscar_path_all, key=lambda x: int(x.split("_")[-1]))
     is_log_files = {os.path.basename(f): f for f in glob.glob("log/*.log")}
     poscar_path_all = [p for p in poscar_path_all if not is_finished(p, is_log_files)]
 
     time_pra = time.time()
     joblib.Parallel(n_jobs=-1, backend="loky")(
-        joblib.delayed(optimization_run)(poscar, args) for poscar in poscar_path_all
+        joblib.delayed(run_optimization)(poscar, args) for poscar in poscar_path_all
     )
     time_pra_fin = time.time() - time_pra
     core = multiprocessing.cpu_count()
@@ -170,3 +200,5 @@ if __name__ == "__main__":
             print("Number of the structures:", len(poscar_path_all), file=f)
             print("Computational time:", time_pra_fin, file=f)
             print("", file=f)
+
+    SortStructure().run_sorting()

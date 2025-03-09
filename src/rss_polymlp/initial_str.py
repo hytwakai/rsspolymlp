@@ -1,18 +1,14 @@
-import argparse
-import glob
 import math
-import os
 
 import numpy as np
-from go_tools import variable
 from scipy.linalg import cholesky
 
 
-class generate_initial_structure:
+class GenerateInitialStructure:
 
     def __init__(
         self,
-        elements: list = ['Z'],
+        elements: list = ["Z"],
         n_atoms: int = 4,
         max_str: int = 100,
         atomic_length: float = 3.0,
@@ -38,7 +34,7 @@ class generate_initial_structure:
         iteration = 1
         num_samples = 1000
         while True:
-            print(f'----- Iteration {iteration} -----')
+            print(f"----- Iteration {iteration} -----")
             rand_g123 = np.sort(np.random.rand(num_samples, 3), axis=1)
             # rand_g123 = penalty / 100 + (rand_g123 * (1 - penalty / 100))
             rand_g456 = np.random.rand(num_samples, 3)
@@ -54,7 +50,7 @@ class generate_initial_structure:
             G_sets = np.stack([G1, G4, G5, G4, G2, G6, G5, G6, G3], axis=1)
             valid_g_sets = G_sets[(G1 + G2 + 2 * G4) >= (2 * G5 + 2 * G6)]
             sym_g_sets = valid_g_sets.reshape(valid_g_sets.shape[0], 3, 3)
-            print(f'< generate {sym_g_sets.shape[0]} random structures >')
+            print(f"< generate {sym_g_sets.shape[0]} random structures >")
 
             # Obtaining axis values (axis.T) and random atomic positions
             L_matrices = np.array([cholesky(mat, lower=False) for mat in sym_g_sets])
@@ -71,7 +67,7 @@ class generate_initial_structure:
             )
             valid_l_matrices = L_matrices[dist_sets > self.least_distance]
             valid_positons = random_atomic_postion[dist_sets > self.least_distance]
-            print(f'< screened {valid_l_matrices.shape[0]} random structures >')
+            print(f"< screened {valid_l_matrices.shape[0]} random structures >")
 
             for axis, positions in zip(valid_l_matrices, valid_positons):
                 self.str_count += 1
@@ -141,37 +137,3 @@ class generate_initial_structure:
                     "{0:15.15f}".format(float(n[2])),
                     file=f,
                 )
-
-
-if __name__ == "__main__":
-
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--elements", type=str, nargs="+", default=None)
-    parser.add_argument("--n_atoms", type=int, nargs="+", default=None)
-    parser.add_argument("--max_str", type=int, default=1000)
-    parser.add_argument("--least_distance", type=float, default=0.5)
-    args = parser.parse_args()
-
-    os.makedirs("initial_str", exist_ok=True)
-    max_str = args.max_str
-    pre_str_count = len(glob.glob("initial_str/*"))
-
-    if max_str > pre_str_count:
-        elements = args.elements
-        atomic_length = None
-        for element in elements:
-            _atomic_length = variable.atom_variable(element)
-            if atomic_length is None:
-                atomic_length = _atomic_length
-            elif atomic_length < _atomic_length:
-                atomic_length = _atomic_length
-
-        gen_str = generate_initial_structure(
-            elements,
-            args.n_atoms,
-            max_str,
-            atomic_length=atomic_length,
-            least_distance=args.least_distance,
-            pre_str_count=pre_str_count,
-        )
-        gen_str.random_structure()
