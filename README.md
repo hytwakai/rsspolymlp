@@ -10,7 +10,7 @@
 - spglib
 - joblib
 
-### installaion
+### Installaion
 
 ```shell
 git clone https://github.com/hytwakai/rss_polymlp.git
