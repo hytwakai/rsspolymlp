@@ -7,17 +7,18 @@ from contextlib import redirect_stdout
 import joblib
 import numpy as np
 
-from pypolymlp.calculator.str_opt.optimization import GeometryOptimization
+# from pypolymlp.calculator.str_opt.optimization import GeometryOptimization
 from pypolymlp.core.interface_vasp import Poscar
 from pypolymlp.utils.spglib_utils import SymCell
 from rss_polymlp import variable
 from rss_polymlp.initial_str import GenerateInitialStructure
+from rss_polymlp.optimization import GeometryOptimization
 from rss_polymlp.sorting_str import SortStructure
 
 np.set_printoptions(legacy="1.21")
 
 
-def run_optimization(poscat_path, args):
+def run_optimization(poscat_path, args, pressure):
     """
     Perform geometry optimization on a given structure using the specified potential.
 
@@ -38,9 +39,10 @@ def run_optimization(poscat_path, args):
         unitcell = Poscar(poscat_path).structure
         energy_keep = None
         max_iteration = 10
-
+        c1_set = [1e-4, 0.9, 0.99]
+        c2_set = [0.1, 0.99, 0.999]
         for iteration in range(max_iteration):
-
+            miter = 10000
             minobj = GeometryOptimization(
                 unitcell,
                 pot=args.pot,
@@ -48,21 +50,44 @@ def run_optimization(poscat_path, args):
                 relax_volume=True,
                 relax_positions=True,
                 with_sym=False,
+                pressure=pressure,
                 verbose=True,
             )
             if iteration == 0:
                 print("Initial structure")
                 minobj.print_structure()
 
-            try:
-                minobj.run(gtol=1e-6, method="CG")
-            except ValueError:
-                time_fin = time.time() - time_initial
-                print("Final function value (eV/atom):", minobj._energy / len(unitcell.elements))
-                print("Geometry optimization failed: Huge negative or zero enegy value.")
-                print("Computational time:", time_fin, file=f)
-                print("Finished", file=f)
-                return
+            for c_count in range(3):
+                if iteration == 0 and c_count <= 1:
+                    miter = 200
+                    continue
+                if iteration == 1 and c_count == 0:
+                    miter = 200
+                    continue
+                try:
+                    minobj.run(
+                        gtol=1e-6,
+                        method="CG",
+                        miter=miter,
+                        c1=c1_set[c_count],
+                        c2=c2_set[c_count],
+                    )
+                    break
+                except ValueError:
+                    if c_count == 2:
+                        time_fin = time.time() - time_initial
+                        print(
+                            "Final function value (eV/atom):",
+                            minobj._energy / len(unitcell.elements),
+                        )
+                        print("Geometry optimization failed: Huge negative or zero enegy value.")
+                        print("Computational time:", time_fin, file=f)
+                        print("Finished", file=f)
+                        return
+                    else:
+                        print("Changing [c1, c2]")
+                        print(f"c1 = {c1_set[c_count+1]}, c2 = {c2_set[c_count+1]}")
+                        miter = 100
 
             # Save optimized structure
             minobj.write_poscar(filename=f"optimized_str/{poscar_name}")
@@ -171,6 +196,7 @@ if __name__ == "__main__":
         default="polymlp.yaml",
         help="Potential file for poly. MLP",
     )
+    parser.add_argument("--pressure", type=float, default=0, help="Pressure term (in GPa)")
     args = parser.parse_args()
 
     os.makedirs("initial_str", exist_ok=True)
@@ -215,7 +241,7 @@ if __name__ == "__main__":
     # Perform parallel optimization
     time_pra = time.time()
     joblib.Parallel(n_jobs=-1, backend="loky")(
-        joblib.delayed(run_optimization)(poscar, args) for poscar in poscar_path_all
+        joblib.delayed(run_optimization)(poscar, args, args.pressure) for poscar in poscar_path_all
     )
     time_pra_fin = time.time() - time_pra
 
