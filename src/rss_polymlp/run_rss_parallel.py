@@ -43,11 +43,11 @@ def run_optimization(poscat_path, args):
 
             minobj = GeometryOptimization(
                 unitcell,
-                relax_cell=not args.fix_cell,
-                relax_volume=not args.fix_volume,
-                relax_positions=not args.fix_positions,
-                with_sym=args.symmetry,
                 pot=args.pot,
+                relax_cell=True,
+                relax_volume=True,
+                relax_positions=True,
+                with_sym=False,
                 verbose=True,
             )
             if iteration == 0:
@@ -148,36 +148,44 @@ def is_finished(poscar, is_log_files):
 
 
 if __name__ == "__main__":
-    """Main script for running structure generation and optimization."""
+    """Main script for running Random Structure Search (RSS) using polynomial MLPs."""
     import argparse
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("--elements", type=str, nargs="+", default=None)
-    parser.add_argument("--n_atoms", type=int, nargs="+", default=None)
-    parser.add_argument("--max_str", type=int, default=1000)
-    parser.add_argument("--least_distance", type=float, default=0.5)
+    parser.add_argument(
+        "--elements", type=str, nargs="+", default=None, help="List of element symbols"
+    )
+    parser.add_argument(
+        "--n_atoms", type=int, nargs="+", default=None, help="Number of atoms for each element"
+    )
+    parser.add_argument(
+        "--max_str", type=int, default=1000, help="Maximum number of initial structures for RSS"
+    )
+    parser.add_argument(
+        "--least_distance", type=float, default=0.5, help="Minimum interatomic distance"
+    )
     parser.add_argument(
         "--pot",
         nargs="*",
         type=str,
         default="polymlp.yaml",
-        help="polymlp file",
+        help="Potential file for poly. MLP",
     )
-    parser.add_argument("--fix_cell", action="store_true", help="Fix cell parameters")
-    parser.add_argument("--fix_volume", action="store_true", help="Fix volume")
-    parser.add_argument("--fix_positions", action="store_true", help="Fix atomic positions")
-    parser.add_argument("--symmetry", action="store_true", help="Consider symmetry")
     args = parser.parse_args()
 
     os.makedirs("initial_str", exist_ok=True)
     os.makedirs("optimized_str", exist_ok=True)
     os.makedirs("log", exist_ok=True)
 
+    # Check the number of pre-existing structures
     max_str = args.max_str
     pre_str_count = len(glob.glob("initial_str/*"))
 
+    # Generate new structures if necessary
     if max_str > pre_str_count:
         elements = args.elements
+
+        # Determine the maximum atomic radius among the given elements
         atomic_length = None
         for element in elements:
             _atomic_length = variable.atom_variable(element)
@@ -186,6 +194,7 @@ if __name__ == "__main__":
             elif atomic_length < _atomic_length:
                 atomic_length = _atomic_length
 
+        # Creating initial random structures
         gen_str = GenerateInitialStructure(
             elements,
             args.n_atoms,
@@ -198,16 +207,20 @@ if __name__ == "__main__":
 
     poscar_path_all = glob.glob("initial_str/*")
     poscar_path_all = sorted(poscar_path_all, key=lambda x: int(x.split("_")[-1]))
+
+    # Check which structures have already been optimized
     is_log_files = {os.path.basename(f): f for f in glob.glob("log/*.log")}
     poscar_path_all = [p for p in poscar_path_all if not is_finished(p, is_log_files)]
 
+    # Perform parallel optimization
     time_pra = time.time()
     joblib.Parallel(n_jobs=-1, backend="loky")(
         joblib.delayed(run_optimization)(poscar, args) for poscar in poscar_path_all
     )
     time_pra_fin = time.time() - time_pra
-    core = multiprocessing.cpu_count()
 
+    # Log computational times
+    core = multiprocessing.cpu_count()
     if len(poscar_path_all) > 0:
         with open("parallel_time.log", "a") as f:
             print("Number of CPU cores:", core, file=f)
@@ -215,4 +228,5 @@ if __name__ == "__main__":
             print("Computational time:", time_pra_fin, file=f)
             print("", file=f)
 
+    # Sort the optimized structures and log computational results
     SortStructure().run_sorting()

@@ -55,7 +55,7 @@ def nearest_neighbor_atomic_distance(lat, coo):
 
 
 class GenerateInitialStructure:
-    """Class for creating initial random structures for Random Structure Search (RSS)."""
+    """Class for creating initial random structures for RSS."""
 
     def __init__(
         self,
