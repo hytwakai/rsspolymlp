@@ -18,6 +18,16 @@ np.set_printoptions(legacy="1.21")
 
 
 def run_optimization(poscat_path, args):
+    """
+    Perform geometry optimization on a given structure using the specified potential.
+
+    Parameters
+    ----------
+    poscat_path : str
+        Path to the POSCAR file of the structure to be optimized.
+    args : argparse.Namespace
+        Parsed command-line arguments containing optimization settings.
+    """
     poscar_name = poscat_path.split("/")[-1]
     output_file = f"log/{poscar_name}.log"
 
@@ -27,8 +37,8 @@ def run_optimization(poscat_path, args):
 
         unitcell = Poscar(poscat_path).structure
         energy_keep = None
-
         max_iteration = 10
+
         for iteration in range(max_iteration):
 
             minobj = GeometryOptimization(
@@ -54,12 +64,14 @@ def run_optimization(poscat_path, args):
                 print("Finished", file=f)
                 return
 
+            # Save optimized structure
             minobj.write_poscar(filename=f"optimized_str/{poscar_name}")
             sym = SymCell(poscar_name=f"optimized_str/{poscar_name}", symprec=1e-5)
             cell_copy = sym.refine_cell()
             minobj.structure = cell_copy
             minobj.write_poscar(filename=f"optimized_str/{poscar_name}")
 
+            # Check for convergence
             energy_per_atom = minobj.energy / len(unitcell.elements)
             print("Energy (eV/atom):", energy_per_atom)
             if energy_keep is not None:
@@ -76,6 +88,7 @@ def run_optimization(poscat_path, args):
             if iteration == max_iteration - 1:
                 print("Maximum number of relaxation iterations has been exceeded")
 
+        # Print final structure details
         if not minobj.relax_cell:
             print("Residuals (force):")
             print(minobj.residual_forces.T)
@@ -91,11 +104,11 @@ def run_optimization(poscat_path, args):
             print("Residuals (stress):")
             print(res_s)
             print("Maximum absolute value in Residuals (stress):", np.max(np.abs(res_s)))
-
         print("Final structure")
         minobj.print_structure()
         minobj.write_poscar(filename=f"optimized_str/{poscar_name}")
 
+        # Analyze space group symmetry with different tolerances
         spg_sets = []
         for tol in [10**-5, 10**-4, 10**-3, 10**-2]:
             sym = SymCell(poscar_name=f"optimized_str/{poscar_name}", symprec=tol)
@@ -111,6 +124,7 @@ def run_optimization(poscat_path, args):
 
 
 def is_finished(poscar, is_log_files):
+    """Check if the optimization process for a given structure has finished."""
     logfile = os.path.basename(poscar) + ".log"
     if logfile not in is_log_files:
         return False
@@ -134,7 +148,7 @@ def is_finished(poscar, is_log_files):
 
 
 if __name__ == "__main__":
-
+    """Main script for running structure generation and optimization."""
     import argparse
 
     parser = argparse.ArgumentParser()

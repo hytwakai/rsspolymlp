@@ -15,7 +15,7 @@ class ReadFile:
             "fval": 0,
             "gval": 0,
             "dup_count": 1,
-            "poscar": self.logfile.split("/")[-1].split(".log")[0],
+            "poscar": self.logfile.split("/")[-1].removesuffix(".log"),
         }
 
         keyword_parsers = {
@@ -58,7 +58,7 @@ class ReadFile:
         _res["potential"] = line.split()[-1]
 
     def parse_spg(self, line, _res):
-        try:    
+        try:
             _res["spg"] = eval(line)
         except Exception:
             _res["spg"] = None
