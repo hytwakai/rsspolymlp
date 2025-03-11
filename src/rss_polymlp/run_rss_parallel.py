@@ -50,7 +50,7 @@ class RandomStructureOptimization:
 
     def run_optimization(self, poscar_path):
         """
-        Perform geometry optimization on a given structure using the specified potential.
+        Perform geometry optimization on a given random structure using MLP.
 
         Parameter
         ----------
@@ -105,7 +105,6 @@ class RandomStructureOptimization:
 
     def minimize(self, unitcell, iteration, c1_set, c2_set):
         """Run geometry optimization with different parameters until successful."""
-
         minobj = GeometryOptimization(
             unitcell,
             pot=self.args.pot,
@@ -198,7 +197,6 @@ class RandomStructureOptimization:
             print("Residuals (stress):")
             print(res_s)
             print("Maximum absolute value in Residuals (stress):", np.max(np.abs(res_s)))
-
         print("Final structure")
         self.minobj.print_structure()
 
@@ -234,8 +232,13 @@ if __name__ == "__main__":
         help="Potential file for poly. MLP",
     )
     parser.add_argument("--pressure", type=float, default=0, help="Pressure term (in GPa)")
-    parser.add_argument("--method", type=str, default="CG")
-    parser.add_argument("--maxiter", type=int, default=100)
+    parser.add_argument("--method", type=str, default="CG", help="Type of solver")
+    parser.add_argument(
+        "--maxiter",
+        type=int,
+        default=100,
+        help="Maximum number of iterations when c1 and c2 values are changed",
+    )
     args = parser.parse_args()
 
     os.makedirs("initial_str", exist_ok=True)
