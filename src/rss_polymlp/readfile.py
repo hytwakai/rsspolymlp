@@ -30,7 +30,9 @@ class ReadFile:
             "Maximum absolute value in Residuals (stress)": lambda line, res: self.parse_numeric(
                 line, "res_s", res
             ),
-            "Computational time": lambda line, res: self.parse_numeric(line, "time", res),
+            "Computational time": lambda line, res: self.parse_numeric(
+                line, "time", res
+            ),
             "Final function value (eV/atom):": lambda line, res: self.parse_numeric(
                 line, "energy", res
             ),
@@ -50,7 +52,9 @@ class ReadFile:
                     return _res, "iteration"
 
                 if "Geometry optimization failed: Huge" in line:
-                    return _res, "energy_zero" if abs(_res["energy"]) < 10**-3 else "energy_low"
+                    return _res, (
+                        "energy_zero" if abs(_res["energy"]) < 10**-3 else "energy_low"
+                    )
 
         return _res, True
 

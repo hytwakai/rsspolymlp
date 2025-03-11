@@ -34,7 +34,9 @@ def nearest_neighbor_atomic_distance(lat, coo):
 
     # Compute the translations due to periodic images
     parallel_move = lat @ image_matrix
-    parallel_move = np.tile(parallel_move[:, None, :], (1, c1.shape[-1], 1))  # (3, N, num_images)
+    parallel_move = np.tile(
+        parallel_move[:, None, :], (1, c1.shape[-1], 1)
+    )  # (3, N, num_images)
     c2_all = cartesian_coo[:, :, None] + parallel_move
 
     # Compute squared distances between all pairs of atoms in all periodic images
@@ -103,7 +105,9 @@ class GenerateInitialStructure:
         atom_num = sum(self.n_atoms)
 
         # Define volume constraints based on atomic packing fraction
-        vol_up = atom_num * (4 * math.pi * ((self.atomic_length / 2) ** 3) / 3) * 100 / 10
+        vol_up = (
+            atom_num * (4 * math.pi * ((self.atomic_length / 2) ** 3) / 3) * 100 / 10
+        )
         vol_under = atom_num * 4 * math.pi * ((self.atomic_length / 2) ** 3) / 3
         vol_under_root = (vol_under ** (1 / 3)) ** 2
         vol_up_root = (vol_up ** (1 / 3)) ** 2
@@ -137,7 +141,9 @@ class GenerateInitialStructure:
             # Convert lattice tensors to Cartesian lattice matrices
             L_matrices = np.array([cholesky(mat, lower=False) for mat in sym_g_sets])
             fixed_position = np.zeros([valid_g_sets.shape[0], 3, 1])
-            random_atomic_position = np.random.rand(valid_g_sets.shape[0], 3, (atom_num - 1))
+            random_atomic_position = np.random.rand(
+                valid_g_sets.shape[0], 3, (atom_num - 1)
+            )
             random_atomic_position = np.concatenate(
                 [fixed_position, random_atomic_position], axis=2
             )
@@ -156,7 +162,9 @@ class GenerateInitialStructure:
             # Save valid structures
             for axis, positions in zip(valid_l_matrices, valid_positions):
                 self.str_count += 1
-                self.write_poscar(axis, positions, f"initial_str/POSCAR_{self.str_count}")
+                self.write_poscar(
+                    axis, positions, f"initial_str/POSCAR_{self.str_count}"
+                )
                 if self.str_count == self.max_str:
                     return
             iteration += 1

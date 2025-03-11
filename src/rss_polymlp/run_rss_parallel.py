@@ -72,7 +72,9 @@ class RandomStructureOptimization:
             for iteration in range(max_iteration):
                 minobj = self.minimize(unitcell, iteration, c1_set, c2_set)
                 if minobj is None:
-                    print("Geometry optimization failed: Huge negative or zero energy value.")
+                    print(
+                        "Geometry optimization failed: Huge negative or zero energy value."
+                    )
                     self.log_computation_time(time_initial)
                     return
 
@@ -192,10 +194,14 @@ class RandomStructureOptimization:
             res_f, res_s = self.minobj.residual_forces
             print("Residuals (force):")
             print(res_f.T)
-            print("Maximum absolute value in Residuals (force):", np.max(np.abs(res_f.T)))
+            print(
+                "Maximum absolute value in Residuals (force):", np.max(np.abs(res_f.T))
+            )
             print("Residuals (stress):")
             print(res_s)
-            print("Maximum absolute value in Residuals (stress):", np.max(np.abs(res_s)))
+            print(
+                "Maximum absolute value in Residuals (stress):", np.max(np.abs(res_s))
+            )
         print("Final structure")
         self.minobj.print_structure()
 
@@ -215,10 +221,17 @@ if __name__ == "__main__":
         "--elements", type=str, nargs="+", default=None, help="List of element symbols"
     )
     parser.add_argument(
-        "--n_atoms", type=int, nargs="+", default=None, help="Number of atoms for each element"
+        "--n_atoms",
+        type=int,
+        nargs="+",
+        default=None,
+        help="Number of atoms for each element",
     )
     parser.add_argument(
-        "--max_str", type=int, default=1000, help="Maximum number of initial structures for RSS"
+        "--max_str",
+        type=int,
+        default=1000,
+        help="Maximum number of initial structures for RSS",
     )
     parser.add_argument(
         "--least_distance", type=float, default=0.5, help="Minimum interatomic distance"
@@ -230,7 +243,9 @@ if __name__ == "__main__":
         default="polymlp.yaml",
         help="Potential file for poly. MLP",
     )
-    parser.add_argument("--pressure", type=float, default=0, help="Pressure term (in GPa)")
+    parser.add_argument(
+        "--pressure", type=float, default=0, help="Pressure term (in GPa)"
+    )
     parser.add_argument("--method", type=str, default="CG", help="Type of solver")
     parser.add_argument(
         "--maxiter",

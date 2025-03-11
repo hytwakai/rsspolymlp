@@ -74,7 +74,9 @@ class SortStructure:
         a, b, c = np.array(polymlp_st.axis)
         _res["axis"] = self.axis_to_abc(a, b, c)
         _res["positions"] = polymlp_st.positions.T.tolist()
-        _res["distance"] = nearest_neighbor_atomic_distance(polymlp_st.axis, polymlp_st.positions)
+        _res["distance"] = nearest_neighbor_atomic_distance(
+            polymlp_st.axis, polymlp_st.positions
+        )
 
     def angle_between(self, v1, v2):
         """Calculate the angle (in degrees) between two vectors."""
@@ -113,7 +115,9 @@ class SortStructure:
                 spg in _res["spg"] for spg in entry["spg"]
             ):
                 app_to_nonduplicate = False
-                if self.extract_spg_count(_res["spg"]) > self.extract_spg_count(entry["spg"]):
+                if self.extract_spg_count(_res["spg"]) > self.extract_spg_count(
+                    entry["spg"]
+                ):
                     change_str = True
                 break
 
@@ -123,7 +127,15 @@ class SortStructure:
             # Update duplicate count and replace with better data if necessary
             self.nondup_str[idx]["dup_count"] += 1
             if change_str:
-                for key in ["energy", "spg", "axis", "positions", "elements", "volume", "distance"]:
+                for key in [
+                    "energy",
+                    "spg",
+                    "axis",
+                    "positions",
+                    "elements",
+                    "volume",
+                    "distance",
+                ]:
                     self.nondup_str[idx][key] = _res[key]
         else:
             # Append a new unique structure
@@ -132,7 +144,9 @@ class SortStructure:
     def extract_spg_count(self, spg_list):
         """Extract and sum space group counts from a list of space group strings."""
         return sum(
-            int(re.search(r"\((\d+)\)", s).group(1)) for s in spg_list if re.search(r"\((\d+)\)", s)
+            int(re.search(r"\((\d+)\)", s).group(1))
+            for s in spg_list
+            if re.search(r"\((\d+)\)", s)
         )
 
     def update_iteration_stats(self, _res):
@@ -188,9 +202,17 @@ class SortStructure:
         with open("sorted_result.log", "w") as f:
             print("---- General outputs ----", file=f)
             print("Sorting time (sec.):           ", round(time_finish, 3), file=f)
-            print("Selected potential:            ", self.nondup_str[0]["potential"], file=f)
+            print(
+                "Selected potential:            ",
+                self.nondup_str[0]["potential"],
+                file=f,
+            )
             print("Number of initial structures:  ", len(self.logfiles), file=f)
-            print("Number of optimized structures:", len(self.logfiles) - error_count, file=f)
+            print(
+                "Number of optimized structures:",
+                len(self.logfiles) - error_count,
+                file=f,
+            )
             print("Total computation time (sec.): ", round(self.time_all, 1), file=f)
             print("", file=f)
             print("---- Error counts ----", file=f)
@@ -207,7 +229,8 @@ class SortStructure:
                 e_diff = round((_str["energy"] - energy_min) * 1000, 2)
                 print(f"No. {idx+1}", file=f)
                 print(
-                    f"{_str['poscar']} ({e_diff} meV/atom, {_str['dup_count']} duplicates)", file=f
+                    f"{_str['poscar']} ({e_diff} meV/atom, {_str['dup_count']} duplicates)",
+                    file=f,
                 )
                 print(" - Enthalpy:   ", _str["energy"], file=f)
                 print(" - Axis:       ", _str["axis"], file=f)
@@ -216,14 +239,10 @@ class SortStructure:
                 print(" - Space group:", _str["spg"], file=f)
                 print(
                     " - Other Info.:",
-                    int(len(_str["elements"])),
-                    "atom",
-                    "/ distance",
-                    round(_str["distance"], 3),
-                    "(Ang.) / volume",
-                    round(_str["volume"], 2),
-                    "(A^3/atom) / iteration",
-                    _str["iter"],
+                    f'{int(len(_str["elements"]))} atom',
+                    f'/ distance {round(_str["distance"], 3)} (Ang.)',
+                    f'/ volume {round(_str["volume"], 2)} (A^3/atom)',
+                    f'/ iteration {_str["iter"]}',
                     file=f,
                 )
             print("", file=f)
