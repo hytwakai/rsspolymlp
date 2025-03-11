@@ -18,136 +18,6 @@ from rss_polymlp.sorting_str import SortStructure
 np.set_printoptions(legacy="1.21")
 
 
-def run_optimization(poscat_path, args, pressure):
-    """
-    Perform geometry optimization on a given structure using the specified potential.
-
-    Parameters
-    ----------
-    poscat_path : str
-        Path to the POSCAR file of the structure to be optimized.
-    args : argparse.Namespace
-        Parsed command-line arguments containing optimization settings.
-    """
-    poscar_name = poscat_path.split("/")[-1]
-    output_file = f"log/{poscar_name}.log"
-
-    with open(output_file, "w") as f, redirect_stdout(f):
-        time_initial = time.time()
-        print("Selected potential:", args.pot)
-
-        unitcell = Poscar(poscat_path).structure
-        energy_keep = None
-        max_iteration = 10
-        c1_set = [1e-4, 0.9, 0.99]
-        c2_set = [0.1, 0.99, 0.999]
-        for iteration in range(max_iteration):
-            miter = 10000
-            minobj = GeometryOptimization(
-                unitcell,
-                pot=args.pot,
-                relax_cell=True,
-                relax_volume=True,
-                relax_positions=True,
-                with_sym=False,
-                pressure=pressure,
-                verbose=True,
-            )
-            if iteration == 0:
-                print("Initial structure")
-                minobj.print_structure()
-
-            for c_count in range(3):
-                if iteration == 0 and c_count <= 1:
-                    miter = 200
-                    continue
-                if iteration == 1 and c_count == 0:
-                    miter = 200
-                    continue
-                try:
-                    minobj.run(
-                        gtol=1e-6,
-                        method="CG",
-                        miter=miter,
-                        c1=c1_set[c_count],
-                        c2=c2_set[c_count],
-                    )
-                    break
-                except ValueError:
-                    if c_count == 2:
-                        time_fin = time.time() - time_initial
-                        print(
-                            "Final function value (eV/atom):",
-                            minobj._energy / len(unitcell.elements),
-                        )
-                        print("Geometry optimization failed: Huge negative or zero enegy value.")
-                        print("Computational time:", time_fin, file=f)
-                        print("Finished", file=f)
-                        return
-                    else:
-                        print("Changing [c1, c2]")
-                        print(f"c1 = {c1_set[c_count+1]}, c2 = {c2_set[c_count+1]}")
-                        miter = 100
-
-            # Save optimized structure
-            minobj.write_poscar(filename=f"optimized_str/{poscar_name}")
-            sym = SymCell(poscar_name=f"optimized_str/{poscar_name}", symprec=1e-5)
-            cell_copy = sym.refine_cell()
-            minobj.structure = cell_copy
-            minobj.write_poscar(filename=f"optimized_str/{poscar_name}")
-
-            # Check for convergence
-            energy_per_atom = minobj.energy / len(unitcell.elements)
-            print("Energy (eV/atom):", energy_per_atom)
-            if energy_keep is not None:
-                energy_convergence = abs(energy_keep - energy_per_atom)
-                print("Energy difference from the previous iteration:")
-                print(energy_convergence)
-                if energy_convergence < 10**-7:
-                    print("Final function value (eV/atom):", energy_per_atom)
-                    break
-            energy_keep = energy_per_atom
-
-            unitcell = Poscar(f"optimized_str/{poscar_name}").structure
-
-            if iteration == max_iteration - 1:
-                print("Maximum number of relaxation iterations has been exceeded")
-
-        # Print final structure details
-        if not minobj.relax_cell:
-            print("Residuals (force):")
-            print(minobj.residual_forces.T)
-            print(
-                "Maximum absolute value in Residuals (force):",
-                np.max(np.abs(minobj.residual_forces.T)),
-            )
-        else:
-            res_f, res_s = minobj.residual_forces
-            print("Residuals (force):")
-            print(res_f.T)
-            print("Maximum absolute value in Residuals (force):", np.max(np.abs(res_f.T)))
-            print("Residuals (stress):")
-            print(res_s)
-            print("Maximum absolute value in Residuals (stress):", np.max(np.abs(res_s)))
-        print("Final structure")
-        minobj.print_structure()
-        minobj.write_poscar(filename=f"optimized_str/{poscar_name}")
-
-        # Analyze space group symmetry with different tolerances
-        spg_sets = []
-        for tol in [10**-5, 10**-4, 10**-3, 10**-2]:
-            sym = SymCell(poscar_name=f"optimized_str/{poscar_name}", symprec=tol)
-            spg = sym.get_spacegroup()
-            spg_sets.append(spg)
-            print(f"Space group ({tol}):", spg)
-        print("Space group set:")
-        print(spg_sets)
-
-        time_fin = time.time() - time_initial
-        print("Computational time:", time_fin)
-        print("Finished")
-
-
 def is_finished(poscar, is_log_files):
     """Check if the optimization process for a given structure has finished."""
     logfile = os.path.basename(poscar) + ".log"
@@ -170,6 +40,173 @@ def is_finished(poscar, is_log_files):
         return last_line.startswith("Finished")
     except Exception:
         return False
+
+
+class RandomStructureOptimization:
+
+    def __init__(self, args):
+        # Parsed command-line arguments containing optimization settings.
+        self.args = args
+
+    def run_optimization(self, poscar_path):
+        """
+        Perform geometry optimization on a given structure using the specified potential.
+
+        Parameter
+        ----------
+        poscar_path : str
+            Path to the POSCAR file of the structure to be optimized.
+        """
+        poscar_name = poscar_path.split("/")[-1]
+        output_file = f"log/{poscar_name}.log"
+
+        with open(output_file, "w") as f, redirect_stdout(f):
+            time_initial = time.time()
+            print("Selected potential:", self.args.pot)
+
+            unitcell = Poscar(poscar_path).structure
+            energy_keep = None
+            max_iteration = 10
+            c1_set = [None, 0.9, 0.99]
+            c2_set = [None, 0.99, 0.999]
+
+            for iteration in range(max_iteration):
+                minobj = self.minimize(unitcell, iteration, c1_set, c2_set)
+                if minobj is None:
+                    print("Geometry optimization failed: Huge negative or zero energy value.")
+                    self.log_computation_time(time_initial)
+                    return
+
+                self.minobj = minobj
+                self.target_poscar = f"optimized_str/{poscar_name}"
+
+                self.minobj.write_poscar(filename=self.target_poscar)
+                refined_cell = self.refine_structure(self.target_poscar)
+                if refined_cell is None:
+                    print("Refining cell failed.")
+                    self.log_computation_time(time_initial)
+                    return
+                self.minobj.structure = refined_cell
+                self.minobj.write_poscar(filename=self.target_poscar)
+
+                if self.check_convergence(energy_keep):
+                    break
+                energy_keep = self.minobj.energy / len(unitcell.elements)
+
+                unitcell = Poscar(self.target_poscar).structure
+
+                if iteration == max_iteration - 1:
+                    print("Maximum number of relaxation iterations has been exceeded")
+
+            self.print_final_structure_details()
+            self.analyze_space_group(self.target_poscar)
+
+            self.log_computation_time(time_initial)
+
+    def minimize(self, unitcell, iteration, c1_set, c2_set):
+        """Run geometry optimization with different parameters until successful."""
+
+        minobj = GeometryOptimization(
+            unitcell,
+            pot=self.args.pot,
+            relax_cell=True,
+            relax_volume=True,
+            relax_positions=True,
+            with_sym=False,
+            pressure=self.args.pressure,
+            verbose=True,
+        )
+        if iteration == 0:
+            print("Initial structure")
+            minobj.print_structure()
+
+        maxiter = 10000
+        for c_count in range(3):
+            if iteration == 0 and c_count <= 1 or iteration == 1 and c_count == 0:
+                maxiter = self.args.maxiter
+                continue
+            try:
+                minobj.run(
+                    gtol=1e-6,
+                    method=self.args.method,
+                    maxiter=maxiter,
+                    c1=c1_set[c_count],
+                    c2=c2_set[c_count],
+                )
+                return minobj
+            except ValueError:
+                if c_count == 2:
+                    print(
+                        "Final function value (eV/atom):",
+                        minobj._energy / len(minobj.structure.elements),
+                    )
+                    return None
+                print("Change [c1, c2] to", c1_set[c_count + 1], c2_set[c_count + 1])
+                maxiter = 100
+
+    def refine_structure(self, poscar_path):
+        """Refine the crystal structure with increasing symmetry precision."""
+        symprec_list = [1e-5, 1e-4, 1e-3, 1e-2, 1e-1]
+        for sp in symprec_list:
+            try:
+                sym = SymCell(poscar_name=poscar_path, symprec=sp)
+                return sym.refine_cell()
+            except TypeError:
+                print("Change symprec to", sp * 10)
+        return None
+
+    def check_convergence(self, energy_keep):
+        """Check if the energy difference is below the threshold."""
+        energy_per_atom = self.minobj.energy / len(self.minobj.structure.elements)
+        print("Energy (eV/atom):", energy_per_atom)
+        if energy_keep is not None:
+            energy_convergence = energy_per_atom - energy_keep
+            print("Energy difference from the previous iteration:", energy_convergence)
+            if abs(energy_convergence) < 1e-7:
+                print("Final function value (eV/atom):", energy_per_atom)
+                return True
+        return False
+
+    def analyze_space_group(self, poscar_path):
+        """Analyze space group symmetry with different tolerances."""
+        spg_sets = []
+        for tol in [1e-5, 1e-4, 1e-3, 1e-2]:
+            try:
+                sym = SymCell(poscar_name=poscar_path, symprec=tol)
+                spg = sym.get_spacegroup()
+                spg_sets.append(spg)
+                print(f"Space group ({tol}):", spg)
+            except TypeError:
+                continue
+        print("Space group set:")
+        print(spg_sets)
+
+    def print_final_structure_details(self):
+        """Print residual forces, stress, and final structure."""
+        if not self.minobj.relax_cell:
+            print("Residuals (force):")
+            print(self.minobj.residual_forces.T)
+            print(
+                "Maximum absolute value in Residuals (force):",
+                np.max(np.abs(self.minobj.residual_forces.T)),
+            )
+        else:
+            res_f, res_s = self.minobj.residual_forces
+            print("Residuals (force):")
+            print(res_f.T)
+            print("Maximum absolute value in Residuals (force):", np.max(np.abs(res_f.T)))
+            print("Residuals (stress):")
+            print(res_s)
+            print("Maximum absolute value in Residuals (stress):", np.max(np.abs(res_s)))
+
+        print("Final structure")
+        self.minobj.print_structure()
+
+    def log_computation_time(self, start_time):
+        """Log computational time."""
+        time_fin = time.time() - start_time
+        print("Computational time:", time_fin)
+        print("Finished")
 
 
 if __name__ == "__main__":
@@ -197,6 +234,8 @@ if __name__ == "__main__":
         help="Potential file for poly. MLP",
     )
     parser.add_argument("--pressure", type=float, default=0, help="Pressure term (in GPa)")
+    parser.add_argument("--method", type=str, default="CG")
+    parser.add_argument("--maxiter", type=int, default=100)
     args = parser.parse_args()
 
     os.makedirs("initial_str", exist_ok=True)
@@ -240,8 +279,9 @@ if __name__ == "__main__":
 
     # Perform parallel optimization
     time_pra = time.time()
+    rssobj = RandomStructureOptimization(args)
     joblib.Parallel(n_jobs=-1, backend="loky")(
-        joblib.delayed(run_optimization)(poscar, args, args.pressure) for poscar in poscar_path_all
+        joblib.delayed(rssobj.run_optimization)(poscar) for poscar in poscar_path_all
     )
     time_pra_fin = time.time() - time_pra
 
