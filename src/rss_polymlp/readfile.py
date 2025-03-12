@@ -59,7 +59,10 @@ class ReadFile:
         return _res, True
 
     def parse_potential(self, line, _res):
-        _res["potential"] = line.split()[-1]
+        try:
+            _res["potential"] = eval(' '.join(line.split()[2:]))
+        except Exception:
+            _res["potential"] = None
 
     def parse_spg(self, line, _res):
         try:
