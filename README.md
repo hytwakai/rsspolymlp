@@ -1,4 +1,4 @@
-# rss_polymlp
+# rsspolymlp
 
 ## A framework for random structure search (RSS) using polynomial MLPs
 
@@ -13,10 +13,10 @@
 ### Installation
 
 ```shell
-git clone https://github.com/hytwakai/rss_polymlp.git
-cd rss_polymlp
-conda create -n rss_polymlp
-conda activate rss_polymlp
+git clone https://github.com/hytwakai/rsspolymlp.git
+cd rsspolymlp
+conda create -n rsspolymlp
+conda activate rsspolymlp
 conda install -c conda-forge pypolymlp symfc spglib joblib
 pip install .
 ```
@@ -26,9 +26,9 @@ pip install .
 python run_rss_parallel.py --elements Al Cu --n_atoms 4 4 --max_str 1000 --pot polymlp.yaml
 ```
 
-### How to cite rss_polymlp
+### How to cite rsspolymlp
 
-If you use `rss_polymlp` in your study, please cite the following articles.
+If you use `rsspolymlp` in your study, please cite the following articles.
 
 ```
 @article{HayatoWakai202323053,
