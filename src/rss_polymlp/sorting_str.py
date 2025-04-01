@@ -94,7 +94,7 @@ class SortStructure:
         gamma = self.angle_between(c, a)
         return np.array([norm_a, norm_b, norm_c, alpha, beta, gamma]).tolist()
 
-    def update_nondup_structure(self, _res):
+    def update_nondup_structure(self, _res, energy_diff=1e-8):
         """
         Check for duplicate structures and update the list accordingly.
 
@@ -111,7 +111,7 @@ class SortStructure:
         app_to_nonduplicate = True
         change_str = False
         for idx, entry in enumerate(self.nondup_str):
-            if abs(entry["energy"] - _res["energy"]) < 1e-8 and any(
+            if abs(entry["energy"] - _res["energy"]) < energy_diff and any(
                 spg in _res["spg"] for spg in entry["spg"]
             ):
                 app_to_nonduplicate = False
@@ -128,6 +128,7 @@ class SortStructure:
             self.nondup_str[idx]["dup_count"] += 1
             if change_str:
                 for key in [
+                    "poscar",
                     "energy",
                     "spg",
                     "axis",
@@ -135,6 +136,7 @@ class SortStructure:
                     "elements",
                     "volume",
                     "distance",
+                    "dup_count",
                 ]:
                     self.nondup_str[idx][key] = _res[key]
         else:
@@ -151,6 +153,8 @@ class SortStructure:
 
     def update_iteration_stats(self, _res):
         """Update iteration statistics."""
+        if "iter" not in _res:
+            return
         if not self.iter_str:
             self.iter_str.append(_res["iter"])
             self.fval_str.append(_res["fval"])
@@ -163,6 +167,8 @@ class SortStructure:
     def add_new_structure(self, _res):
         """Add a new structure to the list of non-duplicate structures."""
         self.nondup_str.append(_res)
+        if "iter" not in _res:
+            return
         self.iter_str.append(self.iter_str[-1])
         self.fval_str.append(self.fval_str[-1])
         self.gval_str.append(self.gval_str[-1])
