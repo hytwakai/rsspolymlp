@@ -7,8 +7,8 @@ from time import time
 import numpy as np
 
 from pypolymlp.core.interface_vasp import Poscar
-from rss_polymlp.initial_str import nearest_neighbor_atomic_distance
-from rss_polymlp.readfile import ReadFile
+from rsspolymlp.initial_str import nearest_neighbor_atomic_distance
+from rsspolymlp.readfile import ReadFile
 
 
 class SortStructure:

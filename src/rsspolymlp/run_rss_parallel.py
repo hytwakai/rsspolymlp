@@ -10,9 +10,9 @@ import numpy as np
 from pypolymlp.calculator.str_opt.optimization import GeometryOptimization
 from pypolymlp.core.interface_vasp import Poscar
 from pypolymlp.utils.spglib_utils import SymCell
-from rss_polymlp import variable
-from rss_polymlp.initial_str import GenerateInitialStructure
-from rss_polymlp.sorting_str import SortStructure
+from rsspolymlp import variable
+from rsspolymlp.initial_str import GenerateInitialStructure
+from rsspolymlp.sorting_str import SortStructure
 
 np.set_printoptions(legacy="1.21")
 
