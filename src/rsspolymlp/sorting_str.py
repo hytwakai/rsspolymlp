@@ -89,9 +89,9 @@ class SortStructure:
         norm_a = np.linalg.norm(a)
         norm_b = np.linalg.norm(b)
         norm_c = np.linalg.norm(c)
-        alpha = self.angle_between(a, b)
-        beta = self.angle_between(b, c)
-        gamma = self.angle_between(c, a)
+        alpha = self.angle_between(b, c)
+        beta = self.angle_between(a, c)
+        gamma = self.angle_between(a, b)
         return np.array([norm_a, norm_b, norm_c, alpha, beta, gamma]).tolist()
 
     def update_nondup_structure(self, _res, energy_diff=1e-8):
