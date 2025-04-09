@@ -64,7 +64,6 @@ class GenerateInitialStructure:
         max_str: int = 100,
         least_distance: float = 0.5,
         pre_str_count: int = 0,
-        penalty: bool = False,
     ):
         """
         Initialize the structure generation parameters.
@@ -81,8 +80,6 @@ class GenerateInitialStructure:
             Minimum allowed atomic distance in unit of angstrom (default: 0.5).
         pre_str_count : int, optional
             Initial structure count (default: 0).
-        penalty : bool, optional
-            Enables a penalty term to bias the generation of lattice parameters (default: False).
         """
 
         self.elements = elements
@@ -90,35 +87,31 @@ class GenerateInitialStructure:
         self.max_str = max_str
         self.least_distance = least_distance
         self.str_count = pre_str_count
-        self.penalty = penalty
 
-    def random_structure(self):
+    def random_structure(self, max_volume=100):
         """
         Generate random structures while ensuring minimum interatomic distance constraints.
         """
         atom_num = sum(self.n_atoms)
 
-        # Define volume constraints
-        vol_up = 100 * atom_num  # A^3
-        vol_up_root = (vol_up ** (1 / 3)) ** 2
+        # Define initial structure constraints
+        vol_constraint = max_volume * atom_num  # A^3
+        axis_constraint = ((atom_num ** (1 / 3)) * 8) ** 2
 
-        penalty = 0
         iteration = 1
-        num_samples = 1000
+        num_samples = 2000
         while True:
             print(f"----- Iteration {iteration} -----")
 
             # Define volume constraints based on atomic packing fraction
             rand_g123 = np.sort(np.random.rand(num_samples, 3), axis=1)
-            if not self.penalty:
-                rand_g123 = penalty / 100 + (rand_g123 * (1 - penalty / 100))
             rand_g456 = np.random.rand(num_samples, 3)
             random_num_set = np.concatenate([rand_g123, rand_g456], axis=1)
 
             # Construct valid Niggli-reduced cells
-            G1 = random_num_set[:, 0] * vol_up_root
-            G2 = random_num_set[:, 1] * vol_up_root
-            G3 = random_num_set[:, 2] * vol_up_root
+            G1 = random_num_set[:, 0] * axis_constraint
+            G2 = random_num_set[:, 1] * axis_constraint
+            G3 = random_num_set[:, 2] * axis_constraint
             G4 = -G1 / 2 + random_num_set[:, 3] * G1
             G5 = random_num_set[:, 4] * G1 / 2
             G6 = random_num_set[:, 5] * G2 / 2
@@ -128,14 +121,19 @@ class GenerateInitialStructure:
             print(f"< generate {sym_g_sets.shape[0]} random structures >")
 
             # Convert lattice tensors to Cartesian lattice matrices
-            L_matrices = np.array([cholesky(mat, lower=False) for mat in sym_g_sets])
-            fixed_position = np.zeros([valid_g_sets.shape[0], 3, 1])
+            L_matrices_pre = np.array(
+                [cholesky(mat, lower=False) for mat in sym_g_sets]
+            )
+            volumes = np.abs(np.linalg.det(L_matrices_pre))
+            L_matrices = L_matrices_pre[volumes <= vol_constraint]
+            fixed_position = np.zeros([L_matrices.shape[0], 3, 1])
             random_atomic_position = np.random.rand(
-                valid_g_sets.shape[0], 3, (atom_num - 1)
+                L_matrices.shape[0], 3, (atom_num - 1)
             )
             random_atomic_position = np.concatenate(
                 [fixed_position, random_atomic_position], axis=2
             )
+            print(f"< screened {L_matrices.shape[0]} random structures (volume) >")
 
             # Filter structures based on interatomic distance constraints
             dist_sets = np.array(
@@ -146,7 +144,9 @@ class GenerateInitialStructure:
             )
             valid_l_matrices = L_matrices[dist_sets > self.least_distance]
             valid_positions = random_atomic_position[dist_sets > self.least_distance]
-            print(f"< screened {valid_l_matrices.shape[0]} random structures >")
+            print(
+                f"< screened {valid_l_matrices.shape[0]} random structures (least distance) >"
+            )
 
             # Save valid structures
             for axis, positions in zip(valid_l_matrices, valid_positions):
@@ -157,7 +157,6 @@ class GenerateInitialStructure:
                 if self.str_count == self.max_str:
                     return
             iteration += 1
-            penalty += 1
 
     def write_poscar(self, axis, positions, filename="POSCAR"):
         """Write the generated structure to a VASP POSCAR file."""
