@@ -10,7 +10,6 @@ import numpy as np
 from pypolymlp.calculator.str_opt.optimization import GeometryOptimization
 from pypolymlp.core.interface_vasp import Poscar
 from pypolymlp.utils.spglib_utils import SymCell
-from rsspolymlp import variable
 from rsspolymlp.initial_str import GenerateInitialStructure
 from rsspolymlp.sorting_str import SortStructure
 
@@ -267,21 +266,11 @@ if __name__ == "__main__":
     if max_str > pre_str_count:
         elements = args.elements
 
-        # Determine the maximum atomic radius among the given elements
-        atomic_length = None
-        for element in elements:
-            _atomic_length = variable.atom_variable(element)
-            if atomic_length is None:
-                atomic_length = _atomic_length
-            elif atomic_length < _atomic_length:
-                atomic_length = _atomic_length
-
         # Creating initial random structures
         gen_str = GenerateInitialStructure(
             elements,
             args.n_atoms,
             max_str,
-            atomic_length=atomic_length,
             least_distance=args.least_distance,
             pre_str_count=pre_str_count,
         )
