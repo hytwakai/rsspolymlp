@@ -172,3 +172,4 @@ cython_debug/
 
 mytest
 optimization.py
+past_file

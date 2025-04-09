@@ -1,5 +1,3 @@
-import math
-
 import numpy as np
 from scipy.linalg import cholesky
 
@@ -64,7 +62,6 @@ class GenerateInitialStructure:
         elements,
         n_atoms,
         max_str: int = 100,
-        atomic_length: float = 3.0,
         least_distance: float = 0.5,
         pre_str_count: int = 0,
         penalty: bool = False,
@@ -80,10 +77,8 @@ class GenerateInitialStructure:
             List of the number of atoms for each element.
         max_str : int, optional
             Maximum number of structures to generate (default: 100).
-        atomic_length : float, optional
-            Characteristic atomic length (default: 3.0).
         least_distance : float, optional
-            Minimum allowed atomic distance, scaled by atomic_length (default: 0.5).
+            Minimum allowed atomic distance in unit of angstrom (default: 0.5).
         pre_str_count : int, optional
             Initial structure count (default: 0).
         penalty : bool, optional
@@ -93,8 +88,7 @@ class GenerateInitialStructure:
         self.elements = elements
         self.n_atoms = n_atoms
         self.max_str = max_str
-        self.atomic_length = atomic_length
-        self.least_distance = least_distance * self.atomic_length
+        self.least_distance = least_distance
         self.str_count = pre_str_count
         self.penalty = penalty
 
@@ -104,14 +98,9 @@ class GenerateInitialStructure:
         """
         atom_num = sum(self.n_atoms)
 
-        # Define volume constraints based on atomic packing fraction
-        vol_up = (
-            atom_num * (4 * math.pi * ((self.atomic_length / 2) ** 3) / 3) * 100 / 10
-        )
-        vol_under = atom_num * 4 * math.pi * ((self.atomic_length / 2) ** 3) / 3
-        vol_under_root = (vol_under ** (1 / 3)) ** 2
+        # Define volume constraints
+        vol_up = 100  # A^3/atom
         vol_up_root = (vol_up ** (1 / 3)) ** 2
-        vol_diff = vol_up_root - vol_under_root
 
         penalty = 0
         iteration = 1
@@ -127,9 +116,9 @@ class GenerateInitialStructure:
             random_num_set = np.concatenate([rand_g123, rand_g456], axis=1)
 
             # Construct valid Niggli-reduced cells
-            G1 = vol_under_root + random_num_set[:, 0] * vol_diff
-            G2 = vol_under_root + random_num_set[:, 1] * vol_diff
-            G3 = vol_under_root + random_num_set[:, 2] * vol_diff
+            G1 = random_num_set[:, 0] * vol_up_root
+            G2 = random_num_set[:, 1] * vol_up_root
+            G3 = random_num_set[:, 2] * vol_up_root
             G4 = -G1 / 2 + random_num_set[:, 3] * G1
             G5 = random_num_set[:, 4] * G1 / 2
             G6 = random_num_set[:, 5] * G2 / 2
