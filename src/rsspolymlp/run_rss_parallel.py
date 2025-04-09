@@ -233,14 +233,23 @@ if __name__ == "__main__":
         help="Maximum number of initial structures for RSS",
     )
     parser.add_argument(
-        "--least_distance", type=float, default=0.5, help="Minimum interatomic distance"
+        "--least_distance",
+        type=float,
+        default=0.5,
+        help="Minimum interatomic distance in initial structure (angstrom)",
+    )
+    parser.add_argument(
+        "--max_volume",
+        type=float,
+        default=100,
+        help="Maximum volume of initial structure (A^3/atom)",
     )
     parser.add_argument(
         "--pot",
         nargs="*",
         type=str,
         default="polymlp.yaml",
-        help="Potential file for poly. MLP",
+        help="Potential file for polynomial MLP",
     )
     parser.add_argument(
         "--pressure", type=float, default=0, help="Pressure term (in GPa)"
@@ -274,7 +283,7 @@ if __name__ == "__main__":
             least_distance=args.least_distance,
             pre_str_count=pre_str_count,
         )
-        gen_str.random_structure()
+        gen_str.random_structure(max_volume=args.max_volume)
 
     poscar_path_all = glob.glob("initial_str/*")
     poscar_path_all = sorted(poscar_path_all, key=lambda x: int(x.split("_")[-1]))
