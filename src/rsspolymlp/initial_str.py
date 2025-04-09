@@ -99,7 +99,7 @@ class GenerateInitialStructure:
         atom_num = sum(self.n_atoms)
 
         # Define volume constraints
-        vol_up = 100  # A^3/atom
+        vol_up = 100 * atom_num  # A^3
         vol_up_root = (vol_up ** (1 / 3)) ** 2
 
         penalty = 0
