@@ -9,6 +9,7 @@ import numpy as np
 from pypolymlp.core.interface_vasp import Poscar
 from rsspolymlp.initial_str import nearest_neighbor_atomic_distance
 from rsspolymlp.readfile import ReadFile
+from rsspolymlp.run_rss_parallel import finished_log
 
 
 class SortStructure:
@@ -28,6 +29,13 @@ class SortStructure:
         self.logfiles = sorted(
             glob.glob("log/*"), key=lambda x: int(x.split("_")[-1].removesuffix(".log"))
         )
+        poscar_path_all = glob.glob("initial_str/*")
+        is_log_files = {os.path.basename(f): f for f in self.logfiles}
+        self.logfiles = [
+            f"log/{os.path.basename(p)}.log"
+            for p in poscar_path_all
+            if finished_log(p, is_log_files)
+        ]
 
         for logfile in self.logfiles:
             _res, judge = ReadFile(logfile).read_file()
@@ -176,7 +184,7 @@ class SortStructure:
         _res["fval"] = self.fval_str[-1]
         _res["gval"] = self.gval_str[-1]
 
-    def run_sorting(self):
+    def run_sorting(self, args):
         """Sort structures and write the results to a log file."""
         time_start = time()
         self.read_and_process()
@@ -204,22 +212,47 @@ class SortStructure:
             ]
         )
 
+        # Check if optimization is complete
+        with open("success.log") as f:
+            successed_str = sum(1 for _ in f)
+        if successed_str < args.max_opt_str:
+            stop_mes = "Success rate of optimization fell below ~20 percent. Stopping."
+        else:
+            stop_mes = "Target number of optimized structures reached."
+        poscar_path_all = glob.glob("initial_str/*")
+        is_log_files = {os.path.basename(f): f for f in glob.glob("log/*.log")}
+        finished_min = [p for p in poscar_path_all if finished_log(p, is_log_files)]
+        prop_success = round(successed_str / len(finished_min), 2)
+
         # Write results to log file
         with open("sorted_result.log", "w") as f:
             print("---- General outputs ----", file=f)
-            print("Sorting time (sec.):           ", round(time_finish, 3), file=f)
+            print("Sorting time (sec.):            ", round(time_finish, 2), file=f)
             print(
-                "Selected potential:            ",
+                "Selected potential:             ",
                 self.nondup_str[0]["potential"],
                 file=f,
             )
-            print("Number of initial structures:  ", len(self.logfiles), file=f)
             print(
-                "Number of optimized structures:",
-                len(self.logfiles) - error_count,
+                "Max number of structures in RSS:",
+                args.max_opt_str,
+                "(Optimized structure)",
                 file=f,
             )
-            print("Total computation time (sec.): ", round(self.time_all, 1), file=f)
+            print("Number of initial structures:   ", len(finished_min), file=f)
+            print("Number of optimized structures: ", successed_str, file=f)
+            print("Stopping criterion:             ", stop_mes, file=f)
+            print("Optimized str. / Initial str.:  ", prop_success, file=f)
+            print(
+                "Total computational time (sec.):",
+                int(self.time_all),
+                file=f,
+            )
+            print("", file=f)
+            print("---- Total evaluation counts ----", file=f)
+            print("Iteration:           ", self.iter_str[-1], file=f)
+            print("Function evaluations:", self.fval_str[-1], file=f)
+            print("Gradient evaluations:", self.gval_str[-1], file=f)
             print("", file=f)
             print("---- Error counts ----", file=f)
             print("Total error counts:", error_count, file=f)
@@ -251,11 +284,6 @@ class SortStructure:
                     f'/ iteration {_str["iter"]}',
                     file=f,
                 )
-            print("", file=f)
-            print("---- Total evaluation counts ----", file=f)
-            print("Iteration:           ", self.iter_str[-1], file=f)
-            print("Function evaluations:", self.fval_str[-1], file=f)
-            print("Gradient evaluations:", self.gval_str[-1], file=f)
             print("", file=f)
             print("---- Evaluation count per structure ----", file=f)
             print("Iteration (list):           ", self.iter_str, file=f)
