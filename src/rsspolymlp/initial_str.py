@@ -88,14 +88,15 @@ class GenerateInitialStructure:
         self.least_distance = least_distance
         self.str_count = pre_str_count
 
-    def random_structure(self, max_volume=100):
+    def random_structure(self, min_volume=0, max_volume=150):
         """
         Generate random structures while ensuring minimum interatomic distance constraints.
         """
         atom_num = sum(self.n_atoms)
 
         # Define initial structure constraints
-        vol_constraint = max_volume * atom_num  # A^3
+        vol_constraint_max = max_volume * atom_num  # A^3
+        vol_constraint_min = min_volume * atom_num  # A^3
         axis_constraint = ((atom_num ** (1 / 3)) * 8) ** 2
 
         iteration = 1
@@ -125,7 +126,9 @@ class GenerateInitialStructure:
                 [cholesky(mat, lower=False) for mat in sym_g_sets]
             )
             volumes = np.abs(np.linalg.det(L_matrices_pre))
-            L_matrices = L_matrices_pre[volumes <= vol_constraint]
+            L_matrices = L_matrices_pre[
+                (volumes >= vol_constraint_min) & (volumes <= vol_constraint_max)
+            ]
             fixed_position = np.zeros([L_matrices.shape[0], 3, 1])
             random_atomic_position = np.random.rand(
                 L_matrices.shape[0], 3, (atom_num - 1)
