@@ -43,9 +43,9 @@ pip install .
 
 The command-line interface of `rsspolylmp` is divided into three sections.
 Each section corresponds to a different phase of the workflow:
-1. **Generating initial structures** (`gen-rand-struct`)
-2. **Geometry optimization performed in parallel** (`rss-parallel`)
-3. **Sorting optimization results** (`sort-struct`)
+1. Generating initial structures (`gen-rand-struct`)
+2. Geometry optimization performed in parallel (`rss-parallel`)
+3. Sorting optimization results (`sort-struct`)
 
 ### Example Commands
 
@@ -55,7 +55,7 @@ gen-rand-struct --elements Al Cu --atom_counts 4 4 --num_init_str 2000
 ```
 #### Geometry optimization performed in parallel
 ```shell
-rss-parallel --num_opt_str 1000 --pot polymlp.yaml
+rss-parallel --pot polymlp.yaml --num_opt_str 1000
 ```
 #### Sorting the optimization results
 ```shell
@@ -70,7 +70,7 @@ These options configure the generation of random initial structures:
 
 - `--elements`  
   **Type**: string (list)  
-  **Description**: List of chemical element symbols (e.g., `Al, Cu`).
+  **Description**: List of chemical element symbols (e.g., `Al`, `Cu`).
 
 - `--atom_counts`  
   **Type**: int (list)  
@@ -144,9 +144,11 @@ These options the geometry optimization settings to enable parallel processing:
   **Default**: `loky`  
   **Description**: Specifies the backend for joblib parallelization.
 
-You can also use `srun` for parallel execution (default: `joblib`), which is suitable for high-performance computing environments. By specifying `--parallel_method srun`, a script named `multiprocess.sh` will be automatically generated for execution with `srun`. For example:
+You can also use `srun` for parallel execution (default: `joblib`), which is suitable for high-performance computing environments. 
+By specifying `--parallel_method srun`, a script named `multiprocess.sh` will be automatically generated for execution with `srun`. 
 
+For example:
 ```shell
-rss-parallel --parallel_method srun --num_opt_str 1000 --pot polymlp.yaml
+rss-parallel --parallel_method srun --pot polymlp.yaml --num_opt_str 1000
 srun -n $SLURM_CPUS_ON_NODE ./multiprocess.sh
 ```
