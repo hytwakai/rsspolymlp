@@ -83,8 +83,11 @@ class RandomStructureOptimization:
 
             if not self.stop_rss:
                 self.print_final_structure_details()
-                self.analyze_space_group(self.target_poscar)
-
+                judge = self.analyze_space_group(self.target_poscar)
+                if judge is False:
+                    print("Analyzing space group failed.")
+                    self.log_computation_time(time_initial, poscar_name)
+                    return
                 self.log_computation_time(time_initial, poscar_name)
                 with open("success.log", "a") as f:
                     print(poscar_name, file=f)
@@ -165,8 +168,13 @@ class RandomStructureOptimization:
                 print(f"Space group ({tol}):", spg)
             except TypeError:
                 continue
+            except IndexError:
+                continue
+        if spg_sets == []:
+            return False
         print("Space group set:")
         print(spg_sets)
+        return True
 
     def print_final_structure_details(self):
         """Print residual forces, stress, and final structure."""

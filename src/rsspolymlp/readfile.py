@@ -57,6 +57,8 @@ class ReadFile:
                     )
                 if "Refining cell failed" in line:
                     return _res, "anom_struct"
+                if "Analyzing space group failed" in line:
+                    return _res, "anom_struct"
 
         return _res, True
 
