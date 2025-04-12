@@ -110,7 +110,7 @@ class GenerateRandomStructure:
         self.least_distance = least_distance
         self.str_count = pre_str_count
 
-    def random_structure(self, min_volume=0, max_volume=150):
+    def random_structure(self, min_volume=0, max_volume=100):
         """
         Generate random structures while ensuring minimum interatomic distance constraints.
         """

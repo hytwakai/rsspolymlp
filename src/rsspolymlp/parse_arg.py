@@ -54,13 +54,13 @@ class ParseArgument:
         parser.add_argument(
             "--max_volume",
             type=float,
-            default=100,
+            default=100.0,
             help="Maximum volume of initial structure (A^3/atom)",
         )
         parser.add_argument(
             "--min_volume",
             type=float,
-            default=0,
+            default=0.0,
             help="Minimum volume of initial structure (A^3/atom)",
         )
 
@@ -81,7 +81,7 @@ class ParseArgument:
             help="Maximum number of optimized structures obtained from RSS",
         )
         parser.add_argument(
-            "--pressure", type=float, default=0, help="Pressure term (in GPa)"
+            "--pressure", type=float, default=0.0, help="Pressure term (in GPa)"
         )
         parser.add_argument(
             "--solver_method", type=str, default="CG", help="Type of solver"
