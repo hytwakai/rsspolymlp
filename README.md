@@ -1,5 +1,23 @@
 # A framework for random structure search (RSS) using polynomial MLPs
 
+## Citation of rsspolymlp
+
+If you use `rsspolymlp` in your study, please cite the following articles.
+
+“Efficient global crystal structure prediction using polynomial machine learning potential in the binary Al–Cu alloy system”, [J. Ceram. Soc. Jpn. 131, 762 (2023)](https://www.jstage.jst.go.jp/article/jcersj2/131/10/131_23053/_article/-char/ja/)
+```
+@article{HayatoWakai202323053,
+  title="{Efficient global crystal structure prediction using polynomial machine learning potential in the binary Al–Cu alloy system}",
+  author={Hayato Wakai and Atsuto Seko and Isao Tanaka},
+  journal={J. Ceram. Soc. Jpn.},
+  volume={131},
+  number={10},
+  pages={762-766},
+  year={2023},
+  doi={10.2109/jcersj2.23053}
+}
+```
+
 ## Installation
 
 ### Required libraries and python modules
@@ -27,7 +45,7 @@ The command-line interface of `rsspolylmp` is divided into three sections.
 Each section corresponds to a different phase of the workflow:
 1. Generating initial structures (`gen-rand-struct`)
 2. Geometry optimization performed in parallel (`rss-parallel`)
-3. Sorting results (`sort-struct`)
+3. Sorting optimization results (`sort-struct`)
 
 ### Example Commands
 
@@ -107,7 +125,7 @@ These options control the settings for geometry optimizations:
   **Description**: Maximum number of iterations allowed when adjusting optimization parameters (e.g., c1 and c2 values).
 
 ### 2.2. Parallelization Arguments
-These options extend the geometry optimization settings to enable parallel processing:
+These options the geometry optimization settings to enable parallel processing:
 
 - `--parallel_method`  
   **Type**: string (choice)  
@@ -131,21 +149,4 @@ You can also use `srun` for parallel execution (default: `joblib`), which is sui
 ```shell
 rss-parallel --parallel_method srun --num_opt_str 1000 --pot polymlp.yaml
 srun -n $SLURM_CPUS_ON_NODE ./multiprocess.sh
-```
-
-## Citation
-
-If you use `rsspolymlp` in your study, please cite the following articles.
-
-```
-@article{HayatoWakai202323053,
-  title="{Efficient global crystal structure prediction using polynomial machine learning potential in the binary Al–Cu alloy system}",
-  author={Hayato Wakai and Atsuto Seko and Isao Tanaka},
-  journal={J. Ceram. Soc. Jpn.},
-  volume={131},
-  number={10},
-  pages={762-766},
-  year={2023},
-  doi={10.2109/jcersj2.23053}
-}
 ```
