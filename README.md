@@ -43,9 +43,9 @@ pip install .
 
 The command-line interface of `rsspolylmp` is divided into three sections.
 Each section corresponds to a different phase of the workflow:
-1. Generating initial structures (`gen-rand-struct`)
-2. Geometry optimization performed in parallel (`rss-parallel`)
-3. Sorting optimization results (`sort-struct`)
+1. **Generating initial structures** (`gen-rand-struct`)
+2. **Geometry optimization performed in parallel** (`rss-parallel`)
+3. **Sorting optimization results** (`sort-struct`)
 
 ### Example Commands
 
@@ -53,7 +53,7 @@ Each section corresponds to a different phase of the workflow:
 ```shell
 gen-rand-struct --elements Al Cu --atom_counts 4 4 --num_init_str 2000
 ```
-#### Running Geometry Optimization
+#### Geometry optimization performed in parallel
 ```shell
 rss-parallel --num_opt_str 1000 --pot polymlp.yaml
 ```
@@ -62,7 +62,7 @@ rss-parallel --num_opt_str 1000 --pot polymlp.yaml
 sort-struct
 ```
 
-## Extended Usage
+## Additional Options
 
 ### 1. Random Structure Generation Arguments
 
@@ -100,8 +100,8 @@ These options configure the generation of random initial structures:
 These options control the settings for geometry optimizations:
 
 - `--pot`  
-  **Type**: string (list)
-  **Default**: polymlp.yaml
+  **Type**: string (list)  
+  **Default**: `polymlp.yaml`  
   **Description**: Potential file used by the polynomial MLP.
 
 - `--num_opt_str`  
@@ -116,32 +116,32 @@ These options control the settings for geometry optimizations:
 
 - `--solver_method`  
   **Type**: string  
-  **Default**: CG  
+  **Default**: `CG`  
   **Description**: Type of solver used during the optimization process.
 
 - `--maxiter`  
   **Type**: int  
   **Default**: 100  
-  **Description**: Maximum number of iterations allowed when adjusting optimization parameters (e.g., c1 and c2 values).
+  **Description**: Maximum number of iterations allowed when adjusting optimization parameters (e.g., `c1` and `c2` values).
 
 ### 2.2. Parallelization Arguments
 These options the geometry optimization settings to enable parallel processing:
 
 - `--parallel_method`  
   **Type**: string (choice)  
-  **Choices**: joblib, srun  
-  **Default**: joblib  
+  **Choices**: `joblib`, `srun`  
+  **Default**: `joblib`  
   **Description**: Selects the parallelization method.
 
 - `--num_process`  
   **Type**: int  
   **Default**: -1  
-  **Description**: Number of processes to use with joblib; use -1 to use all available CPU cores.
+  **Description**: Number of processes to use with `joblib`; use `-1` to use all available CPU cores.
 
 - `--backend`  
   **Type**: string (choice)  
-  **Choices**: loky, threading, multiprocessing  
-  **Default**: loky
+  **Choices**: `loky`, `threading`, `multiprocessing`  
+  **Default**: `loky`  
   **Description**: Specifies the backend for joblib parallelization.
 
 You can also use `srun` for parallel execution (default: `joblib`), which is suitable for high-performance computing environments. By specifying `--parallel_method srun`, a script named `multiprocess.sh` will be automatically generated for execution with `srun`. For example:
