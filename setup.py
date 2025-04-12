@@ -10,6 +10,14 @@ setup(
     author="Hayato Wakai",
     author_email="wakai@cms.mtl.kyoto-u.ac.jp",
     packages=find_packages(where="src"),
+    entry_points={
+        "console_scripts": [
+            "gen-rand-struct = rsspolymlp.gen_rand_struct:run",
+            "rss-single-srun = rsspolymlp.run_rss_parallel:run_single_srun",
+            "rss-parallel = rsspolymlp.run_rss_parallel:run",
+            "sort-struct = rsspolymlp.sort_struct:run",
+        ]
+    },
     package_dir={"": "src"},
     package_data={"rss_polymlp": ["py.typed"]},
     python_requires=">=3.9",

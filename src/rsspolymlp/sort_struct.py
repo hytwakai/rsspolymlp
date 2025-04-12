@@ -1,3 +1,9 @@
+"""
+Parse and analyze optimization logs, filter out failed or unconverged results,
+identify and retain unique structures based on energy and symmetry,
+and write detailed computational statistics to log.
+"""
+
 import glob
 import os
 import re
@@ -7,9 +13,13 @@ from time import time
 import numpy as np
 
 from pypolymlp.core.interface_vasp import Poscar
-from rsspolymlp.initial_str import nearest_neighbor_atomic_distance
+from rsspolymlp.gen_rand_struct import nearest_neighbor_atomic_distance
 from rsspolymlp.readfile import ReadFile
-from rsspolymlp.run_rss_parallel import finished_log
+
+
+def run():
+    sorter = SortStructure()
+    sorter.run_sorting()
 
 
 class SortStructure:
@@ -29,19 +39,15 @@ class SortStructure:
         self.logfiles = sorted(
             glob.glob("log/*"), key=lambda x: int(x.split("_")[-1].removesuffix(".log"))
         )
-        poscar_path_all = glob.glob("initial_str/*")
-        is_log_files = {os.path.basename(f): f for f in self.logfiles}
-        self.logfiles = [
-            f"log/{os.path.basename(p)}.log"
-            for p in poscar_path_all
-            if finished_log(p, is_log_files)
-        ]
+        with open("finish.log") as f:
+            finished_set = [line.strip() for line in f]
+        self.logfiles = [f"log/{p}.log" for p in finished_set]
 
         for logfile in self.logfiles:
             _res, judge = ReadFile(logfile).read_file()
 
             # Handle different error cases
-            if judge in {"iteration", "energy_low", "energy_zero"}:
+            if judge in {"iteration", "energy_low", "energy_zero", "anom_struct"}:
                 self.errors[judge] += 1
                 self.error_poscar[judge].append(_res["poscar"])
                 continue
@@ -64,7 +70,7 @@ class SortStructure:
                 continue
 
             # Ensure the optimized structure file exists
-            optimized_path = f"optimized_str/{_res['poscar']}"
+            optimized_path = f"opt_struct/{_res['poscar']}"
             if not os.path.isfile(optimized_path):
                 self.errors["else_err"] += 1
                 self.error_poscar["else_err"].append(_res["poscar"])
@@ -184,7 +190,7 @@ class SortStructure:
         _res["fval"] = self.fval_str[-1]
         _res["gval"] = self.gval_str[-1]
 
-    def run_sorting(self, args):
+    def run_sorting(self):
         """Sort structures and write the results to a log file."""
         time_start = time()
         self.read_and_process()
@@ -205,6 +211,7 @@ class SortStructure:
             [
                 self.errors["energy_low"],
                 self.errors["energy_zero"],
+                self.errors["anom_struct"],
                 self.errors["f_conv"],
                 self.errors["s_conv"],
                 self.errors["iteration"],
@@ -213,16 +220,17 @@ class SortStructure:
         )
 
         # Check if optimization is complete
+        max_init_str = int(len(glob.glob("initial_struct/*")))
+        log_str = int(len(glob.glob("log/*")))
         with open("success.log") as f:
-            successed_str = sum(1 for _ in f)
-        if successed_str < args.max_opt_str:
-            stop_mes = "Success rate of optimization fell below ~20 percent. Stopping."
+            success_count = sum(1 for _ in f)
+        with open("finish.log") as f:
+            finish_count = sum(1 for _ in f)
+        if log_str == max_init_str:
+            stop_mes = "All randomly generated initial structures have been processed. Stopping."
         else:
             stop_mes = "Target number of optimized structures reached."
-        poscar_path_all = glob.glob("initial_str/*")
-        is_log_files = {os.path.basename(f): f for f in glob.glob("log/*.log")}
-        finished_min = [p for p in poscar_path_all if finished_log(p, is_log_files)]
-        prop_success = round(successed_str / len(finished_min), 2)
+        prop_success = round(success_count / finish_count, 2)
 
         # Write results to log file
         with open("sorted_result.log", "w") as f:
@@ -233,14 +241,9 @@ class SortStructure:
                 self.nondup_str[0]["potential"],
                 file=f,
             )
-            print(
-                "Max number of structures in RSS:",
-                args.max_opt_str,
-                "(Optimized structure)",
-                file=f,
-            )
-            print("Number of initial structures:   ", len(finished_min), file=f)
-            print("Number of optimized structures: ", successed_str, file=f)
+            print("Max number of structures in RSS:", max_init_str, file=f)
+            print("Number of initial structures:   ", finish_count, file=f)
+            print("Number of optimized structures: ", success_count, file=f)
             print("Stopping criterion:             ", stop_mes, file=f)
             print("Optimized str. / Initial str.:  ", prop_success, file=f)
             print(
@@ -258,6 +261,7 @@ class SortStructure:
             print("Total error counts:", error_count, file=f)
             print(" - Low energy:        ", self.errors["energy_low"], file=f)
             print(" - Zero energy:       ", self.errors["energy_zero"], file=f)
+            print(" - Anomalous struct.: ", self.errors["anom_struct"], file=f)
             print(" - Force convergence: ", self.errors["f_conv"], file=f)
             print(" - Stress convergence:", self.errors["s_conv"], file=f)
             print(" - Max iteration:     ", self.errors["iteration"], file=f)

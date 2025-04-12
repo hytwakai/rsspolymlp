@@ -1,16 +1,38 @@
+import glob
+import os
+
 import numpy as np
 from scipy.linalg import cholesky
 
+from rsspolymlp.parse_arg import ParseArgument
 
-def nearest_neighbor_atomic_distance(lat, coo):
+
+def run():
+    args = ParseArgument.get_initial_structure_args()
+    os.makedirs("initial_struct", exist_ok=True)
+
+    # Generate new structures if necessary
+    pre_str_count = len(glob.glob("initial_struct/*"))
+    if args.num_init_str > pre_str_count:
+        gen_str = GenerateRandomStructure(
+            args.elements,
+            args.atom_counts,
+            args.num_init_str,
+            least_distance=args.least_distance,
+            pre_str_count=pre_str_count,
+        )
+        gen_str.random_structure(min_volume=args.min_volume, max_volume=args.max_volume)
+
+
+def nearest_neighbor_atomic_distance(lattice, frac_coo):
     """
     Calculate the nearest neighbor atomic distance within a periodic lattice.
 
     Parameters
     ----------
-    lat : ndarray (3,3)
+    lattice : ndarray (3,3)
         Lattice matrix.
-    coo : ndarray (3, N)
+    frac_coo : ndarray (3, N)
         Atomic coordinates in fractional coordinates.
 
     Returns
@@ -19,7 +41,7 @@ def nearest_neighbor_atomic_distance(lat, coo):
         Minimum atomic distance considering periodic boundary conditions.
     """
 
-    cartesian_coo = lat @ coo
+    cartesian_coo = lattice @ frac_coo
     c1 = cartesian_coo
 
     # Generate periodic image translations along x, y, and z
@@ -31,7 +53,7 @@ def nearest_neighbor_atomic_distance(lat, coo):
     )  # (3, num_images)
 
     # Compute the translations due to periodic images
-    parallel_move = lat @ image_matrix
+    parallel_move = lattice @ image_matrix
     parallel_move = np.tile(
         parallel_move[:, None, :], (1, c1.shape[-1], 1)
     )  # (3, N, num_images)
@@ -54,15 +76,15 @@ def nearest_neighbor_atomic_distance(lat, coo):
     return distance_min
 
 
-class GenerateInitialStructure:
+class GenerateRandomStructure:
     """Class for creating initial random structures for RSS."""
 
     def __init__(
         self,
         elements,
-        n_atoms,
-        max_str: int = 100,
-        least_distance: float = 0.5,
+        atom_counts,
+        max_str: int = 5000,
+        least_distance: float = 0.0,
         pre_str_count: int = 0,
     ):
         """
@@ -72,18 +94,18 @@ class GenerateInitialStructure:
         ----------
         elements : list
             List of element symbols.
-        n_atoms : list
+        atom_counts : list
             List of the number of atoms for each element.
         max_str : int, optional
-            Maximum number of structures to generate (default: 100).
+            Maximum number of structures to generate (default: 5000).
         least_distance : float, optional
-            Minimum allowed atomic distance in unit of angstrom (default: 0.5).
+            Minimum allowed atomic distance in unit of angstrom (default: 0.0).
         pre_str_count : int, optional
-            Initial structure count (default: 0).
+            Initial structure count.
         """
 
         self.elements = elements
-        self.n_atoms = n_atoms
+        self.atom_counts = atom_counts
         self.max_str = max_str
         self.least_distance = least_distance
         self.str_count = pre_str_count
@@ -92,7 +114,7 @@ class GenerateInitialStructure:
         """
         Generate random structures while ensuring minimum interatomic distance constraints.
         """
-        atom_num = sum(self.n_atoms)
+        atom_num = sum(self.atom_counts)
 
         # Define initial structure constraints
         vol_constraint_max = max_volume * atom_num  # A^3
@@ -122,40 +144,41 @@ class GenerateInitialStructure:
             print(f"< generate {sym_g_sets.shape[0]} random structures >")
 
             # Convert lattice tensors to Cartesian lattice matrices
-            L_matrices_pre = np.array(
-                [cholesky(mat, lower=False) for mat in sym_g_sets]
-            )
-            volumes = np.abs(np.linalg.det(L_matrices_pre))
-            L_matrices = L_matrices_pre[
+            L_matrices = np.array([cholesky(mat, lower=False) for mat in sym_g_sets])
+            volumes = np.abs(np.linalg.det(L_matrices))
+            valid_l_matrices = L_matrices[
                 (volumes >= vol_constraint_min) & (volumes <= vol_constraint_max)
             ]
-            fixed_position = np.zeros([L_matrices.shape[0], 3, 1])
+            fixed_position = np.zeros([valid_l_matrices.shape[0], 3, 1])
             random_atomic_position = np.random.rand(
-                L_matrices.shape[0], 3, (atom_num - 1)
+                valid_l_matrices.shape[0], 3, (atom_num - 1)
             )
-            random_atomic_position = np.concatenate(
+            valid_positions = np.concatenate(
                 [fixed_position, random_atomic_position], axis=2
             )
-            print(f"< screened {L_matrices.shape[0]} random structures (volume) >")
-
-            # Filter structures based on interatomic distance constraints
-            dist_sets = np.array(
-                [
-                    nearest_neighbor_atomic_distance(lat, coo)
-                    for lat, coo in zip(L_matrices, random_atomic_position)
-                ]
-            )
-            valid_l_matrices = L_matrices[dist_sets > self.least_distance]
-            valid_positions = random_atomic_position[dist_sets > self.least_distance]
             print(
-                f"< screened {valid_l_matrices.shape[0]} random structures (least distance) >"
+                f"< screened {valid_l_matrices.shape[0]} random structures (volume) >"
             )
+
+            if self.least_distance > 0:
+                # Filter structures based on interatomic distance constraints
+                distance_sets = np.array(
+                    [
+                        nearest_neighbor_atomic_distance(lat, coo)
+                        for lat, coo in zip(valid_l_matrices, random_atomic_position)
+                    ]
+                )
+                valid_l_matrices = valid_l_matrices[distance_sets > self.least_distance]
+                valid_positions = valid_positions[distance_sets > self.least_distance]
+                print(
+                    f"< screened {valid_l_matrices.shape[0]} random structures (least distance) >"
+                )
 
             # Save valid structures
             for axis, positions in zip(valid_l_matrices, valid_positions):
                 self.str_count += 1
                 self.write_poscar(
-                    axis, positions, f"initial_str/POSCAR_{self.str_count}"
+                    axis, positions, f"initial_struct/POSCAR_{self.str_count}"
                 )
                 if self.str_count == self.max_str:
                     return
@@ -174,13 +197,13 @@ class GenerateInitialStructure:
                     "{0:15.15f}".format(n[2]),
                     file=f,
                 )
-            for idx, n in enumerate(self.n_atoms):
+            for idx, n in enumerate(self.atom_counts):
                 if n > 0:
                     print(self.elements[idx], " ", end="", file=f)
                 else:
                     print("Z  ", end="", file=f)
             print("", file=f)
-            for n in self.n_atoms:
+            for n in self.atom_counts:
                 print(n, " ", end="", file=f)
             print("", file=f)
             print("Direct", file=f)

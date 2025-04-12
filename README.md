@@ -23,7 +23,9 @@ pip install .
 
 ### Usage
 ```shell
-python run_rss_parallel.py --elements Al Cu --n_atoms 4 4 --max_opt_str 1000 --pot polymlp.yaml
+gen-rand-struct --elements Al Cu --atom_counts 4 4 --num_init_str 2000
+rss-parallel --num_opt_str 1000 --pot polymlp.yaml
+sort-struct
 ```
 
 ### How to cite rsspolymlp

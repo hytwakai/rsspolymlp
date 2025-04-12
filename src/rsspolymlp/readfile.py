@@ -48,19 +48,21 @@ class ReadFile:
                             line = next(lines)
                         parser(line, _res)
 
+                # check errors
                 if "Maximum number of relaxation iterations has been exceeded" in line:
                     return _res, "iteration"
-
                 if "Geometry optimization failed: Huge" in line:
                     return _res, (
                         "energy_zero" if abs(_res["energy"]) < 10**-3 else "energy_low"
                     )
+                if "Refining cell failed" in line:
+                    return _res, "anom_struct"
 
         return _res, True
 
     def parse_potential(self, line, _res):
         try:
-            _res["potential"] = eval(' '.join(line.split()[2:]))
+            _res["potential"] = eval(" ".join(line.split()[2:]))
         except Exception:
             _res["potential"] = None
 

@@ -13,9 +13,11 @@ class RandomStructureOptimization:
 
     def __init__(self, args):
         # Parsed command-line arguments containing optimization settings.
-        self.args = args
-        self.max_opt_str = args.max_opt_str
-        self.max_init_str = args.max_init_str
+        self.pot = args.pot
+        self.pressure = args.pressure
+        self.solver_method = args.solver_method
+        self.maxiter = args.maxiter
+        self.num_opt_str = args.num_opt_str
         self.stop_rss = False
 
     def run_optimization(self, poscar_path):
@@ -41,7 +43,7 @@ class RandomStructureOptimization:
             c1_set = [None, 0.9, 0.99]
             c2_set = [None, 0.99, 0.999]
 
-            print("Selected potential:", self.args.pot)
+            print("Selected potential:", self.pot)
             unitcell = Poscar(poscar_path).structure
 
             for iteration in range(max_iteration):
@@ -55,17 +57,17 @@ class RandomStructureOptimization:
                     print(
                         "Geometry optimization failed: Huge negative or zero energy value."
                     )
-                    self.log_computation_time(time_initial)
+                    self.log_computation_time(time_initial, poscar_name)
                     return
 
                 self.minobj = minobj
-                self.target_poscar = f"optimized_str/{poscar_name}"
+                self.target_poscar = f"opt_struct/{poscar_name}"
 
                 self.minobj.write_poscar(filename=self.target_poscar)
                 refined_cell = self.refine_structure(self.target_poscar)
                 if refined_cell is None:
                     print("Refining cell failed.")
-                    self.log_computation_time(time_initial)
+                    self.log_computation_time(time_initial, poscar_name)
                     return
                 self.minobj.structure = refined_cell
                 self.minobj.write_poscar(filename=self.target_poscar)
@@ -83,7 +85,7 @@ class RandomStructureOptimization:
                 self.print_final_structure_details()
                 self.analyze_space_group(self.target_poscar)
 
-                self.log_computation_time(time_initial)
+                self.log_computation_time(time_initial, poscar_name)
                 with open("success.log", "a") as f:
                     print(poscar_name, file=f)
 
@@ -91,12 +93,12 @@ class RandomStructureOptimization:
         """Run geometry optimization with different parameters until successful."""
         minobj = GeometryOptimization(
             unitcell,
-            pot=self.args.pot,
+            pot=self.pot,
             relax_cell=True,
             relax_volume=True,
             relax_positions=True,
             with_sym=False,
-            pressure=self.args.pressure,
+            pressure=self.pressure,
             verbose=True,
         )
         if iteration == 0:
@@ -106,12 +108,12 @@ class RandomStructureOptimization:
         maxiter = 1000
         for c_count in range(3):
             if iteration == 0 and c_count <= 1 or iteration == 1 and c_count == 0:
-                maxiter = self.args.maxiter
+                maxiter = self.maxiter
                 continue
             try:
                 minobj.run(
                     gtol=1e-6,
-                    method=self.args.method,
+                    method=self.solver_method,
                     maxiter=maxiter,
                     c1=c1_set[c_count],
                     c2=c2_set[c_count],
@@ -135,7 +137,9 @@ class RandomStructureOptimization:
                 sym = SymCell(poscar_name=poscar_path, symprec=sp)
                 return sym.refine_cell()
             except TypeError:
-                print("Change symprec to", sp * 10)
+                print("TypeError: Change symprec to", sp * 10)
+            except IndexError:
+                print("IndexError: Change symprec to", sp * 10)
         return None
 
     def check_convergence(self, energy_keep):
@@ -188,17 +192,19 @@ class RandomStructureOptimization:
         print("Final structure")
         self.minobj.print_structure()
 
-    def log_computation_time(self, start_time):
+    def log_computation_time(self, start_time, poscar_name):
         """Log computational time."""
         time_fin = time.time() - start_time
         print("Computational time:", time_fin)
         print("Finished")
+        with open("finish.log", "a") as f:
+            print(poscar_name, file=f)
 
     def check_opt_str(self):
         with open("success.log") as f:
-            finished_str = sum(1 for _ in f)
-        residual_str = self.max_opt_str - finished_str
+            success_str = sum(1 for _ in f)
+        residual_str = self.num_opt_str - success_str
         if residual_str < 0:
             self.stop_rss = True
-        if self.max_init_str == len(glob.glob("log/*")):
+        if len(glob.glob("initial_struct/*")) == len(glob.glob("log/*")):
             self.stop_rss = True
