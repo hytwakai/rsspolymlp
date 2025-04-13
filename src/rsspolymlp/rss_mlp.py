@@ -138,6 +138,7 @@ class RandomStructureOptimization:
         for sp in symprec_list:
             try:
                 sym = SymCell(poscar_name=poscar_path, symprec=sp)
+                self.minobj.structure = sym.refine_cell()
                 refine_success = True
                 break
             except TypeError:
@@ -150,7 +151,6 @@ class RandomStructureOptimization:
             self.log_computation_time()
             return False
         else:
-            self.minobj.structure = sym.refine_cell()
             self.minobj.write_poscar(filename=self.opt_poscar)
             if not wait_for_file_lines(self.opt_poscar):
                 print("Reading file failed.")

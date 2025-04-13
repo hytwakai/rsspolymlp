@@ -297,6 +297,7 @@ class SortStructure:
             print("---- Poscar name (failed) ----", file=f)
             print("Low energy:        ", self.error_poscar["energy_low"], file=f)
             print("Zero energy:       ", self.error_poscar["energy_zero"], file=f)
+            print("Anomalous struct.: ", self.error_poscar["anom_struct"], file=f)
             print("Force convergence: ", self.error_poscar["not_converged_f"], file=f)
             print("Stress convergence:", self.error_poscar["not_converged_s"], file=f)
             print("Max iteration:     ", self.error_poscar["iteration"], file=f)

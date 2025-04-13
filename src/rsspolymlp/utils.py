@@ -3,7 +3,7 @@ import time
 
 def wait_for_file_lines(file_path, timeout=20, interval=0.1):
     """
-    Waits until the specified file exists and its contents (lines) can be read.
+    Waits until its contents (lines) can be read.
 
     Parameters:
         file_path (str): The path of the file to be read.
