@@ -22,6 +22,12 @@ class ParseArgument:
         cls._add_parallelization_arguments(parser)
         return parser.parse_args()
 
+    @classmethod
+    def get_sorting_args(cls):
+        parser = argparse.ArgumentParser()
+        cls._add_sorting_arguments(parser)
+        return parser.parse_args()
+
     @staticmethod
     def _add_initial_structure_arguments(parser):
         # Settings in generating initial structures
@@ -122,4 +128,14 @@ class ParseArgument:
             choices=["loky", "threading", "multiprocessing"],
             default="loky",
             help="Backend for joblib parallelization",
+        )
+
+    @staticmethod
+    def _add_sorting_arguments(parser):
+        # Settings for sorting
+        parser.add_argument(
+            "--num_sort_str",
+            type=int,
+            default=None,
+            help="(Optional) Maximum number of optimized structures used for sorting",
         )

@@ -13,13 +13,15 @@ from time import time
 import numpy as np
 
 from pypolymlp.core.interface_vasp import Poscar
+from rsspolymlp.parse_arg import ParseArgument
 from rsspolymlp.gen_rand_struct import nearest_neighbor_atomic_distance
 from rsspolymlp.readfile import ReadFile
 
 
 def run():
+    args = ParseArgument.get_sorting_args()
     sorter = SortStructure()
-    sorter.run_sorting()
+    sorter.run_sorting(args)
 
 
 class SortStructure:
@@ -36,13 +38,6 @@ class SortStructure:
 
     def read_and_process(self):
         """Read and process log files, filtering based on convergence criteria."""
-        self.logfiles = sorted(
-            glob.glob("log/*"), key=lambda x: int(x.split("_")[-1].removesuffix(".log"))
-        )
-        with open("finish.log") as f:
-            finished_set = [line.strip() for line in f]
-        self.logfiles = [f"log/{p}.log" for p in finished_set]
-
         for logfile in self.logfiles:
             _res, judge = ReadFile(logfile).read_file()
 
@@ -190,9 +185,19 @@ class SortStructure:
         _res["fval"] = self.fval_str[-1]
         _res["gval"] = self.gval_str[-1]
 
-    def run_sorting(self):
+    def run_sorting(self, args):
         """Sort structures and write the results to a log file."""
         time_start = time()
+        with open("finish.log") as f:
+            finished_set = [line.strip() for line in f]
+        with open("success.log") as f:
+            sucessed_set = [line.strip() for line in f]
+        if args.num_sort_str is not None:
+            sucessed_set = sucessed_set[:args.num_sort_str]
+            fin_poscar = sucessed_set[-1]
+            index = finished_set.index(fin_poscar)
+            finished_set = finished_set[:index + 1]
+        self.logfiles = [f"log/{p}.log" for p in finished_set]
         self.read_and_process()
         time_finish = time() - time_start
 
@@ -222,10 +227,8 @@ class SortStructure:
         # Check if optimization is complete
         max_init_str = int(len(glob.glob("initial_struct/*")))
         log_str = int(len(glob.glob("log/*")))
-        with open("success.log") as f:
-            success_count = sum(1 for _ in f)
-        with open("finish.log") as f:
-            finish_count = sum(1 for _ in f)
+        finish_count = len(finished_set)
+        success_count = len(sucessed_set)
         if log_str == max_init_str:
             stop_mes = "All randomly generated initial structures have been processed. Stopping."
         else:
@@ -233,7 +236,11 @@ class SortStructure:
         prop_success = round(success_count / finish_count, 2)
 
         # Write results to log file
-        with open("sorted_result.log", "w") as f:
+        if args.num_sort_str is not None:
+            file_name = f"sorted_result_{args.num_sort_str}.log"
+        else:
+            file_name = "sorted_result.log"
+        with open(file_name, "w") as f:
             print("---- General outputs ----", file=f)
             print("Sorting time (sec.):            ", round(time_finish, 2), file=f)
             print(
