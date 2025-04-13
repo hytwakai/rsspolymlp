@@ -13,8 +13,8 @@ from time import time
 import numpy as np
 
 from pypolymlp.core.interface_vasp import Poscar
-from rsspolymlp.parse_arg import ParseArgument
 from rsspolymlp.gen_rand_struct import nearest_neighbor_atomic_distance
+from rsspolymlp.parse_arg import ParseArgument
 from rsspolymlp.readfile import ReadFile
 
 
@@ -39,7 +39,14 @@ class SortStructure:
     def read_and_process(self):
         """Read and process log files, filtering based on convergence criteria."""
         for logfile in self.logfiles:
-            _res, judge = ReadFile(logfile).read_file()
+            try:
+                _res, judge = ReadFile(logfile).read_file()
+            except TypeError:
+                self.errors["else_err"] += 1
+                self.error_poscar["else_err"].append(
+                    logfile.split("/")[-1].removesuffix(".log")
+                )
+                continue
 
             # Handle different error cases
             if judge in {"iteration", "energy_low", "energy_zero", "anom_struct"}:
@@ -193,10 +200,10 @@ class SortStructure:
         with open("success.log") as f:
             sucessed_set = [line.strip() for line in f]
         if args.num_sort_str is not None:
-            sucessed_set = sucessed_set[:args.num_sort_str]
+            sucessed_set = sucessed_set[: args.num_sort_str]
             fin_poscar = sucessed_set[-1]
             index = finished_set.index(fin_poscar)
-            finished_set = finished_set[:index + 1]
+            finished_set = finished_set[: index + 1]
         self.logfiles = [f"log/{p}.log" for p in finished_set]
         self.read_and_process()
         time_finish = time() - time_start

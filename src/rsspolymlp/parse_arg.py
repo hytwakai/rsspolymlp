@@ -98,13 +98,6 @@ class ParseArgument:
             default=100,
             help="Maximum number of iterations when c1 and c2 values are changed",
         )
-        parser.add_argument(
-            "--first_poscar",
-            type=int,
-            default=0,
-            help="Index of the POSCAR to be used for the first geometry optimization "
-            "in srun parallelization method.",
-        )
 
     @staticmethod
     def _add_parallelization_arguments(parser):
