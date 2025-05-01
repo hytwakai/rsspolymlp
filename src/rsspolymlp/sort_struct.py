@@ -152,7 +152,6 @@ class SortStructure:
                     "elements",
                     "volume",
                     "distance",
-                    "dup_count",
                 ]:
                     self.nondup_str[idx][key] = _res[key]
         else:

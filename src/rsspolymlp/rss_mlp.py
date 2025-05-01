@@ -19,7 +19,8 @@ class RandomStructureOptimization:
         self.solver_method = args.solver_method
         self.maxiter = args.maxiter
         self.num_opt_str = args.num_opt_str
-        self.stop_rss = False
+        self.not_stop_rss = args.not_stop_rss
+        self._stop_rss = False
 
     def run_optimization(self, poscar_path):
         """
@@ -31,7 +32,7 @@ class RandomStructureOptimization:
             Path to the POSCAR file of the structure to be optimized.
         """
         self.check_opt_str()
-        if self.stop_rss:
+        if self._stop_rss:
             return
 
         self.poscar_name = poscar_path.split("/")[-1]
@@ -41,7 +42,7 @@ class RandomStructureOptimization:
         with open(output_file, "w") as f, redirect_stdout(f):
             self.time_initial = time.time()
             energy_keep = None
-            max_iteration = 100
+            max_iteration = 10
             c1_set = [None, 0.9, 0.99]
             c2_set = [None, 0.99, 0.999]
 
@@ -50,7 +51,7 @@ class RandomStructureOptimization:
 
             for iteration in range(max_iteration):
                 self.check_opt_str()
-                if self.stop_rss:
+                if self._stop_rss:
                     print("Number of optimized structures has been reached.")
                     break
 
@@ -72,7 +73,7 @@ class RandomStructureOptimization:
                 if iteration == max_iteration - 1:
                     print("Maximum number of relaxation iterations has been exceeded")
 
-            if not self.stop_rss:
+            if not self._stop_rss:
                 self.print_final_structure_details()
                 judge = self.analyze_space_group(self.opt_poscar)
                 if judge is False:
@@ -102,6 +103,7 @@ class RandomStructureOptimization:
             if iteration == 0 and c_count <= 1 or iteration == 1 and c_count == 0:
                 maxiter = self.maxiter
                 continue
+
             try:
                 minobj.run(
                     gtol=1e-6,
@@ -110,7 +112,16 @@ class RandomStructureOptimization:
                     c1=c1_set[c_count],
                     c2=c2_set[c_count],
                 )
+                energy_per_atom = minobj._energy / len(minobj.structure.elements)
+                if energy_per_atom < -50:
+                    print("Final function value (eV/atom):", energy_per_atom)
+                    print(
+                        "Geometry optimization failed: Huge negative or zero energy value."
+                    )
+                    self.log_computation_time()
+                    return None
                 return minobj
+
             except ValueError:
                 if c_count == 2:
                     print(
@@ -224,10 +235,12 @@ class RandomStructureOptimization:
             print(self.poscar_name, file=f)
 
     def check_opt_str(self):
+        if self.not_stop_rss:
+            return
         with open("success.log") as f:
             success_str = sum(1 for _ in f)
         residual_str = self.num_opt_str - success_str
         if residual_str < 0:
-            self.stop_rss = True
+            self._stop_rss = True
         if len(glob.glob("initial_struct/*")) == len(glob.glob("log/*")):
-            self.stop_rss = True
+            self._stop_rss = True

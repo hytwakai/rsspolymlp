@@ -98,6 +98,11 @@ class ParseArgument:
             default=100,
             help="Maximum number of iterations when c1 and c2 values are changed",
         )
+        parser.add_argument(
+            "--not_stop_rss",
+            action="store_true",
+            help="If enabled, the search continues until all structures are processed.",
+        )
 
     @staticmethod
     def _add_parallelization_arguments(parser):

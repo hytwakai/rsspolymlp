@@ -56,9 +56,10 @@ def run():
         if args.num_process == -1:
             args.num_process = multiprocessing.cpu_count()
         if len(poscar_path_all) > args.num_process:
+            with open("start.log", "w") as f:
+                pass
             with open("multiprocess.sh", "w") as f:
                 print("#!/bin/bash", file=f)
-                print(": > start.log", file=f)
                 print("case $SLURM_PROCID in", file=f)
                 for i in range(args.num_process):
                     run_ = (
@@ -69,6 +70,8 @@ def run():
                         f"--solver_method {args.solver_method} "
                         f"--maxiter {args.maxiter} "
                     )
+                    if args.not_stop_rss:
+                        run_ += "--not_stop_rss"
                     print(f"    {i}) {run_} ;;", file=f)
                 print("esac", file=f)
                 print("rm start.log", file=f)
