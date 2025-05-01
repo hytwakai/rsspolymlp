@@ -1,5 +1,7 @@
 import copy
 import glob
+import os
+import tarfile
 import time
 
 import numpy as np
@@ -12,6 +14,11 @@ pymat = pymat_util.MyPymat()
 
 poscar_num = 1000
 compare_pymatgen = False
+
+if not os.path.exists("./poscars2"):
+    os.makedirs("./poscars2")
+    with tarfile.open("./poscars.tar.gz", "r:gz") as tar:
+        tar.extractall(path="./poscars2", filter="data")
 
 poscar_all = glob.glob("./poscars2/*")
 poscar_all = poscar_all[:poscar_num]
