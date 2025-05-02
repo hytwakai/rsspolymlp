@@ -2,7 +2,7 @@ import itertools
 
 import numpy as np
 
-from myutils import property_util
+from rsspolymlp.utils.property_util import PropUtil
 
 
 class IrrepPos:
@@ -94,7 +94,7 @@ class IrrepPos:
         """Return all position arrays reachable by inverting/swapping
         crystallographically equivalent lattice axes."""
         # Axis lengths (a, b, c) and angles (α, β, γ)
-        prop = property_util.PropUtil(lattice, positions)
+        prop = PropUtil(lattice, positions)
         abc_angle = np.asarray(prop.axis_to_abc, dtype=float)  # (6,)
         abc, angle = abc_angle[:3], abc_angle[3:]
 
