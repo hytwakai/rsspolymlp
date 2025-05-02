@@ -45,6 +45,7 @@ for i in range(len(sym_st)):
     rep_pos, recommend_order = irrep_pos.irrep_positions(axis, pos)
     sym_st[i]["rep_pos"] = rep_pos
     sym_st[i]["recommend_order"] = recommend_order
+    # print(sym_st[i]["poscar"])
 el_time2 = round(time.time() - start, 3)
 print(" get irrep atomic positions:", (el_time2) * 1000)
 print(f"  (elapsed time per structure: {(el_time2) * 1000 / poscar_num})")

@@ -44,11 +44,11 @@ class IrrepPos:
         if pos.shape[0] == 1:
             return [], []
 
-        pos_candidates = self.invert_and_swap_positions(lattice, pos)
+        pos_candidates1 = self.invert_and_swap_positions(lattice, pos)
         irrep_position = None
         get_recom_symprec = False
 
-        for pos in pos_candidates:
+        for pos in pos_candidates1:
             pos_cls_id, snapped_pos = self.assign_clusters(pos)
 
             if not get_recom_symprec:
@@ -56,17 +56,21 @@ class IrrepPos:
                 recommend_symprecs = self._recommended_symprec(diffs)
                 get_recom_symprec = True
 
-            pos_candidates, id_candidates = self.centroid_positions(
+            pos_candidates2, id_candidates = self.centroid_positions(
                 snapped_pos, pos_cls_id
             )
 
             for i, h, g in itertools.product(
-                range(len(pos_candidates[0])),
-                range(len(pos_candidates[1])),
-                range(len(pos_candidates[2])),
+                range(len(pos_candidates2[0])),
+                range(len(pos_candidates2[1])),
+                range(len(pos_candidates2[2])),
             ):
                 pos = np.stack(
-                    [pos_candidates[0][i], pos_candidates[1][h], pos_candidates[2][g]],
+                    [
+                        pos_candidates2[0][i],
+                        pos_candidates2[1][h],
+                        pos_candidates2[2][g],
+                    ],
                     axis=1,
                 )
                 ids = np.stack(
@@ -80,7 +84,7 @@ class IrrepPos:
                 if irrep_position is None:
                     irrep_position = flat_pos
                 else:
-                    irrep_position = self._choose_lex_larger_one(
+                    irrep_position = self._choose_lex_smaller_one(
                         irrep_position, flat_pos
                     )
 
@@ -150,30 +154,33 @@ class IrrepPos:
         return pos_candidates
 
     def assign_clusters(self, positions: np.ndarray):
-        positions_copy = positions.copy()
-        pos_cls_id = np.zeros_like(positions_copy, dtype=np.int32)
+        sort_idx = np.argsort(positions, axis=0, kind="mergesort")
+        coord_sorted = np.take_along_axis(positions, sort_idx, axis=0)
 
-        for axis in range(3):
-            coord = positions_copy[:, axis]
-            sort_idx = np.argsort(coord, kind="mergesort")
-            coord_sorted = coord[sort_idx]
+        # Cyclic forward difference (wrap unit cell)
+        gap = np.roll(coord_sorted, -1, axis=0) - coord_sorted
+        gap[-1, :] += 1.0
 
-            # Cyclic forward difference (wrap unit cell)
-            gap = np.roll(coord_sorted, -1) - coord_sorted
-            gap[-1] += 1.0
+        # New cluster starts where gap > symprec
+        new_cluster = gap > self.symprec
+        pos_cls_id_sorted = np.empty_like(coord_sorted, dtype=np.int32)
+        pos_cls_id_sorted[0, :] = 0
+        pos_cls_id_sorted[1:, :] = np.cumsum(new_cluster[:-1, :], axis=0)
 
-            # New cluster starts where gap > symprec
-            new_cluster = gap > self.symprec
-            pos_cls_id_1d = np.empty_like(coord_sorted, dtype=int)
-            pos_cls_id_1d[0] = 0
-            pos_cls_id_1d[1:] = np.cumsum(new_cluster[:-1])
-            if not new_cluster[-1]:  # Merge first & last if wrapped
-                coord_sorted[pos_cls_id_1d == pos_cls_id_1d[-1]] -= 1
-                pos_cls_id_1d[pos_cls_id_1d == pos_cls_id_1d[-1]] = 0
-            pos_cls_id[sort_idx, axis] = pos_cls_id_1d
-            positions_copy[sort_idx, axis] = coord_sorted
+        merge_mask = ~new_cluster[-1, :]
+        for axis in np.where(merge_mask)[0]:
+            max_id = pos_cls_id_sorted[-1, axis]
+            merged = pos_cls_id_sorted[:, axis] == max_id
+            coord_sorted[merged, axis] -= 1.0
+            pos_cls_id_sorted[merged, axis] = 0
 
-        return pos_cls_id, positions_copy
+        pos_cls_id = np.empty_like(pos_cls_id_sorted)
+        coord_unsort = np.empty_like(coord_sorted)
+        for ax in range(3):
+            pos_cls_id[sort_idx[:, ax], ax] = pos_cls_id_sorted[:, ax]
+            coord_unsort[sort_idx[:, ax], ax] = coord_sorted[:, ax]
+
+        return pos_cls_id, coord_unsort
 
     def centroid_positions(self, positions, pos_cls_id):
         n_atoms = positions.shape[0]
@@ -212,7 +219,7 @@ class IrrepPos:
                     rep_ids.append(id_candidates[idx])
                     continue
 
-                chosen_idx = self._choose_lex_larger_index(
+                chosen_idx = self._choose_lex_smaller_index(
                     pos_candidates, target_idx, idx
                 )
                 if chosen_idx is None:
@@ -230,8 +237,8 @@ class IrrepPos:
 
         return rep_pos_candidates, rep_id_candidates
 
-    def _choose_lex_larger_index(self, positions_all: np.ndarray, target_idx, idx):
-        """Return the lexicographically larger of two 1-D vectors *A* and *B*.
+    def _choose_lex_smaller_index(self, positions_all: np.ndarray, target_idx, idx):
+        """Return the lexicographically smaller of two 1-D vectors *A* and *B*.
         If the two vectors differ by less than *symprec* in all components,
         they are considered equal and *None* is returned.
         """
@@ -240,50 +247,40 @@ class IrrepPos:
         diff = pos_target - pos_ref
         non_zero = np.where(np.abs(diff) > self.symprec)[0]
         if non_zero.size:
-            return target_idx if diff[non_zero[-1]] > 0 else idx
+            return target_idx if diff[non_zero[-1]] < 0 else idx
         return None  # Equivalent within tolerance
 
-    def _choose_lex_larger_one(self, A: np.ndarray, B: np.ndarray):
+    def _choose_lex_smaller_one(self, A: np.ndarray, B: np.ndarray):
         diff = A - B
         non_zero = np.where(np.abs(diff) > self.symprec)[0]
         if non_zero.size:
-            return A if diff[non_zero[0]] > 0 else B
+            return A if diff[non_zero[0]] < 0 else B
         return (A + B) / 2  # Equivalent within tolerance
 
     def _sort_positions(self, positions: np.ndarray, pos_cls_id: np.ndarray):
         # Stable lexicographic sort by (ids_x, ids_y, ids_z)
-        sort_idx_final = np.lexsort(
-            (pos_cls_id[:, 2], pos_cls_id[:, 1], pos_cls_id[:, 0])
-        )
-        sorted_positions = positions[sort_idx_final]
+        sort_idx = np.lexsort((pos_cls_id[:, 2], pos_cls_id[:, 1], pos_cls_id[:, 0]))
+        sorted_positions = positions[sort_idx]
         return sorted_positions
 
     def inter_cluster_diffs(self, positions: np.ndarray, pos_cls_id: np.ndarray):
-        positions_copy = positions.copy()
+        pos = positions.copy()
+        diffs_all = np.zeros_like(pos, dtype=float)
 
-        diffs_all = np.zeros_like(positions_copy, dtype=float)
         for axis in range(3):
-            pos_cls_id_1d = pos_cls_id[:, axis]
-            pos_1d = positions_copy[:, axis]
-            sort_idx = np.argsort(pos_1d, kind="mergesort")
-            coord_sorted = pos_1d[sort_idx]
-            pos_cls_id_sorted = pos_cls_id_1d[sort_idx]
-            cluster_sizes = np.bincount(pos_cls_id_sorted)
+            sort_idx = np.argsort(pos[:, axis], kind="mergesort")
+            coord_sorted = pos[sort_idx, axis]
+            pos_cls_id_sorted = np.take_along_axis(
+                pos_cls_id[:, axis], sort_idx, axis=0
+            )
 
-            n_cluster = pos_cls_id_sorted[-1] + 1
-            if n_cluster == 1:
+            sizes = np.bincount(pos_cls_id_sorted)
+            if len(sizes) == 1:
                 continue  # Nothing to do on this axis
 
-            # Weighted average → cluster centre
-            cluster_centres = np.bincount(
-                pos_cls_id_sorted, weights=coord_sorted, minlength=n_cluster
-            )
-            cluster_centres = np.divide(
-                cluster_centres, cluster_sizes, where=cluster_sizes > 0
-            )
-
             # Distance between consecutive centres (cyclic)
-            centre_gap = np.roll(cluster_centres, -1) - cluster_centres
+            centres = np.bincount(pos_cls_id_sorted, weights=coord_sorted) / sizes
+            centre_gap = np.roll(centres, -1) - centres
             centre_gap[-1] += 1.0
             diffs_all[sort_idx, axis] = centre_gap[pos_cls_id_sorted]
 
