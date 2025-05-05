@@ -3,6 +3,7 @@ import glob
 import os
 import tarfile
 import time
+from collections import Counter
 
 import numpy as np
 
@@ -13,14 +14,14 @@ from rsspolymlp.utils.spglib_utils import SymCell
 pymat = pymat_util.MyPymat()
 
 poscar_num = 1000
-compare_pymatgen = False
+compare_pymatgen = True
 
-if not os.path.exists("./poscars2"):
-    os.makedirs("./poscars2")
-    with tarfile.open("./poscars.tar.gz", "r:gz") as tar:
-        tar.extractall(path="./poscars2", filter="data")
+if not os.path.exists("./poscar_multi"):
+    os.makedirs("./poscar_multi")
+    with tarfile.open("./poscar_multi.tar.gz", "r:gz") as tar:
+        tar.extractall(path="./poscar_multi", filter="data")
 
-poscar_all = glob.glob("./poscars2/*")
+poscar_all = sorted(glob.glob("./poscar_multi/*"), key=lambda x: int(x.split("_")[-1]))
 poscar_all = poscar_all[:poscar_num]
 
 print("--- Comparing irrep atomic position ---")
@@ -42,8 +43,12 @@ start = time.time()
 for i in range(len(sym_st)):
     axis = sym_st[i]["structure"].axis
     pos = sym_st[i]["structure"].positions.T
-    rep_pos, recommend_order = irrep_pos.irrep_positions(axis, pos)
+    elements = sym_st[i]["structure"].elements
+    rep_pos, sorted_elements, recommend_order = irrep_pos.irrep_positions(
+        axis, pos, elements
+    )
     sym_st[i]["rep_pos"] = rep_pos
+    sym_st[i]["sorted_elements"] = Counter(sorted_elements)
     sym_st[i]["recommend_order"] = recommend_order
     # print(sym_st[i]["poscar"])
 el_time2 = round(time.time() - start, 3)
@@ -56,13 +61,10 @@ count1 = 0
 for st in sym_st:
     app = True
     for st_ref in nondup_st:
-        if len(st_ref["rep_pos"]) == len(st["rep_pos"]):
+        if st_ref["sorted_elements"] == st["sorted_elements"]:
             count1 += 1
-            if len(st["rep_pos"]) != 0:
-                diffs = st["rep_pos"] - st_ref["rep_pos"]
-                residual_pos = np.max(abs(diffs))
-            else:
-                residual_pos = 0
+            diffs = st["rep_pos"] - st_ref["rep_pos"]
+            residual_pos = np.max(abs(diffs))
             residual_axis = st["structure"].axis - st_ref["structure"].axis
             residual_axis = np.max(np.sum(residual_axis**2, axis=1))
             if residual_pos < 0.01 and residual_axis < 0.01:
@@ -86,13 +88,14 @@ for i in range(len(nondup_st)):
     for symprec in nondup_st[i]["recommend_order"]:
         axis = nondup_st[i]["structure"].axis
         pos = nondup_st[i]["structure"].positions.T
+        elements = nondup_st[i]["structure"].elements
         irrep_pos = IrrepPos(symprec=symprec)
-        _rep_pos, recommend_order = irrep_pos.irrep_positions(axis, pos)
+        _rep_pos, sorted_elements, recommend_order = irrep_pos.irrep_positions(
+            axis, pos, elements
+        )
         rep_pos.append(_rep_pos)
-    if not rep_pos == []:
-        nondup_st[i]["rep_pos"] = np.stack(rep_pos, axis=0)
-    else:
-        nondup_st[i]["rep_pos"] = [[], []]
+        nondup_st[i]["sorted_elements"] = Counter(sorted_elements)
+    nondup_st[i]["rep_pos"] = np.stack(rep_pos, axis=0)
 _sym_st = copy.copy(nondup_st)
 el_time4 = round(time.time() - start, 3)
 print(" get irrep atomic positions::", (el_time4) * 1000)
@@ -104,14 +107,11 @@ nondup_st = []
 for st in _sym_st:
     app = True
     for st_ref in nondup_st:
-        if len(st_ref["rep_pos"][0]) == len(st["rep_pos"][0]):
+        if st_ref["sorted_elements"] == st["sorted_elements"]:
             count2 += 1
-            if len(st["rep_pos"]) > 0:
-                diffs = st_ref["rep_pos"][:, None, :] - st["rep_pos"][None, :, :]
-                diffs_flat = diffs.reshape(-1, diffs.shape[2])
-                residual_pos = np.min(np.max(np.abs(diffs_flat), axis=1))
-            else:
-                residual_pos = 0
+            diffs = st_ref["rep_pos"][:, None, :] - st["rep_pos"][None, :, :]
+            diffs_flat = diffs.reshape(-1, diffs.shape[2])
+            residual_pos = np.min(np.max(np.abs(diffs_flat), axis=1))
             residual_axis = st["structure"].axis - st_ref["structure"].axis
             residual_axis = np.max(np.sum(residual_axis**2, axis=1))
             if residual_pos < 0.01 and residual_axis < 0.01:
@@ -181,3 +181,23 @@ if compare_pymatgen:
     print(set(pos_irpos) - set(pos_pymat))
     print("set(pymatgen) - set(irrep_pos):")
     print(set(pos_pymat) - set(pos_irpos))
+
+    """
+    with open(f"myresult/result_multi{poscar_num}.log", "w") as f:
+        print("generate sym_st:", (el_time1) * 1000, file=f)
+        print("get irrep_pos:", (el_time2) * 1000, file=f)
+        print("sorting sym_st:", (el_time3) * 1000, file=f)
+        print(count1, file=f)
+        print("get irrep_pos (recom. symprec):", (el_time4) * 1000, file=f)
+        print("sorting sym_st (recom. symprec):", (el_time5) * 1000, file=f)
+        print(count2, file=f)
+        print("generate sym_st (pymatgen):", (el_time6) * 1000, file=f)
+        print("sorting sym_st (pymatgen):", (el_time7) * 1000, file=f)
+        print(count3, file=f)
+        print(len(nondup_st), file=f)
+        print(len(nondup_st_pymat), file=f)
+        print(set(pos_irpos) - set(pos_pymat), file=f)
+        print(set(pos_pymat) - set(pos_irpos), file=f)
+        for st in nondup_st_pymat:
+            print(st["duplicate"], file=f)
+    """

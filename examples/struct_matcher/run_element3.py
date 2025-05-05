@@ -6,7 +6,7 @@ from pypolymlp.utils.spglib_utils import SymCell
 from rsspolymlp.struct_matcher.irrep_position import IrrepPos
 from rsspolymlp.utils.property_util import PropUtil
 
-poscar_name = "./poscars2/POSCAR_112"
+poscar_name = "./poscar_element2/POSCAR_112"
 symutil = SymCell(poscar_name=poscar_name, symprec=1e-3)
 st1 = symutil.refine_cell(standardize_cell=True)
 

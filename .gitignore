@@ -173,4 +173,6 @@ cython_debug/
 mytest
 optimization.py
 past_file
-poscars2
+poscar_element2
+poscar_multi
+myresult
