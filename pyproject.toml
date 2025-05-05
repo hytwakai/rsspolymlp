@@ -1,0 +1,43 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "rsspolymlp"
+version = "0.0.1"
+description = "A framework for random structure search using polynomial MLPs"
+license = {text = "MIT"}
+authors = [
+    {name = "Hayato Wakai", email = "wakai@cms.mtl.kyoto-u.ac.jp"},
+]
+readme = {file = "README.md", content-type = "text/markdown"}
+requires-python = ">=3.9"
+dependencies = [
+    "numpy",
+    "scipy",
+    "setuptools",
+    "pyyaml",
+    "pybind11",
+    "joblib",
+    "pypolymlp",
+    "spglib",
+    "symfc",
+]
+
+[project.urls]
+homepage = "https://github.com/hytwakai/rsspolymlp"
+
+[project.scripts]
+gen-rand-struct = "rsspolymlp.gen_rand_struct:run"
+rss-single-srun = "rsspolymlp.run_rss_parallel:run_single_srun"
+rss-parallel = "rsspolymlp.run_rss_parallel:run"
+sort-struct = "rsspolymlp.struct_sort.struct_sort:run"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+rss_polymlp = ["py.typed"]
