@@ -12,20 +12,20 @@ pymatgen_res = []
 
 for test_mode in all_test_mode:
     if test_mode == "example":
-        pos1 = "./poscars/example_1"
-        pos2 = "./poscars/example_2"
+        pos1 = "./poscar_element/example_1"
+        pos2 = "./poscar_element/example_2"
         symprec = 1e-5
     elif test_mode == "invert":
-        pos1 = "./poscars/invert_1"
-        pos2 = "./poscars/invert_2"
+        pos1 = "./poscar_element/invert_1"
+        pos2 = "./poscar_element/invert_2"
         symprec = 1e-5
     elif test_mode == "swap":
-        pos1 = "./poscars/swap_1"
-        pos2 = "./poscars/swap_2"
+        pos1 = "./poscar_element/swap_1"
+        pos2 = "./poscar_element/swap_2"
         symprec = 1e-5
     elif test_mode == "symprec":
-        pos1 = "./poscars/symprec_1e-2_1"
-        pos2 = "./poscars/symprec_1e-2_2"
+        pos1 = "./poscar_element/symprec_1e-2_1"
+        pos2 = "./poscar_element/symprec_1e-2_2"
         symprec = 1e-2
     else:
         raise ValueError(f"Unknown test_mode: {test_mode}")
@@ -37,8 +37,12 @@ for test_mode in all_test_mode:
 
     irrep_pos = IrrepPos(symprec=symprec)
 
-    rep_pos1, order1 = irrep_pos.irrep_positions(st1.axis, st1.positions.T)
-    rep_pos2, order2 = irrep_pos.irrep_positions(st2.axis, st2.positions.T)
+    rep_pos1, sorted_elements1, order1 = irrep_pos.irrep_positions(
+        st1.axis, st1.positions.T, st1.elements
+    )
+    rep_pos2, sorted_elements2, order2 = irrep_pos.irrep_positions(
+        st2.axis, st2.positions.T, st2.elements
+    )
 
     print(f"----- test_mode: {test_mode} -----")
     print("--- Stucture 1 ---")
@@ -46,6 +50,8 @@ for test_mode in all_test_mode:
     print(PropUtil(st1.axis, st1.positions).axis_to_abc)
     print(" - Positions:")
     print(np.round(st1.positions, 5))
+    print(" - Elements:")
+    print(st1.elements)
     print(" - Irrep positions:")
     print(rep_pos1.reshape(3, -1))
     print(" - Recommended symprec:", order1)
@@ -54,6 +60,8 @@ for test_mode in all_test_mode:
     print(PropUtil(st2.axis, st2.positions).axis_to_abc)
     print(" - Positions:")
     print(np.round(st2.positions, 5))
+    print(" - Elements:")
+    print(st2.elements)
     print(" - Irrep positions:")
     print(rep_pos2.reshape(3, -1))
     print(" - Recommended symprec:", order2)
