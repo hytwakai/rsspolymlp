@@ -20,7 +20,7 @@ print("get irrep atomic positions:", (el_time1) * 1000)
 
 print("--- Stucture 1 ---")
 print(" - Axis:")
-print(PropUtil(st1.axis, st1.positions).axis_to_abc)
+print(PropUtil(st1.axis.T, st1.positions).axis_to_abc)
 print(" - Positions:")
 print(np.round(st1.positions, 5))
 print(" - Elements:")

@@ -14,9 +14,10 @@ class IrrepPos:
         Numerical tolerance when comparing fractional coordinates (default: 1e-3).
     """
 
-    def __init__(self, symprec: float = 1e-3):
+    def __init__(self, symprec: float = 1e-3, get_recommend_symprecs=False):
         """Init method."""
         self.symprec = float(symprec)
+        self.get_recommend_symprecs = get_recommend_symprecs
         self.distance_cluster = None
 
     def irrep_positions(self, axis, positions, elements):
@@ -26,8 +27,9 @@ class IrrepPos:
         Parameters
         ----------
         axis : (3, 3) array_like
-            Lattice vectors defining the unit cell.
-            Each row corresponds to a lattice vector in Cartesian coordinates.
+            Lattice vectors defining the unit cell. Each row represents
+            a lattice vector (a, b, or c) in Cartesian coordinates. Equivalent to
+            np.array([a, b, c]), where each of a, b, and c is a 3-element vector.
         positions : (N, 3) array_like
             Fractional atomic coordinates within the unit cell.
             Each row represents the (x, y, z) coordinate of an atom.
@@ -72,6 +74,8 @@ class IrrepPos:
                 )
                 recommend_symprecs = self._recommended_symprec(self.distance_cluster)
                 get_recom_symprec = True
+                if self.get_recommend_symprecs:
+                    return None, None, recommend_symprecs
 
             pos_cands2, id_cands = self.centroid_positions(
                 snapped_pos, types, pos_cls_id

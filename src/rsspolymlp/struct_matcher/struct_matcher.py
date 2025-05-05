@@ -14,7 +14,7 @@ class IrrepStruct:
     positions: np.ndarray
     elements: np.ndarray
     element_count: Counter[str]
-    recommend_symprecs: np.ndarray
+    recommend_symprecs: list[float]
 
 
 def get_irrep_positions(
@@ -23,6 +23,7 @@ def get_irrep_positions(
     symprec_primitive: float = 1e-3,
     symprec_irreps: list = [1e-5],
 ) -> IrrepStruct:
+
     if poscar_name is not None:
         symutil = SymCell(poscar_name=poscar_name, symprec=symprec_primitive)
         struct = symutil.primitive_cell()
@@ -47,12 +48,32 @@ def get_irrep_positions(
     )
 
 
+def get_recommend_symprecs(
+    poscar_name: str = None,
+    struct: PolymlpStructure = None,
+    symprec_primitive: float = 1e-3,
+    symprec_irrep: float = 1e-5,
+):
+    if poscar_name is not None:
+        symutil = SymCell(poscar_name=poscar_name, symprec=symprec_primitive)
+        struct = symutil.primitive_cell()
+
+    irrep_pos = IrrepPos(symprec=symprec_irrep, get_recommend_symprecs=True)
+    _axis = struct.axis
+    _pos = struct.positions.T
+    _elements = struct.elements
+    _, _, recommend_symprecs = irrep_pos.irrep_positions(_axis, _pos, _elements)
+
+    return struct, recommend_symprecs, irrep_pos.distance_cluster
+
+
 def struct_match(
     st_1: IrrepStruct,
     st_2: IrrepStruct,
     axis_tol: float = 0.01,
     pos_tol: float = 0.01,
 ) -> bool:
+
     if st_1.element_count != st_2.element_count:
         return False
 

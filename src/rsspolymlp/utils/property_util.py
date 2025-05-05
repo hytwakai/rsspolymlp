@@ -11,7 +11,7 @@ class PropUtil:
         """
         Parameters
         ----------
-        axis : parameters of lattice (3,3)
+        axis : Lattice vectors arranged row-wise as a (3, 3)
         positions : parameters of atomic postions (N, 3)
         """
         self.axis = axis

@@ -137,3 +137,9 @@ class ParseArgument:
             default=None,
             help="(Optional) Maximum number of optimized structures used for sorting",
         )
+        parser.add_argument(
+            "--cutoff",
+            type=float,
+            default=None,
+            help="(Optional) Cutoff radius used in the MLP",
+        )
