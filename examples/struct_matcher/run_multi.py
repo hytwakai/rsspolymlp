@@ -3,12 +3,9 @@ import glob
 import os
 import tarfile
 import time
-from collections import Counter
-
-import numpy as np
 
 from myutils import pymat_util
-from rsspolymlp.struct_matcher.irrep_position import IrrepPos
+from rsspolymlp.struct_matcher.struct_matcher import get_irrep_positions, struct_match
 from rsspolymlp.utils.spglib_utils import SymCell
 
 pymat = pymat_util.MyPymat()
@@ -38,18 +35,10 @@ el_time1 = round(time.time() - start, 3)
 print(" convert to primitive cell:", (el_time1) * 1000)
 print(f"  (elapsed time per structure: {(el_time1) * 1000 / poscar_num})")
 
-irrep_pos = IrrepPos(symprec=1e-5)
 start = time.time()
 for i in range(len(sym_st)):
-    axis = sym_st[i]["structure"].axis
-    pos = sym_st[i]["structure"].positions.T
-    elements = sym_st[i]["structure"].elements
-    rep_pos, sorted_elements, recommend_order = irrep_pos.irrep_positions(
-        axis, pos, elements
-    )
-    sym_st[i]["rep_pos"] = rep_pos
-    sym_st[i]["sorted_elements"] = Counter(sorted_elements)
-    sym_st[i]["recommend_order"] = recommend_order
+    irrep_st = get_irrep_positions(struct=sym_st[i]["structure"], symprec_irreps=[1e-5])
+    sym_st[i]["irrep_st"] = irrep_st
     # print(sym_st[i]["poscar"])
 el_time2 = round(time.time() - start, 3)
 print(" get irrep atomic positions:", (el_time2) * 1000)
@@ -61,15 +50,11 @@ count1 = 0
 for st in sym_st:
     app = True
     for st_ref in nondup_st:
-        if st_ref["sorted_elements"] == st["sorted_elements"]:
-            count1 += 1
-            diffs = st["rep_pos"] - st_ref["rep_pos"]
-            residual_pos = np.max(abs(diffs))
-            residual_axis = st["structure"].axis - st_ref["structure"].axis
-            residual_axis = np.max(np.sum(residual_axis**2, axis=1))
-            if residual_pos < 0.01 and residual_axis < 0.01:
-                app = False
-                break
+        count1 += 1
+        st_similarity = struct_match(st_ref["irrep_st"], st["irrep_st"])
+        if st_similarity:
+            app = False
+            break
     if app:
         nondup_st.append(st)
 el_time3 = round(time.time() - start, 3)
@@ -84,18 +69,11 @@ print(" number of nonduplicate structures:", len(nondup_st))
 print("--- Comparing irrep atomic position (in recommended symprec) ---")
 start = time.time()
 for i in range(len(nondup_st)):
-    rep_pos = []
-    for symprec in nondup_st[i]["recommend_order"]:
-        axis = nondup_st[i]["structure"].axis
-        pos = nondup_st[i]["structure"].positions.T
-        elements = nondup_st[i]["structure"].elements
-        irrep_pos = IrrepPos(symprec=symprec)
-        _rep_pos, sorted_elements, recommend_order = irrep_pos.irrep_positions(
-            axis, pos, elements
-        )
-        rep_pos.append(_rep_pos)
-        nondup_st[i]["sorted_elements"] = Counter(sorted_elements)
-    nondup_st[i]["rep_pos"] = np.stack(rep_pos, axis=0)
+    irrep_st = get_irrep_positions(
+        struct=nondup_st[i]["structure"],
+        symprec_irreps=nondup_st[i]["irrep_st"].recommend_symprecs,
+    )
+    nondup_st[i]["irrep_st"] = irrep_st
 _sym_st = copy.copy(nondup_st)
 el_time4 = round(time.time() - start, 3)
 print(" get irrep atomic positions::", (el_time4) * 1000)
@@ -107,16 +85,11 @@ nondup_st = []
 for st in _sym_st:
     app = True
     for st_ref in nondup_st:
-        if st_ref["sorted_elements"] == st["sorted_elements"]:
-            count2 += 1
-            diffs = st_ref["rep_pos"][:, None, :] - st["rep_pos"][None, :, :]
-            diffs_flat = diffs.reshape(-1, diffs.shape[2])
-            residual_pos = np.min(np.max(np.abs(diffs_flat), axis=1))
-            residual_axis = st["structure"].axis - st_ref["structure"].axis
-            residual_axis = np.max(np.sum(residual_axis**2, axis=1))
-            if residual_pos < 0.01 and residual_axis < 0.01:
-                app = False
-                break
+        count2 += 1
+        st_similarity = struct_match(st_ref["irrep_st"], st["irrep_st"])
+        if st_similarity:
+            app = False
+            break
     if app:
         nondup_st.append(st)
 el_time5 = round(time.time() - start, 3)

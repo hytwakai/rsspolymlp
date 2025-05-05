@@ -15,7 +15,7 @@ setup(
             "gen-rand-struct = rsspolymlp.gen_rand_struct:run",
             "rss-single-srun = rsspolymlp.run_rss_parallel:run_single_srun",
             "rss-parallel = rsspolymlp.run_rss_parallel:run",
-            "sort-struct = rsspolymlp.sort_struct:run",
+            "sort-struct = rsspolymlp.struct_sort.struct_sort:run",
         ]
     },
     package_dir={"": "src"},

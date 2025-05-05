@@ -13,9 +13,9 @@ from time import time
 import numpy as np
 
 from pypolymlp.core.interface_vasp import Poscar
-from rsspolymlp.gen_rand_struct import nearest_neighbor_atomic_distance
 from rsspolymlp.parse_arg import ParseArgument
-from rsspolymlp.readfile import ReadFile
+from rsspolymlp.struct_sort.readfile import ReadFile
+from rsspolymlp.utils.property_util import PropUtil
 
 
 def run():
@@ -85,30 +85,12 @@ class SortStructure:
     def process_optimized_structure(self, _res, optimized_path):
         """Extract structural properties from the optimized structure file."""
         polymlp_st = Poscar(optimized_path).structure
+        prop = PropUtil(polymlp_st.axis, polymlp_st.positions.T)
         _res["elements"] = polymlp_st.elements
-        _res["volume"] = np.linalg.det(polymlp_st.axis) / len(_res["elements"])
-        a, b, c = np.array(polymlp_st.axis)
-        _res["axis"] = self.axis_to_abc(a, b, c)
+        _res["volume"] = prop.volume
+        _res["axis"] = prop.axis_to_abc
         _res["positions"] = polymlp_st.positions.T.tolist()
-        _res["distance"] = nearest_neighbor_atomic_distance(
-            polymlp_st.axis, polymlp_st.positions
-        )
-
-    def angle_between(self, v1, v2):
-        """Calculate the angle (in degrees) between two vectors."""
-        dot_product = np.dot(v1, v2)
-        norms = np.linalg.norm(v1) * np.linalg.norm(v2)
-        return np.degrees(np.arccos(np.clip(dot_product / norms, -1.0, 1.0)))
-
-    def axis_to_abc(self, a, b, c):
-        """Convert lattice vectors to unit cell parameters."""
-        norm_a = np.linalg.norm(a)
-        norm_b = np.linalg.norm(b)
-        norm_c = np.linalg.norm(c)
-        alpha = self.angle_between(b, c)
-        beta = self.angle_between(a, c)
-        gamma = self.angle_between(a, b)
-        return np.array([norm_a, norm_b, norm_c, alpha, beta, gamma]).tolist()
+        _res["distance"] = prop.least_distance
 
     def update_nondup_structure(self, _res, energy_diff=1e-8):
         """

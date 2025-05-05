@@ -7,7 +7,7 @@ import numpy as np
 from pypolymlp.calculator.str_opt.optimization import GeometryOptimization
 from pypolymlp.core.interface_vasp import Poscar
 from pypolymlp.utils.spglib_utils import SymCell
-from rsspolymlp.utils import wait_for_file_lines
+from rsspolymlp.utils.wait_readfile import wait_for_file_lines
 
 
 class RandomStructureOptimization:
