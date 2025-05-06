@@ -18,6 +18,7 @@ from rsspolymlp.parse_arg import ParseArgument
 from rsspolymlp.struct_matcher.struct_matcher import (
     get_irrep_positions,
     get_recommend_symprecs,
+    get_distance_cluster,
     struct_match,
 )
 from rsspolymlp.struct_sort.readfile import ReadFile
@@ -100,8 +101,8 @@ class SortStructure:
         """Extract structural properties from the optimized structure file."""
         if self.cutoff is None:
             _params, _ = load_mlps(res["potential"])
-            if len(_params) == 1:
-                self.cutoff = _params[0].as_dict()["model"]["cutoff"]
+            if not isinstance(_params, list):
+                self.cutoff = _params.as_dict()["model"]["cutoff"]
             else:
                 max_cutoff = 0.0
                 for param in _params:
@@ -119,22 +120,23 @@ class SortStructure:
         res["positions"] = polymlp_st.positions.T.tolist()
         res["distance"] = prop.least_distance
 
-        struct, recommend_symprecs, distance_cluster = get_recommend_symprecs(
-            poscar_name=poscar_name, symprec_irrep=1e-5
+        distance_cluster = get_distance_cluster(
+            struct=polymlp_st, symprec_irrep=1e-5
         )
         if distance_cluster is not None:
-            prop2 = PropUtil(struct.axis.T, struct.positions.T)
-            abc = prop2.axis_to_abc
             max_layer_diff = max(
                 [
-                    np.max(distance_cluster[0]) * abc[0],
-                    np.max(distance_cluster[1]) * abc[1],
-                    np.max(distance_cluster[2]) * abc[2],
+                    np.max(distance_cluster[0]) * res["axis"][0],
+                    np.max(distance_cluster[1]) * res["axis"][1],
+                    np.max(distance_cluster[2]) * res["axis"][2],
                 ]
             )
             if max_layer_diff > self.cutoff:
                 return None
 
+        struct, recommend_symprecs = get_recommend_symprecs(
+            poscar_name=poscar_name, symprec_irrep=1e-5
+        )
         symprec_list = [1e-5]
         symprec_list.extend(recommend_symprecs)
         irrep_st = get_irrep_positions(struct=struct, symprec_irreps=symprec_list)
@@ -282,9 +284,9 @@ class SortStructure:
 
         # Write results to log file
         if args.num_sort_str is not None:
-            file_name = f"sorted_result_{args.num_sort_str}.log"
+            file_name = f"rss_results_{args.num_sort_str}.log"
         else:
-            file_name = "sorted_result.log"
+            file_name = "rss_results.log"
         with open(file_name, "w") as f:
             print("---- General outputs ----", file=f)
             print("Sorting time (sec.):            ", round(time_finish, 2), file=f)

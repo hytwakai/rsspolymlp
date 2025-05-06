@@ -64,7 +64,20 @@ def get_recommend_symprecs(
     _elements = struct.elements
     _, _, recommend_symprecs = irrep_pos.irrep_positions(_axis, _pos, _elements)
 
-    return struct, recommend_symprecs, irrep_pos.distance_cluster
+    return struct, recommend_symprecs
+
+
+def get_distance_cluster(
+    struct: PolymlpStructure,
+    symprec_irrep: float = 1e-5,
+):
+    irrep_pos = IrrepPos(symprec=symprec_irrep, get_recommend_symprecs=True)
+    _axis = struct.axis
+    _pos = struct.positions.T
+    _elements = struct.elements
+    _, _, _ = irrep_pos.irrep_positions(_axis, _pos, _elements)
+
+    return irrep_pos.distance_cluster
 
 
 def struct_match(
