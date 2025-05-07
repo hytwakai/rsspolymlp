@@ -16,9 +16,9 @@ from pypolymlp.core.interface_vasp import Poscar
 from pypolymlp.core.io_polymlp import load_mlps
 from rsspolymlp.parse_arg import ParseArgument
 from rsspolymlp.struct_matcher.struct_matcher import (
+    get_distance_cluster,
     get_irrep_positions,
     get_recommend_symprecs,
-    get_distance_cluster,
     struct_match,
 )
 from rsspolymlp.struct_sort.readfile import ReadFile
@@ -95,7 +95,54 @@ class SortStructure:
                 self.error_poscar["invalid_layer_struct"].append(_res["poscar"])
                 continue
 
-            self._update_nondup_structure(res_processed)
+            self.identify_duplicate_struct(res_processed)
+
+    def identify_duplicate_struct(self, _res, energy_diff=1e-8):
+        """
+        Check for duplicate structures and update the list accordingly.
+
+        A structure is considered a duplicate if:
+        1. Its energy is within 1e-8 of an existing structure.
+        2. It shares at least one space group with an existing structure.
+
+        If a duplicate is found:
+        - The duplicate count is incremented.
+        - The structure is updated if it has a higher symmmerty of space group.
+        Otherwise, the structure is added as a new unique entry.
+        """
+
+        is_nonduplicate = True
+        change_struct = False
+
+        for idx, entry in enumerate(self.nondup_str):
+            if abs(entry["energy"] - _res["energy"]) < energy_diff and any(
+                spg in _res["spg"] for spg in entry["spg"]
+            ):
+                is_nonduplicate = False
+                if self._extract_spg_count(_res["spg"]) > self._extract_spg_count(
+                    entry["spg"]
+                ):
+                    change_struct = True
+                break
+            elif struct_match(entry["irrep_st"], _res["irrep_st"]):
+                is_nonduplicate = False
+                if self._extract_spg_count(_res["spg"]) > self._extract_spg_count(
+                    entry["spg"]
+                ):
+                    change_struct = True
+                break
+
+        self._update_iteration_stats(_res, is_nonduplicate)
+
+        if not is_nonduplicate:
+            # Update duplicate count and replace with better data if necessary
+            self.nondup_str[idx]["dup_count"] += 1
+            if change_struct:
+                for key in _res:
+                    if key != "dup_count":
+                        self.nondup_str[idx][key] = _res[key]
+        else:
+            self.nondup_str.append(_res)
 
     def _preprocess_optimized_struct(self, res, poscar_name):
         """Extract structural properties from the optimized structure file."""
@@ -120,9 +167,7 @@ class SortStructure:
         res["positions"] = polymlp_st.positions.T.tolist()
         res["distance"] = prop.least_distance
 
-        distance_cluster = get_distance_cluster(
-            struct=polymlp_st, symprec_irrep=1e-5
-        )
+        distance_cluster = get_distance_cluster(struct=polymlp_st, symprec_irrep=1e-5)
         if distance_cluster is not None:
             max_layer_diff = max(
                 [
@@ -143,62 +188,6 @@ class SortStructure:
         res["irrep_st"] = irrep_st
         return res
 
-    def _update_nondup_structure(self, _res, energy_diff=1e-8):
-        """
-        Check for duplicate structures and update the list accordingly.
-
-        A structure is considered a duplicate if:
-        1. Its energy is within 1e-8 of an existing structure.
-        2. It shares at least one space group with an existing structure.
-
-        If a duplicate is found:
-        - The duplicate count is incremented.
-        - The structure is updated if it has a higher symmmerty of space group.
-        Otherwise, the structure is added as a new unique entry.
-        """
-
-        app_to_nonduplicate = True
-        change_str = False
-        for idx, entry in enumerate(self.nondup_str):
-            if abs(entry["energy"] - _res["energy"]) < energy_diff and any(
-                spg in _res["spg"] for spg in entry["spg"]
-            ):
-                app_to_nonduplicate = False
-                if self._extract_spg_count(_res["spg"]) > self._extract_spg_count(
-                    entry["spg"]
-                ):
-                    change_str = True
-                break
-            elif struct_match(entry["irrep_st"], _res["irrep_st"]):
-                app_to_nonduplicate = False
-                if self._extract_spg_count(_res["spg"]) > self._extract_spg_count(
-                    entry["spg"]
-                ):
-                    change_str = True
-                break
-
-        self._update_iteration_stats(_res)
-
-        if not app_to_nonduplicate:
-            # Update duplicate count and replace with better data if necessary
-            self.nondup_str[idx]["dup_count"] += 1
-            if change_str:
-                for key in [
-                    "poscar",
-                    "energy",
-                    "spg",
-                    "axis",
-                    "positions",
-                    "elements",
-                    "volume",
-                    "distance",
-                    "irrep_st",
-                ]:
-                    self.nondup_str[idx][key] = _res[key]
-        else:
-            # Append a new unique structure
-            self._add_new_structure(_res)
-
     def _extract_spg_count(self, spg_list):
         """Extract and sum space group counts from a list of space group strings."""
         return sum(
@@ -207,10 +196,11 @@ class SortStructure:
             if re.search(r"\((\d+)\)", s)
         )
 
-    def _update_iteration_stats(self, _res):
+    def _update_iteration_stats(self, _res, is_nonduplicate):
         """Update iteration statistics."""
         if "iter" not in _res:
             return
+        
         if not self.iter_str:
             self.iter_str.append(_res["iter"])
             self.fval_str.append(_res["fval"])
@@ -219,18 +209,13 @@ class SortStructure:
             self.iter_str[-1] += _res["iter"]
             self.fval_str[-1] += _res["fval"]
             self.gval_str[-1] += _res["gval"]
-
-    def _add_new_structure(self, _res):
-        """Add a new structure to the list of non-duplicate structures."""
-        self.nondup_str.append(_res)
-        if "iter" not in _res:
-            return
-        self.iter_str.append(self.iter_str[-1])
-        self.fval_str.append(self.fval_str[-1])
-        self.gval_str.append(self.gval_str[-1])
-        _res["iter"] = self.iter_str[-1]
-        _res["fval"] = self.fval_str[-1]
-        _res["gval"] = self.gval_str[-1]
+        if is_nonduplicate:
+            self.iter_str.append(self.iter_str[-1])
+            self.fval_str.append(self.fval_str[-1])
+            self.gval_str.append(self.gval_str[-1])
+            _res["iter"] = self.iter_str[-1]
+            _res["fval"] = self.fval_str[-1]
+            _res["gval"] = self.gval_str[-1]
 
     def run_sorting(self, args):
         """Sort structures and write the results to a log file."""
