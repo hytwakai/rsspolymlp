@@ -8,13 +8,17 @@ import glob
 import os
 import re
 from collections import Counter, defaultdict
+from dataclasses import dataclass
 from time import time
+from typing import Optional
 
 import numpy as np
 
+from pypolymlp.core.data_format import PolymlpStructure
 from pypolymlp.core.interface_vasp import Poscar
 from pypolymlp.core.io_polymlp import load_mlps
 from rsspolymlp.struct_matcher.struct_match import (
+    IrrepStruct,
     get_distance_cluster,
     get_irrep_positions,
     get_recommend_symprecs,
@@ -33,12 +37,28 @@ def run():
     sorter.run_sorting(args)
 
 
+@dataclass
+class SortStruct:
+    energy: float
+    spg_list: list[str]
+    irrep_struct: IrrepStruct
+    original_axis: np.ndarray
+    original_positions: np.ndarray
+    original_elements: np.ndarray
+    n_atoms: int
+    volume: float
+    least_distance: float
+    input_poscar: str
+    dup_count: int = 1
+
+
 class SortStructure:
 
     def __init__(self):
         """Initialize data structures for sorting structures."""
         self.cutoff = None
         self.nondup_str = []  # List to store non-duplicate structures
+        self.nondup_str_prop = []  # List to store non-duplicate structure properties
         self.iter_str = []  # Iteration statistics
         self.fval_str = []  # Function evaluation statistics
         self.gval_str = []  # Gradient evaluation statistics
@@ -50,56 +70,99 @@ class SortStructure:
         """Read and process log files, filtering based on convergence criteria."""
         for logfile in self.logfiles:
             try:
-                _res, judge = ReadFile(logfile).read_file()
+                struct_properties, judge = ReadFile(logfile).read_file()
             except TypeError:
                 self.errors["else_err"] += 1
                 self.error_poscar["else_err"].append(
                     logfile.split("/")[-1].removesuffix(".log")
                 )
                 continue
+            poscar_name = struct_properties["poscar"]
 
             # Handle different error cases
             if judge in {"iteration", "energy_low", "energy_zero", "anom_struct"}:
                 self.errors[judge] += 1
-                self.error_poscar[judge].append(_res["poscar"])
+                self.error_poscar[judge].append(poscar_name)
                 continue
 
             if judge is not True or any(
-                _res[key] is None for key in ["time", "spg", "energy", "res_f", "res_s"]
+                struct_properties[key] is None
+                for key in ["time", "spg", "energy", "res_f", "res_s"]
             ):
                 self.errors["else_err"] += 1
-                self.error_poscar["else_err"].append(_res["poscar"])
+                self.error_poscar["else_err"].append(poscar_name)
                 continue
 
             # Convergence checks
-            if _res["res_f"] > 10**-4:
+            if struct_properties["res_f"] > 10**-4:
                 self.errors["f_conv"] += 1
-                self.error_poscar["not_converged_f"].append(_res["poscar"])
+                self.error_poscar["not_converged_f"].append(poscar_name)
                 continue
-            if _res["res_s"] > 10**-3:
+            if struct_properties["res_s"] > 10**-3:
                 self.errors["s_conv"] += 1
-                self.error_poscar["not_converged_s"].append(_res["poscar"])
+                self.error_poscar["not_converged_s"].append(poscar_name)
                 continue
 
             # Ensure the optimized structure file exists
-            optimized_poscar = f"opt_struct/{_res['poscar']}"
-            if not os.path.isfile(optimized_poscar):
+            optimized_poscar = f"opt_struct/{poscar_name}"
+            if (
+                not os.path.isfile(optimized_poscar)
+                or os.path.getsize(optimized_poscar) == 0
+            ):
                 self.errors["else_err"] += 1
-                self.error_poscar["else_err"].append(_res["poscar"])
+                self.error_poscar["else_err"].append(poscar_name)
                 continue
 
-            self.time_all += _res["time"]
-            res_processed = self._preprocess_optimized_struct(_res, optimized_poscar)
-            if res_processed is None:
+            self.time_all += struct_properties["time"]
+            sort_struct, struct_properties = self._preprocess_optimized_struct(
+                struct_properties, optimized_poscar
+            )
+            if sort_struct is None:
                 self.errors["invalid_layer_struct"] += 1
-                self.error_poscar["invalid_layer_struct"].append(_res["poscar"])
+                self.error_poscar["invalid_layer_struct"].append(
+                    struct_properties["poscar"]
+                )
                 continue
 
-            self.identify_duplicate_struct(res_processed)
+            self.identify_duplicate_struct(sort_struct, struct_properties)
 
-    def identify_duplicate_struct(self, _res, energy_diff=1e-8):
+    def get_sort_struct(
+        self,
+        energy: float,
+        spg_list: list[str],
+        poscar_name: str,
+        original_polymlp_st: Optional[PolymlpStructure] = None,
+    ):
+        if original_polymlp_st is None:
+            original_polymlp_st = Poscar(poscar_name).structure
+        _st = original_polymlp_st
+        objprop = PropUtil(_st.axis.T, _st.positions.T)
+
+        struct, recommend_symprecs = get_recommend_symprecs(
+            poscar_name=poscar_name, symprec_irrep=1e-5
+        )
+        symprec_list = [1e-5]
+        symprec_list.extend(recommend_symprecs)
+        irrep_struct = get_irrep_positions(struct=struct, symprec_irreps=symprec_list)
+
+        return SortStruct(
+            energy=energy,
+            spg_list=spg_list,
+            irrep_struct=irrep_struct,
+            original_axis=_st.axis.T,
+            original_positions=_st.positions.T,
+            original_elements=_st.elements,
+            n_atoms=int(len(_st.elements)),
+            volume=objprop.volume,
+            least_distance=objprop.least_distance,
+            input_poscar=poscar_name,
+        )
+
+    def identify_duplicate_struct(
+        self, sort_struct: SortStruct, other_properties: dict = {}, energy_diff=1e-8
+    ):
         """
-        Check for duplicate structures and update the list accordingly.
+        Identify duplicate structures and update the internal list accordingly.
 
         A structure is considered a duplicate if:
         1. Its energy is within 1e-8 of an existing structure.
@@ -113,41 +176,46 @@ class SortStructure:
 
         is_nonduplicate = True
         change_struct = False
+        _energy = sort_struct.energy
+        _spg_list = sort_struct.spg_list
+        _irrep_struct = sort_struct.irrep_struct
 
-        for idx, entry in enumerate(self.nondup_str):
-            if abs(entry["energy"] - _res["energy"]) < energy_diff and any(
-                spg in _res["spg"] for spg in entry["spg"]
+        for idx, ndstr in enumerate(self.nondup_str):
+            if abs(ndstr.energy - _energy) < energy_diff and any(
+                spg in _spg_list for spg in ndstr.spg_list
             ):
                 is_nonduplicate = False
-                if self._extract_spg_count(_res["spg"]) > self._extract_spg_count(
-                    entry["spg"]
+                if self._extract_spg_count(_spg_list) > self._extract_spg_count(
+                    ndstr.spg_list
                 ):
                     change_struct = True
                 break
-            elif struct_match(entry["irrep_st"], _res["irrep_st"]):
+            elif struct_match(ndstr.irrep_struct, _irrep_struct):
                 is_nonduplicate = False
-                if self._extract_spg_count(_res["spg"]) > self._extract_spg_count(
-                    entry["spg"]
+                if self._extract_spg_count(_spg_list) > self._extract_spg_count(
+                    ndstr.spg_list
                 ):
                     change_struct = True
                 break
 
-        self._update_iteration_stats(_res, is_nonduplicate)
+        self._update_iteration_stats(other_properties, is_nonduplicate)
 
         if not is_nonduplicate:
             # Update duplicate count and replace with better data if necessary
-            self.nondup_str[idx]["dup_count"] += 1
             if change_struct:
-                for key in _res:
-                    if key != "dup_count":
-                        self.nondup_str[idx][key] = _res[key]
+                self.nondup_str[idx] = sort_struct
+                self.nondup_str_prop[idx] = other_properties
+            self.nondup_str[idx].dup_count += 1
         else:
-            self.nondup_str.append(_res)
+            self.nondup_str.append(sort_struct)
+            self.nondup_str_prop.append(other_properties)
 
-    def _preprocess_optimized_struct(self, res, poscar_name):
+    def _preprocess_optimized_struct(self, struct_properties, poscar_name):
         """Extract structural properties from the optimized structure file."""
+        _prop = struct_properties
+
         if self.cutoff is None:
-            _params, _ = load_mlps(res["potential"])
+            _params, _ = load_mlps(_prop["potential"])
             if not isinstance(_params, list):
                 self.cutoff = _params.as_dict()["model"]["cutoff"]
             else:
@@ -160,33 +228,26 @@ class SortStructure:
                 self.cutoff = max_cutoff
 
         polymlp_st = Poscar(poscar_name).structure
-        prop = PropUtil(polymlp_st.axis.T, polymlp_st.positions.T)
-        res["elements"] = polymlp_st.elements
-        res["volume"] = prop.volume
-        res["axis"] = prop.axis_to_abc
-        res["positions"] = polymlp_st.positions.T.tolist()
-        res["distance"] = prop.least_distance
+        objprop = PropUtil(polymlp_st.axis.T, polymlp_st.positions.T)
+        _prop["axis_abc"] = objprop.axis_to_abc
+        _prop["position_list"] = polymlp_st.positions.T.tolist()
 
         distance_cluster = get_distance_cluster(struct=polymlp_st, symprec_irrep=1e-5)
         if distance_cluster is not None:
             max_layer_diff = max(
                 [
-                    np.max(distance_cluster[0]) * res["axis"][0],
-                    np.max(distance_cluster[1]) * res["axis"][1],
-                    np.max(distance_cluster[2]) * res["axis"][2],
+                    np.max(distance_cluster[0]) * _prop["axis_abc"][0],
+                    np.max(distance_cluster[1]) * _prop["axis_abc"][1],
+                    np.max(distance_cluster[2]) * _prop["axis_abc"][2],
                 ]
             )
             if max_layer_diff > self.cutoff:
-                return None
+                return None, _prop
 
-        struct, recommend_symprecs = get_recommend_symprecs(
-            poscar_name=poscar_name, symprec_irrep=1e-5
+        sort_struct = self.get_sort_struct(
+            _prop["energy"], _prop["spg"], poscar_name, original_polymlp_st=polymlp_st
         )
-        symprec_list = [1e-5]
-        symprec_list.extend(recommend_symprecs)
-        irrep_st = get_irrep_positions(struct=struct, symprec_irreps=symprec_list)
-        res["irrep_st"] = irrep_st
-        return res
+        return sort_struct, _prop
 
     def _extract_spg_count(self, spg_list):
         """Extract and sum space group counts from a list of space group strings."""
@@ -234,13 +295,16 @@ class SortStructure:
         time_finish = time() - time_start
 
         # Sort structures by energy
-        self.nondup_str.sort(key=lambda x: x["energy"])
+        energies = np.array([s.energy for s in self.nondup_str])
+        sort_indices = np.argsort(energies)
+        self.nondup_str = [self.nondup_str[i] for i in sort_indices]
+        self.nondup_str_prop = [self.nondup_str_prop[i] for i in sort_indices]
 
         # Get minimum energy value
         energy_min = -10
         for _str in self.nondup_str:
-            if energy_min < _str["energy"]:
-                energy_min = _str["energy"]
+            if energy_min < _str.energy:
+                energy_min = _str.energy
                 break
 
         # Calculate total error count
@@ -277,7 +341,7 @@ class SortStructure:
             print("Sorting time (sec.):            ", round(time_finish, 2), file=f)
             print(
                 "Selected potential:             ",
-                self.nondup_str[0]["potential"],
+                self.nondup_str_prop[0]["potential"],
                 file=f,
             )
             print("Max number of structures in RSS:", max_init_str, file=f)
@@ -316,23 +380,24 @@ class SortStructure:
             print("", file=f)
             print("---- Nonduplicate structures ----", file=f)
             for idx, _str in enumerate(self.nondup_str):
-                e_diff = round((_str["energy"] - energy_min) * 1000, 2)
+                _prop = self.nondup_str_prop[idx]
+                e_diff = round((_str.energy - energy_min) * 1000, 2)
                 print(f"No. {idx+1}", file=f)
                 print(
-                    f"{_str['poscar']} ({e_diff} meV/atom, {_str['dup_count']} duplicates)",
+                    f"{_str.input_poscar} ({e_diff} meV/atom, {_str.dup_count} duplicates)",
                     file=f,
                 )
-                print(" - Enthalpy:   ", _str["energy"], file=f)
-                print(" - Axis:       ", _str["axis"], file=f)
-                print(" - Postions:   ", _str["positions"], file=f)
-                print(" - Elements:   ", _str["elements"], file=f)
-                print(" - Space group:", _str["spg"], file=f)
+                print(" - Enthalpy:   ", _str.energy, file=f)
+                print(" - Axis:       ", _prop["axis_abc"], file=f)
+                print(" - Postions:   ", _prop["position_list"], file=f)
+                print(" - Elements:   ", _str.original_elements, file=f)
+                print(" - Space group:", _str.spg_list, file=f)
                 print(
                     " - Other Info.:",
-                    f'{int(len(_str["elements"]))} atom',
-                    f'/ distance {round(_str["distance"], 3)} (Ang.)',
-                    f'/ volume {round(_str["volume"], 2)} (A^3/atom)',
-                    f'/ iteration {_str["iter"]}',
+                    f"{_str.n_atoms} atom",
+                    f"/ distance {round(_str.least_distance, 3)} (Ang.)",
+                    f"/ volume {round(_str.volume, 2)} (A^3/atom)",
+                    f'/ iteration {_prop["iter"]}',
                     file=f,
                 )
             print("", file=f)
