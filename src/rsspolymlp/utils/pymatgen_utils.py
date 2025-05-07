@@ -1,6 +1,5 @@
 import numpy as np
 
-from myutils.property_util import PropUtil
 from pymatgen.analysis.prototypes import AflowPrototypeMatcher
 from pymatgen.analysis.structure_matcher import StructureMatcher
 from pymatgen.core import Lattice
@@ -8,11 +7,12 @@ from pymatgen.core.structure import Structure
 from pymatgen.io.cif import CifParser
 from pymatgen.io.vasp.inputs import Poscar
 from pymatgen.symmetry.analyzer import SpacegroupAnalyzer
+from rsspolymlp.utils.property import PropUtil
 
 np.set_printoptions(precision=15)
 
 
-class MyPymat:
+class PymatUtil:
 
     def __init__(self):
         pass

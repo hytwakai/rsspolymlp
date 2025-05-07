@@ -12,8 +12,8 @@ import time
 
 import joblib
 
-from rsspolymlp.parse_arg import ParseArgument
-from rsspolymlp.rss_mlp import RandomStructureOptimization
+from rsspolymlp.utils.parse_arg import ParseArgument
+from rsspolymlp.rss.rss_mlp import RandomStructureOptimization
 
 
 def run():

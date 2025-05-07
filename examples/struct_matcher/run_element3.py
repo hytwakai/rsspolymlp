@@ -4,7 +4,7 @@ import numpy as np
 
 from pypolymlp.utils.spglib_utils import SymCell
 from rsspolymlp.struct_matcher.irrep_position import IrrepPos
-from rsspolymlp.utils.property_util import PropUtil
+from rsspolymlp.utils.property import PropUtil
 
 poscar_name = "./poscar_element2/POSCAR_112"
 symutil = SymCell(poscar_name=poscar_name, symprec=1e-3)
@@ -13,8 +13,8 @@ st1 = symutil.refine_cell(standardize_cell=True)
 irrep_pos = IrrepPos(symprec=1e-5)
 start = time.time()
 rep_pos1, sorted_elements1, order1 = irrep_pos.irrep_positions(
-        st1.axis, st1.positions.T, st1.elements
-    )
+    st1.axis, st1.positions.T, st1.elements
+)
 el_time1 = round(time.time() - start, 5)
 print("get irrep atomic positions:", (el_time1) * 1000)
 

@@ -17,6 +17,30 @@ class IrrepStruct:
     recommend_symprecs: list[float]
 
 
+def struct_match(
+    st_1: IrrepStruct,
+    st_2: IrrepStruct,
+    axis_tol: float = 0.01,
+    pos_tol: float = 0.01,
+) -> bool:
+
+    if st_1.element_count != st_2.element_count:
+        return False
+
+    axis_diff = st_1.axis - st_2.axis
+    max_axis_diff = np.max(np.sum(axis_diff**2, axis=1))
+    if max_axis_diff >= axis_tol:
+        return False
+
+    deltas = st_1.positions[:, None, :] - st_2.positions[None, :, :]
+    deltas_flat = deltas.reshape(-1, deltas.shape[2])
+    max_pos_error = np.min(np.max(np.abs(deltas_flat), axis=1))
+    if max_pos_error >= pos_tol:
+        return False
+
+    return True
+
+
 def get_irrep_positions(
     poscar_name: str = None,
     struct: PolymlpStructure = None,
@@ -78,27 +102,3 @@ def get_distance_cluster(
     _, _, _ = irrep_pos.irrep_positions(_axis, _pos, _elements)
 
     return irrep_pos.distance_cluster
-
-
-def struct_match(
-    st_1: IrrepStruct,
-    st_2: IrrepStruct,
-    axis_tol: float = 0.01,
-    pos_tol: float = 0.01,
-) -> bool:
-
-    if st_1.element_count != st_2.element_count:
-        return False
-
-    axis_diff = st_1.axis - st_2.axis
-    max_axis_diff = np.max(np.sum(axis_diff**2, axis=1))
-    if max_axis_diff >= axis_tol:
-        return False
-
-    deltas = st_1.positions[:, None, :] - st_2.positions[None, :, :]
-    deltas_flat = deltas.reshape(-1, deltas.shape[2])
-    max_pos_error = np.min(np.max(np.abs(deltas_flat), axis=1))
-    if max_pos_error >= pos_tol:
-        return False
-
-    return True

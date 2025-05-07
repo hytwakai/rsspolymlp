@@ -1,11 +1,11 @@
 import numpy as np
 
-from myutils import pymat_util
+from rsspolymlp.utils import pymatgen_utils
 from pypolymlp.utils.spglib_utils import SymCell
 from rsspolymlp.struct_matcher.irrep_position import IrrepPos
-from rsspolymlp.utils.property_util import PropUtil
+from rsspolymlp.utils.property import PropUtil
 
-pymat = pymat_util.MyPymat()
+pymat = pymatgen_utils.PymatUtil()
 all_test_mode = ["example", "invert", "swap", "symprec"]
 final_res = []
 pymatgen_res = []

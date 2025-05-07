@@ -14,15 +14,15 @@ import numpy as np
 
 from pypolymlp.core.interface_vasp import Poscar
 from pypolymlp.core.io_polymlp import load_mlps
-from rsspolymlp.parse_arg import ParseArgument
-from rsspolymlp.struct_matcher.struct_matcher import (
+from rsspolymlp.struct_matcher.struct_match import (
     get_distance_cluster,
     get_irrep_positions,
     get_recommend_symprecs,
     struct_match,
 )
-from rsspolymlp.struct_sort.readfile import ReadFile
-from rsspolymlp.utils.property_util import PropUtil
+from rsspolymlp.struct_sorter.readfile import ReadFile
+from rsspolymlp.utils.parse_arg import ParseArgument
+from rsspolymlp.utils.property import PropUtil
 
 
 def run():
@@ -200,7 +200,7 @@ class SortStructure:
         """Update iteration statistics."""
         if "iter" not in _res:
             return
-        
+
         if not self.iter_str:
             self.iter_str.append(_res["iter"])
             self.fval_str.append(_res["fval"])

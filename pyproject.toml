@@ -28,10 +28,10 @@ dependencies = [
 homepage = "https://github.com/hytwakai/rsspolymlp"
 
 [project.scripts]
-gen-rand-struct = "rsspolymlp.gen_rand_struct:run"
-rss-single-srun = "rsspolymlp.run_rss_parallel:run_single_srun"
-rss-parallel = "rsspolymlp.run_rss_parallel:run"
-sort-struct = "rsspolymlp.struct_sort.struct_sort:run"
+gen-rand-struct = "rsspolymlp.struct_generator.random_struct:run"
+rss-single-srun = "rsspolymlp.rss.run_rss_parallel:run_single_srun"
+rss-parallel = "rsspolymlp.rss.run_rss_parallel:run"
+sort-struct = "rsspolymlp.struct_sorter.struct_sort:run"
 
 [tool.setuptools]
 package-dir = {"" = "src"}

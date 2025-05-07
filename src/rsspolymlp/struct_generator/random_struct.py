@@ -4,7 +4,7 @@ import os
 import numpy as np
 from scipy.linalg import cholesky
 
-from rsspolymlp.parse_arg import ParseArgument
+from rsspolymlp.utils.parse_arg import ParseArgument
 
 
 def run():

@@ -4,11 +4,11 @@ import os
 import tarfile
 import time
 
-from myutils import pymat_util
-from rsspolymlp.struct_matcher.struct_matcher import get_irrep_positions, struct_match
+from rsspolymlp.utils import pymatgen_utils
+from rsspolymlp.struct_matcher.struct_match import get_irrep_positions, struct_match
 from rsspolymlp.utils.spglib_utils import SymCell
 
-pymat = pymat_util.MyPymat()
+pymat = pymatgen_utils.PymatUtil()
 
 poscar_num = 1000
 compare_pymatgen = True
