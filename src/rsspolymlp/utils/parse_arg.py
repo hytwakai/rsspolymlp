@@ -5,31 +5,31 @@ class ParseArgument:
     @classmethod
     def get_initial_structure_args(cls):
         parser = argparse.ArgumentParser()
-        cls._add_initial_structure_arguments(parser)
+        cls.add_initial_structure_arguments(parser)
         args = parser.parse_args()
         return args
 
     @classmethod
     def get_optimization_args(cls):
         parser = argparse.ArgumentParser()
-        cls._add_optimization_arguments(parser)
+        cls.add_optimization_arguments(parser)
         return parser.parse_args()
 
     @classmethod
     def get_parallelization_args(cls):
         parser = argparse.ArgumentParser()
-        cls._add_optimization_arguments(parser)
-        cls._add_parallelization_arguments(parser)
+        cls.add_optimization_arguments(parser)
+        cls.add_parallelization_arguments(parser)
         return parser.parse_args()
 
     @classmethod
     def get_sorting_args(cls):
         parser = argparse.ArgumentParser()
-        cls._add_sorting_arguments(parser)
+        cls.add_sorting_arguments(parser)
         return parser.parse_args()
 
     @staticmethod
-    def _add_initial_structure_arguments(parser):
+    def add_initial_structure_arguments(parser):
         # Settings in generating initial structures
         parser.add_argument(
             "--elements",
@@ -71,7 +71,7 @@ class ParseArgument:
         )
 
     @staticmethod
-    def _add_optimization_arguments(parser):
+    def add_optimization_arguments(parser):
         # Settings in geometry optimizations
         parser.add_argument(
             "--pot",
@@ -105,7 +105,7 @@ class ParseArgument:
         )
 
     @staticmethod
-    def _add_parallelization_arguments(parser):
+    def add_parallelization_arguments(parser):
         # Settings for parallelization
         parser.add_argument(
             "--parallel_method",
@@ -129,7 +129,7 @@ class ParseArgument:
         )
 
     @staticmethod
-    def _add_sorting_arguments(parser):
+    def add_sorting_arguments(parser):
         # Settings for sorting
         parser.add_argument(
             "--num_sort_str",
