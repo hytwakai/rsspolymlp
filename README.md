@@ -54,94 +54,39 @@ rss-parallel --pot polymlp.yaml --num_opt_str 1000
 rss-analysis
 ```
 
-#### Arguments
-- `--elements`  
-  **Type**: string (list)  
-  **Description**: List of chemical element symbols (e.g., `Al`, `Cu`).
+| Argument            | Description |
+|---------------------|-------------|
+| `--elements`        | List of element symbols (e.g., `Al Cu`). |
+| `--atom_counts`     | Number of atoms for each element (must match the order of `--elements`). |
+| `--num_init_str`    | Number of random initial structures to generate. |
+| `--pot`             | Path to the polynomial MLP potential file. |
+| `--num_opt_str`     | Maximum number of optimized structures to obtain from RSS. |
 
-- `--atom_counts`  
-  **Type**: int (list)  
-  **Description**: Number of atoms for each element specified in `--elements`.
+### Additional Options
 
-- `--num_init_str`  
-  **Type**: int  
-  **Default**: 5000  
-  **Description**: Number of randomly generated initial structures.
+`rss-init-struct`
 
-- `--pot`  
-  **Type**: string (list)  
-  **Default**: `polymlp.yaml`  
-  **Description**: Potential file used by the polynomial MLP.
+| Argument           | Description |
+|--------------------|-------------|
+| `--least_distance` | Minimum interatomic distance in the initial structure, in angstroms. **Default**: `0.0` |
+| `--max_volume`     | Maximum volume per atom for the initial structure (Å³/atom). **Default**: `100.0` |
+| `--min_volume`     | Minimum volume per atom for the initial structure (Å³/atom). **Default**: `0.0` |
 
-- `--num_opt_str`  
-  **Type**: int  
-  **Default**: 1000  
-  **Description**: Maximum number of optimized structures obtained from RSS.
+`rss-parallel`
 
-## Additional Options
-
-### 1. Random Structure Generation Arguments
-
-These options configure the generation of random initial structures in `rss-init-struct`:
-
-- `--least_distance`  
-  **Type**: float  
-  **Default**: 0.0  
-  **Description**: Minimum interatomic distance in the initial structure, in angstroms.
-
-- `--max_volume`  
-  **Type**: float  
-  **Default**: 100.0  
-  **Description**: Maximum volume per atom for the initial structure (A³/atom).
-
-- `--min_volume`  
-  **Type**: float  
-  **Default**: 0.0  
-  **Description**: Minimum volume per atom for the initial structure (A³/atom).
-
-### 2.1. Geometry Optimization Arguments
-These options control the settings for geometry optimizations in `rss-parallel`:
-
-- `--pressure`  
-  **Type**: float  
-  **Default**: 0.0  
-  **Description**: Pressure term to be applied during optimization (in GPa).
-
-- `--solver_method`  
-  **Type**: string  
-  **Default**: `CG`  
-  **Description**: Type of solver used during the optimization process.
-
-- `--maxiter`  
-  **Type**: int  
-  **Default**: 100  
-  **Description**: Maximum number of iterations allowed when adjusting optimization parameters (e.g., `c1` and `c2` values).
-
-### 2.2. Parallelization Arguments
-These options the geometry optimization settings to enable parallel processing in `rss-parallel`:
-
-- `--parallel_method`  
-  **Type**: string (choice)  
-  **Choices**: `joblib`, `srun`  
-  **Default**: `joblib`  
-  **Description**: Selects the parallelization method.
-
-- `--num_process`  
-  **Type**: int  
-  **Default**: -1  
-  **Description**: Number of processes to use with `joblib`; use `-1` to use all available CPU cores.
-
-- `--backend`  
-  **Type**: string (choice)  
-  **Choices**: `loky`, `threading`, `multiprocessing`  
-  **Default**: `loky`  
-  **Description**: Specifies the backend for joblib parallelization.
+| Argument          | Description |
+|-------------------|-------------|
+| `--pressure`      | Pressure to apply during optimization (in GPa). **Default**: `0.0` |
+| `--solver_method` | Optimization solver to use. **Default**: `CG` |
+| `--maxiter`       | Maximum number of iterations for parameter tuning (e.g., `c1`, `c2`). **Default**: `100` |
+| `--parallel_method`  | Parallelization method. <br>**Choices**: `joblib`, `srun` **Default**: `joblib` |
+| `--num_process`      | Number of processes for `joblib`; `-1` uses all available cores. **Default**: `-1` |
+| `--backend`          | Backend used by `joblib`. **Default**: `loky` |
 
 You can also use `srun` for parallel execution (default: `joblib`), which is suitable for high-performance computing environments. 
 By specifying `--parallel_method srun`, a script named `multiprocess.sh` will be automatically generated for execution with `srun`. 
 
-For example:
-```shell
+```bash
 rss-parallel --parallel_method srun --pot polymlp.yaml --num_opt_str 1000
 srun -n $SLURM_CPUS_ON_NODE ./multiprocess.sh
 ```
