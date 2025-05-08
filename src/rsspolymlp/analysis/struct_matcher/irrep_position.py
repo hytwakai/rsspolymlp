@@ -152,20 +152,22 @@ class IrrepPos:
         original_candidates = pos_candidates.copy()
         for pos in original_candidates:
             _pos = pos.copy()
-            if np.all(same_axis_flag):
+            active_cols = np.nonzero(same_axis_flag)[0]
+            if len(active_cols) == 3:
                 # If all 3 are equivalent: generate all 6 non‑trivial permutations
                 perms = np.array(
                     [[0, 2, 1], [1, 0, 2], [1, 2, 0], [2, 0, 1], [2, 1, 0]], dtype=int
                 )
                 for perm in perms:
                     pos_candidates.append(_pos[:, perm])
-            elif np.any(same_axis_flag):
-                active_cols = np.nonzero(same_axis_flag)[0]
+            elif len(active_cols) == 2:
                 _pos[:, (active_cols[1], active_cols[0])] = _pos[
                     :, (active_cols[0], active_cols[1])
                 ]
                 pos_candidates.append(_pos)
-            # else: all False ⇒ only the original array
+            elif len(active_cols) <= 1:
+                # No axis is considered equivalent ⇒ do nothing (only original is used)
+                pass
 
         return pos_candidates
 

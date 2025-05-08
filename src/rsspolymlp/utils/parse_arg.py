@@ -28,6 +28,13 @@ class ParseArgument:
         cls.add_sorting_arguments(parser)
         return parser.parse_args()
 
+    @classmethod
+    def get_sorting_args2(cls):
+        parser = argparse.ArgumentParser()
+        cls.add_sorting_arguments2(parser)
+        cls.add_parallelization_arguments(parser)
+        return parser.parse_args()
+
     @staticmethod
     def add_initial_structure_arguments(parser):
         # Settings in generating initial structures
@@ -142,4 +149,26 @@ class ParseArgument:
             type=float,
             default=None,
             help="(Optional) Cutoff radius used in the MLP",
+        )
+
+    @staticmethod
+    def add_sorting_arguments2(parser):
+        parser.add_argument(
+            "--elements",
+            nargs="*",
+            type=str,
+            default=None,
+            help="List of target element symbols",
+        )
+        parser.add_argument(
+            "--result_paths",
+            nargs="*",
+            type=str,
+            default="rss_results.log",
+            help="Path(s) to RSS result log file(s).",
+        )
+        parser.add_argument(
+            "--use_joblib",
+            action="store_true",
+            help="Enable parallel processing using joblib.",
         )

@@ -17,14 +17,14 @@ import numpy as np
 from pypolymlp.core.data_format import PolymlpStructure
 from pypolymlp.core.interface_vasp import Poscar
 from pypolymlp.core.io_polymlp import load_mlps
-from rsspolymlp.struct_matcher.struct_match import (
+from rsspolymlp.analysis.struct_matcher.struct_match import (
     IrrepStruct,
     get_distance_cluster,
     get_irrep_positions,
     get_recommend_symprecs,
     struct_match,
 )
-from rsspolymlp.struct_sorter.readfile import ReadFile
+from rsspolymlp.rss.read_logfile import ReadFile
 from rsspolymlp.utils.parse_arg import ParseArgument
 from rsspolymlp.utils.property import PropUtil
 
@@ -52,6 +52,38 @@ class SortStruct:
     dup_count: int = 1
 
 
+def generate_sort_struct(
+    energy: float,
+    spg_list: list[str],
+    poscar_name: str,
+    original_polymlp_st: Optional[PolymlpStructure] = None,
+):
+    if original_polymlp_st is None:
+        original_polymlp_st = Poscar(poscar_name).structure
+    _st = original_polymlp_st
+    objprop = PropUtil(_st.axis.T, _st.positions.T)
+
+    struct, recommend_symprecs = get_recommend_symprecs(
+        poscar_name=poscar_name, symprec_irrep=1e-5
+    )
+    symprec_list = [1e-5]
+    symprec_list.extend(recommend_symprecs)
+    irrep_struct = get_irrep_positions(struct=struct, symprec_irreps=symprec_list)
+
+    return SortStruct(
+        energy=energy,
+        spg_list=spg_list,
+        irrep_struct=irrep_struct,
+        original_axis=_st.axis.T,
+        original_positions=_st.positions.T,
+        original_elements=_st.elements,
+        n_atoms=int(len(_st.elements)),
+        volume=objprop.volume,
+        least_distance=objprop.least_distance,
+        input_poscar=poscar_name,
+    )
+
+
 class SortStructure:
 
     def __init__(self):
@@ -66,12 +98,64 @@ class SortStructure:
         self.error_poscar = defaultdict(list)  # POSCAR error details
         self.time_all = 0  # Total computation time accumulator
 
-    def get_result_from_logfiles(self):
+    def identify_duplicate_struct(
+        self, sort_struct: SortStruct, other_properties: dict = {}, energy_diff=1e-8
+    ):
+        """
+        Identify duplicate structures and update the internal list accordingly.
+
+        A structure is considered a duplicate if:
+        1. Its energy is within 1e-8 of an existing structure.
+        2. It shares at least one space group with an existing structure.
+
+        If a duplicate is found:
+        - The duplicate count is incremented.
+        - The structure is updated if it has a higher symmmerty of space group.
+        Otherwise, the structure is added as a new unique entry.
+        """
+
+        is_nonduplicate = True
+        change_struct = False
+        _energy = sort_struct.energy
+        _spg_list = sort_struct.spg_list
+        _irrep_struct = sort_struct.irrep_struct
+
+        for idx, ndstr in enumerate(self.nondup_str):
+            if abs(ndstr.energy - _energy) < energy_diff and any(
+                spg in _spg_list for spg in ndstr.spg_list
+            ):
+                is_nonduplicate = False
+                if self._extract_spg_count(_spg_list) > self._extract_spg_count(
+                    ndstr.spg_list
+                ):
+                    change_struct = True
+                break
+            elif struct_match(ndstr.irrep_struct, _irrep_struct):
+                is_nonduplicate = False
+                if self._extract_spg_count(_spg_list) > self._extract_spg_count(
+                    ndstr.spg_list
+                ):
+                    change_struct = True
+                break
+
+        self._update_iteration_stats(other_properties, is_nonduplicate)
+
+        if not is_nonduplicate:
+            # Update duplicate count and replace with better data if necessary
+            if change_struct:
+                self.nondup_str[idx] = sort_struct
+                self.nondup_str_prop[idx] = other_properties
+            self.nondup_str[idx].dup_count += 1
+        else:
+            self.nondup_str.append(sort_struct)
+            self.nondup_str_prop.append(other_properties)
+
+    def _get_result_from_logfiles(self):
         """Read and process log files, filtering based on convergence criteria."""
         for logfile in self.logfiles:
             try:
                 struct_properties, judge = ReadFile(logfile).read_file()
-            except TypeError:
+            except (TypeError, ValueError):
                 self.errors["else_err"] += 1
                 self.error_poscar["else_err"].append(
                     logfile.split("/")[-1].removesuffix(".log")
@@ -126,90 +210,6 @@ class SortStructure:
 
             self.identify_duplicate_struct(sort_struct, struct_properties)
 
-    def get_sort_struct(
-        self,
-        energy: float,
-        spg_list: list[str],
-        poscar_name: str,
-        original_polymlp_st: Optional[PolymlpStructure] = None,
-    ):
-        if original_polymlp_st is None:
-            original_polymlp_st = Poscar(poscar_name).structure
-        _st = original_polymlp_st
-        objprop = PropUtil(_st.axis.T, _st.positions.T)
-
-        struct, recommend_symprecs = get_recommend_symprecs(
-            poscar_name=poscar_name, symprec_irrep=1e-5
-        )
-        symprec_list = [1e-5]
-        symprec_list.extend(recommend_symprecs)
-        irrep_struct = get_irrep_positions(struct=struct, symprec_irreps=symprec_list)
-
-        return SortStruct(
-            energy=energy,
-            spg_list=spg_list,
-            irrep_struct=irrep_struct,
-            original_axis=_st.axis.T,
-            original_positions=_st.positions.T,
-            original_elements=_st.elements,
-            n_atoms=int(len(_st.elements)),
-            volume=objprop.volume,
-            least_distance=objprop.least_distance,
-            input_poscar=poscar_name,
-        )
-
-    def identify_duplicate_struct(
-        self, sort_struct: SortStruct, other_properties: dict = {}, energy_diff=1e-8
-    ):
-        """
-        Identify duplicate structures and update the internal list accordingly.
-
-        A structure is considered a duplicate if:
-        1. Its energy is within 1e-8 of an existing structure.
-        2. It shares at least one space group with an existing structure.
-
-        If a duplicate is found:
-        - The duplicate count is incremented.
-        - The structure is updated if it has a higher symmmerty of space group.
-        Otherwise, the structure is added as a new unique entry.
-        """
-
-        is_nonduplicate = True
-        change_struct = False
-        _energy = sort_struct.energy
-        _spg_list = sort_struct.spg_list
-        _irrep_struct = sort_struct.irrep_struct
-
-        for idx, ndstr in enumerate(self.nondup_str):
-            if abs(ndstr.energy - _energy) < energy_diff and any(
-                spg in _spg_list for spg in ndstr.spg_list
-            ):
-                is_nonduplicate = False
-                if self._extract_spg_count(_spg_list) > self._extract_spg_count(
-                    ndstr.spg_list
-                ):
-                    change_struct = True
-                break
-            elif struct_match(ndstr.irrep_struct, _irrep_struct):
-                is_nonduplicate = False
-                if self._extract_spg_count(_spg_list) > self._extract_spg_count(
-                    ndstr.spg_list
-                ):
-                    change_struct = True
-                break
-
-        self._update_iteration_stats(other_properties, is_nonduplicate)
-
-        if not is_nonduplicate:
-            # Update duplicate count and replace with better data if necessary
-            if change_struct:
-                self.nondup_str[idx] = sort_struct
-                self.nondup_str_prop[idx] = other_properties
-            self.nondup_str[idx].dup_count += 1
-        else:
-            self.nondup_str.append(sort_struct)
-            self.nondup_str_prop.append(other_properties)
-
     def _preprocess_optimized_struct(self, struct_properties, poscar_name):
         """Extract structural properties from the optimized structure file."""
         _prop = struct_properties
@@ -244,7 +244,7 @@ class SortStructure:
             if max_layer_diff > self.cutoff:
                 return None, _prop
 
-        sort_struct = self.get_sort_struct(
+        sort_struct = generate_sort_struct(
             _prop["energy"], _prop["spg"], poscar_name, original_polymlp_st=polymlp_st
         )
         return sort_struct, _prop
@@ -291,7 +291,7 @@ class SortStructure:
             index = finished_set.index(fin_poscar)
             finished_set = finished_set[: index + 1]
         self.logfiles = [f"log/{p}.log" for p in finished_set]
-        self.get_result_from_logfiles()
+        self._get_result_from_logfiles()
         time_finish = time() - time_start
 
         # Sort structures by energy

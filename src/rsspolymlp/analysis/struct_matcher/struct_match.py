@@ -4,7 +4,7 @@ from dataclasses import dataclass
 import numpy as np
 
 from pypolymlp.core.data_format import PolymlpStructure
-from rsspolymlp.struct_matcher.irrep_position import IrrepPos
+from rsspolymlp.analysis.struct_matcher.irrep_position import IrrepPos
 from rsspolymlp.utils.spglib_utils import SymCell
 
 

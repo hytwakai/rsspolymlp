@@ -24,15 +24,21 @@ dependencies = [
     "symfc",
 ]
 
+[project.optional-dependencies]
+pymatgen = ["pymatgen"]
+matplotlib = ["matplotlib"]
+seaborn = ["seaborn"]
+tools = ["pymatgen", "matplotlib", "seaborn"]
+
 [project.urls]
 homepage = "https://github.com/hytwakai/rsspolymlp"
 
 [project.scripts]
-gen-rand-struct = "rsspolymlp.struct_generator.random_struct:run"
+gen-rand-struct = "rsspolymlp.rss.random_struct:run"
 rss-single-srun = "rsspolymlp.rss.run_rss_parallel:run_single_srun"
 rss-parallel = "rsspolymlp.rss.run_rss_parallel:run"
-sort-struct = "rsspolymlp.struct_sorter.struct_sort:run"
-sort-struct-all = "rsspolymlp.struct_sorter.struct_sort_all:run"
+sort-struct = "rsspolymlp.rss.struct_sort:run"
+sort-struct-all = "rsspolymlp.analysis.struct_sort_all:run"
 
 [tool.setuptools]
 package-dir = {"" = "src"}

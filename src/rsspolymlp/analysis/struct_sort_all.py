@@ -1,4 +1,3 @@
-import argparse
 import ast
 import os
 import re
@@ -8,37 +7,99 @@ from time import time
 import joblib
 import numpy as np
 
-from rsspolymlp.struct_sorter.struct_sort import SortStructure
+from rsspolymlp.rss.struct_sort import SortStructure, generate_sort_struct
 from rsspolymlp.utils.parse_arg import ParseArgument
 from rsspolymlp.utils.property import PropUtil
 
 
 def run():
-    parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "--elements",
-        nargs="*",
-        type=str,
-        default=None,
-        help="",
+    args = ParseArgument.get_sorting_args2()
+    sorter_all = SortStructAll(
+        args.elements,
+        args.result_paths,
+        args.use_joblib,
+        args.num_process,
+        args.backend,
     )
-    parser.add_argument(
-        "--result_paths",
-        nargs="*",
-        type=str,
-        default="rss_results.log",
-        help="",
-    )
-    parser.add_argument(
-        "--use_joblib",
-        action="store_true",
-        help="",
-    )
-    ParseArgument.add_parallelization_arguments(parser)
-    args = parser.parse_args()
-
-    sorter_all = SortStructAll(args.elements, args.result_paths, args.use_joblib)
     sorter_all.run_sorting()
+
+
+def extract_composition_ratio(path_name: str, target_elements: list):
+    comp_ratio = None
+    with open(path_name) as f:
+        for line in f:
+            if "- Elements:" in line:
+                line_strip = line.strip()
+                log = re.search(r"- Elements: (.+)", line_strip)
+                element_list = np.array(ast.literal_eval(log[1]))
+                counts = np.array(
+                    [np.count_nonzero(element_list == el) for el in target_elements]
+                )
+                if not np.any(counts):
+                    raise ValueError(
+                        "None of the specified elements were found in the result."
+                    )
+                g = np.gcd.reduce(counts[counts > 0])
+                reduced = counts // g
+                comp_ratio = tuple(reduced)
+                break
+
+    return comp_ratio
+
+
+def load_rss_results(result_path: str, absolute_path=False) -> list[dict]:
+    rss_results = []
+    parent_path = os.path.dirname(result_path)
+    with open(result_path) as f:
+        lines = [i.strip() for i in f]
+    for line_idx in range(len(lines)):
+        if "No." in lines[line_idx]:
+            _res = {}
+            if absolute_path:
+                _res["poscar"] = str(lines[line_idx + 1]).split()[0]
+            else:
+                poscar_name = str(lines[line_idx + 1]).split()[0].split("/")[-1]
+                _res["poscar"] = parent_path + "/opt_struct/" + poscar_name
+            _res["enthalpy"] = float(lines[line_idx + 2].split()[-1])
+            spg = re.search(r"- Space group: (.+)", lines[line_idx + 6])
+            _res["spg_list"] = ast.literal_eval(spg[1])
+            _res["volume"] = float(lines[line_idx + 7].split("volume")[-1].split()[0])
+            rss_results.append(_res)
+
+    return rss_results
+
+
+def generate_sort_structs(
+    rss_results, use_joblib=True, num_process=-1, backend="loky"
+) -> list[SortStructure]:
+    if use_joblib:
+        sort_structs = joblib.Parallel(n_jobs=num_process, backend=backend)(
+            joblib.delayed(generate_sort_struct)(
+                res["enthalpy"], res["spg_list"], res["poscar"]
+            )
+            for res in rss_results
+        )
+    else:
+        sort_structs = []
+        for res in rss_results:
+            sort_structs.append(
+                generate_sort_struct(res["enthalpy"], res["spg_list"], res["poscar"])
+            )
+    return sort_structs
+
+
+def detect_outlier(energies: np.array, volumes: np.array):
+    energy_diff = np.abs(np.diff(energies))
+    volume_diff = np.abs(np.diff(volumes))
+
+    maybe_outlier = np.full_like(energies, fill_value=False, dtype=bool)
+    for i in range(len(energy_diff)):
+        if energy_diff[i] > 0.5 or volume_diff[i] > 4:
+            maybe_outlier[i] = True
+        else:
+            break
+
+    return maybe_outlier
 
 
 class SortStructAll:
@@ -60,7 +121,7 @@ class SortStructAll:
     def run_sorting(self):
         result_path_comp = defaultdict(list)
         for path_name in self.result_paths:
-            comp_ratio = self._get_compositions_from_file(path_name, self.elements)
+            comp_ratio = extract_composition_ratio(path_name, self.elements)
             result_path_comp[comp_ratio].append(path_name)
         result_path_comp = dict(result_path_comp)
 
@@ -79,13 +140,16 @@ class SortStructAll:
             time_finish = time() - time_start
 
             energies = np.array([s.energy for s in nondup_str])
+            volumes = np.array([s.volume for s in nondup_str])
             sort_indices = np.argsort(energies)
             nondup_str = [nondup_str[i] for i in sort_indices]
-
-            energy_min = -10
-            for _str in nondup_str:
-                if energy_min < _str.energy:
-                    energy_min = _str.energy
+            
+            maybe_outlier = detect_outlier(
+                energies[sort_indices], volumes[sort_indices]
+            )
+            for i in range(len(nondup_str)):
+                if not maybe_outlier[i]:
+                    energy_min = nondup_str[i].energy
                     break
 
             with open(log_name + ".log", "w") as f:
@@ -120,27 +184,9 @@ class SortStructAll:
                         f"/ volume {round(_str.volume, 2)} (A^3/atom)",
                         file=f,
                     )
+                    if maybe_outlier[idx]:
+                        print(" - WARNING    : This structure might be an outlier.", file=f)
                 print("", file=f)
-
-    def _get_compositions_from_file(self, path_name: str, target_elements: list):
-        with open(path_name) as f:
-            for line in f:
-                if "- Elements:" in line:
-                    line_strip = line.strip()
-                    log = re.search(r"- Elements: (.+)", line_strip)
-                    element_list = np.array(ast.literal_eval(log[1]))
-                    counts = np.array(
-                        [np.count_nonzero(element_list == el) for el in target_elements]
-                    )
-                    if not np.any(counts):
-                        raise ValueError(
-                            "None of the specified elements were found in the result."
-                        )
-                    g = np.gcd.reduce(counts[counts > 0])
-                    reduced = counts // g
-                    comp_ratio = tuple(reduced)
-
-        return comp_ratio
 
     def _sorting_in_same_comp(self, comp_ratio, result_paths):
         log_name = ""
@@ -162,58 +208,31 @@ class SortStructAll:
                         pre_result_paths = ast.literal_eval(paths[1])
                         break
 
-            sort_structs1 = self._get_results_from_file(
-                sorter, [log_name + ".log"], absolute_path=True
+            rss_results1 = load_rss_results(log_name + ".log", absolute_path=True)
+            sort_structs1 = generate_sort_structs(
+                rss_results1,
+                use_joblib=self.use_joblib,
+                num_process=self.num_process,
+                backend=self.backend,
             )
             sorter.nondup_str = sort_structs1
 
         not_processed_path = list(set(result_paths) - set(pre_result_paths))
         integrated_res_paths = list(set(result_paths) | set(pre_result_paths))
 
-        sort_structs2 = self._get_results_from_file(sorter, not_processed_path)
+        rss_results2 = []
+        for res_path in not_processed_path:
+            rss_res = load_rss_results(res_path)
+            rss_results2.extend(rss_res)
+        sort_structs2 = generate_sort_structs(
+            rss_results2,
+            use_joblib=self.use_joblib,
+            num_process=self.num_process,
+            backend=self.backend,
+        )
         num_opt_struct += len(sort_structs2)
+
         for res in sort_structs2:
             sorter.identify_duplicate_struct(res)
 
         return sorter.nondup_str, num_opt_struct, integrated_res_paths
-
-    def _get_results_from_file(
-        self, sorter: SortStructure, result_paths: list[str], absolute_path=False
-    ) -> list[SortStructure]:
-
-        rss_results = []
-        for path_name in result_paths:
-            parent_path = os.path.dirname(path_name)
-            with open(path_name) as f:
-                lines = [i.strip() for i in f]
-            for line_idx in range(len(lines)):
-                if "No." in lines[line_idx]:
-                    _res = {}
-                    if absolute_path:
-                        _res["poscar"] = str(lines[line_idx + 1]).split()[0]
-                    else:
-                        poscar_name = str(lines[line_idx + 1]).split()[0].split("/")[-1]
-                        _res["poscar"] = parent_path + "/opt_struct/" + poscar_name
-                    _res["enthalpy"] = float(lines[line_idx + 2].split()[-1])
-                    spg = re.search(r"- Space group: (.+)", lines[line_idx + 6])
-                    _res["spg_list"] = ast.literal_eval(spg[1])
-                    rss_results.append(_res)
-
-        if self.use_joblib:
-            sort_structs = joblib.Parallel(
-                n_jobs=self.num_process, backend=self.backend
-            )(
-                joblib.delayed(sorter.get_sort_struct)(
-                    res["enthalpy"], res["spg_list"], res["poscar"]
-                )
-                for res in rss_results
-            )
-        else:
-            sort_structs = []
-            for res in rss_results:
-                sort_structs.append(
-                    sorter.get_sort_struct(
-                        res["enthalpy"], res["spg_list"], res["poscar"]
-                    )
-                )
-        return sort_structs
