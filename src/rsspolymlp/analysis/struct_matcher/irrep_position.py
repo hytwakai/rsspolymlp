@@ -2,7 +2,7 @@ import itertools
 
 import numpy as np
 
-from rsspolymlp.utils.property import PropUtil
+from rsspolymlp.common.property import PropUtil
 
 
 class IrrepPos:

@@ -1,96 +1,56 @@
 """
 Parse and analyze optimization logs, filter out failed or unconverged results,
-identify and retain unique structures based on energy and symmetry,
-and write detailed computational statistics to log.
+identify and retain unique structures based on energy, symmetry, and irreducible
+structure representation, and write detailed computational statistics to the log.
 """
 
 import glob
 import os
-import re
 from collections import Counter, defaultdict
-from dataclasses import dataclass
 from time import time
-from typing import Optional
 
 import numpy as np
 
-from pypolymlp.core.data_format import PolymlpStructure
 from pypolymlp.core.interface_vasp import Poscar
 from pypolymlp.core.io_polymlp import load_mlps
-from rsspolymlp.analysis.struct_matcher.struct_match import (
-    IrrepStruct,
-    get_distance_cluster,
-    get_irrep_positions,
-    get_recommend_symprecs,
-    struct_match,
+from rsspolymlp.analysis.struct_matcher.struct_match import get_distance_cluster
+from rsspolymlp.analysis.unique_struct import (
+    UniqueStructure,
+    UniqueStructureAnalyzer,
+    generate_unique_struct,
 )
-from rsspolymlp.rss.read_logfile import ReadFile
-from rsspolymlp.utils.parse_arg import ParseArgument
-from rsspolymlp.utils.property import PropUtil
+from rsspolymlp.rss.load_logfile import LogfileLoader
+from rsspolymlp.common.parse_arg import ParseArgument
+from rsspolymlp.common.property import PropUtil
 
 
 def run():
-    args = ParseArgument.get_sorting_args()
-    sorter = SortStructure()
+    args = ParseArgument.get_analysis_args()
+    analyzer = RSSResultAnalyzer()
     if args.cutoff is not None:
-        sorter.cutoff = args.cutoff
-    sorter.run_sorting(args)
+        analyzer.cutoff = args.cutoff
+    analyzer.run_rss_analysis(args)
 
 
-@dataclass
-class SortStruct:
-    energy: float
-    spg_list: list[str]
-    irrep_struct: IrrepStruct
-    original_axis: np.ndarray
-    original_positions: np.ndarray
-    original_elements: np.ndarray
-    n_atoms: int
-    volume: float
-    least_distance: float
-    input_poscar: str
-    dup_count: int = 1
+def detect_outlier(energies: np.array, volumes: np.array):
+    energy_diff = np.abs(np.diff(energies))
+    volume_diff = np.abs(np.diff(volumes))
+
+    maybe_outlier = np.full_like(energies, fill_value=False, dtype=bool)
+    for i in range(len(energy_diff)):
+        if energy_diff[i] > 0.5 or volume_diff[i] > 4:
+            maybe_outlier[i] = True
+        else:
+            break
+
+    return maybe_outlier
 
 
-def generate_sort_struct(
-    energy: float,
-    spg_list: list[str],
-    poscar_name: str,
-    original_polymlp_st: Optional[PolymlpStructure] = None,
-):
-    if original_polymlp_st is None:
-        original_polymlp_st = Poscar(poscar_name).structure
-    _st = original_polymlp_st
-    objprop = PropUtil(_st.axis.T, _st.positions.T)
-
-    struct, recommend_symprecs = get_recommend_symprecs(
-        poscar_name=poscar_name, symprec_irrep=1e-5
-    )
-    symprec_list = [1e-5]
-    symprec_list.extend(recommend_symprecs)
-    irrep_struct = get_irrep_positions(struct=struct, symprec_irreps=symprec_list)
-
-    return SortStruct(
-        energy=energy,
-        spg_list=spg_list,
-        irrep_struct=irrep_struct,
-        original_axis=_st.axis.T,
-        original_positions=_st.positions.T,
-        original_elements=_st.elements,
-        n_atoms=int(len(_st.elements)),
-        volume=objprop.volume,
-        least_distance=objprop.least_distance,
-        input_poscar=poscar_name,
-    )
-
-
-class SortStructure:
+class RSSResultAnalyzer:
 
     def __init__(self):
         """Initialize data structures for sorting structures."""
         self.cutoff = None
-        self.nondup_str = []  # List to store non-duplicate structures
-        self.nondup_str_prop = []  # List to store non-duplicate structure properties
         self.iter_str = []  # Iteration statistics
         self.fval_str = []  # Function evaluation statistics
         self.gval_str = []  # Gradient evaluation statistics
@@ -98,70 +58,21 @@ class SortStructure:
         self.error_poscar = defaultdict(list)  # POSCAR error details
         self.time_all = 0  # Total computation time accumulator
 
-    def identify_duplicate_struct(
-        self, sort_struct: SortStruct, other_properties: dict = {}, energy_diff=1e-8
-    ):
-        """
-        Identify duplicate structures and update the internal list accordingly.
-
-        A structure is considered a duplicate if:
-        1. Its energy is within 1e-8 of an existing structure.
-        2. It shares at least one space group with an existing structure.
-
-        If a duplicate is found:
-        - The duplicate count is incremented.
-        - The structure is updated if it has a higher symmmerty of space group.
-        Otherwise, the structure is added as a new unique entry.
-        """
-
-        is_nonduplicate = True
-        change_struct = False
-        _energy = sort_struct.energy
-        _spg_list = sort_struct.spg_list
-        _irrep_struct = sort_struct.irrep_struct
-
-        for idx, ndstr in enumerate(self.nondup_str):
-            if abs(ndstr.energy - _energy) < energy_diff and any(
-                spg in _spg_list for spg in ndstr.spg_list
-            ):
-                is_nonduplicate = False
-                if self._extract_spg_count(_spg_list) > self._extract_spg_count(
-                    ndstr.spg_list
-                ):
-                    change_struct = True
-                break
-            elif struct_match(ndstr.irrep_struct, _irrep_struct):
-                is_nonduplicate = False
-                if self._extract_spg_count(_spg_list) > self._extract_spg_count(
-                    ndstr.spg_list
-                ):
-                    change_struct = True
-                break
-
-        self._update_iteration_stats(other_properties, is_nonduplicate)
-
-        if not is_nonduplicate:
-            # Update duplicate count and replace with better data if necessary
-            if change_struct:
-                self.nondup_str[idx] = sort_struct
-                self.nondup_str_prop[idx] = other_properties
-            self.nondup_str[idx].dup_count += 1
-        else:
-            self.nondup_str.append(sort_struct)
-            self.nondup_str_prop.append(other_properties)
-
-    def _get_result_from_logfiles(self):
+    def _load_rss_logfiles(self):
         """Read and process log files, filtering based on convergence criteria."""
+        unique_structs = []
+        struct_properties = []
+
         for logfile in self.logfiles:
             try:
-                struct_properties, judge = ReadFile(logfile).read_file()
+                struct_prop, judge = LogfileLoader(logfile).read_file()
             except (TypeError, ValueError):
                 self.errors["else_err"] += 1
                 self.error_poscar["else_err"].append(
                     logfile.split("/")[-1].removesuffix(".log")
                 )
                 continue
-            poscar_name = struct_properties["poscar"]
+            poscar_name = struct_prop["poscar"]
 
             # Handle different error cases
             if judge in {"iteration", "energy_low", "energy_zero", "anom_struct"}:
@@ -170,7 +81,7 @@ class SortStructure:
                 continue
 
             if judge is not True or any(
-                struct_properties[key] is None
+                struct_prop[key] is None
                 for key in ["time", "spg", "energy", "res_f", "res_s"]
             ):
                 self.errors["else_err"] += 1
@@ -178,11 +89,11 @@ class SortStructure:
                 continue
 
             # Convergence checks
-            if struct_properties["res_f"] > 10**-4:
+            if struct_prop["res_f"] > 10**-4:
                 self.errors["f_conv"] += 1
                 self.error_poscar["not_converged_f"].append(poscar_name)
                 continue
-            if struct_properties["res_s"] > 10**-3:
+            if struct_prop["res_s"] > 10**-3:
                 self.errors["s_conv"] += 1
                 self.error_poscar["not_converged_s"].append(poscar_name)
                 continue
@@ -197,18 +108,19 @@ class SortStructure:
                 self.error_poscar["else_err"].append(poscar_name)
                 continue
 
-            self.time_all += struct_properties["time"]
-            sort_struct, struct_properties = self._preprocess_optimized_struct(
-                struct_properties, optimized_poscar
+            self.time_all += struct_prop["time"]
+            unique_struct, struct_prop = self._preprocess_optimized_struct(
+                struct_prop, optimized_poscar
             )
-            if sort_struct is None:
+            if unique_struct is None:
                 self.errors["invalid_layer_struct"] += 1
-                self.error_poscar["invalid_layer_struct"].append(
-                    struct_properties["poscar"]
-                )
+                self.error_poscar["invalid_layer_struct"].append(struct_prop["poscar"])
                 continue
 
-            self.identify_duplicate_struct(sort_struct, struct_properties)
+            unique_structs.append(unique_struct)
+            struct_properties.append(struct_prop)
+
+        return unique_structs, struct_properties
 
     def _preprocess_optimized_struct(self, struct_properties, poscar_name):
         """Extract structural properties from the optimized structure file."""
@@ -244,20 +156,30 @@ class SortStructure:
             if max_layer_diff > self.cutoff:
                 return None, _prop
 
-        sort_struct = generate_sort_struct(
+        unique_struct = generate_unique_struct(
             _prop["energy"], _prop["spg"], poscar_name, original_polymlp_st=polymlp_st
         )
-        return sort_struct, _prop
+        return unique_struct, _prop
 
-    def _extract_spg_count(self, spg_list):
-        """Extract and sum space group counts from a list of space group strings."""
-        return sum(
-            int(re.search(r"\((\d+)\)", s).group(1))
-            for s in spg_list
-            if re.search(r"\((\d+)\)", s)
-        )
+    def _analysis_unique_structure(
+        self,
+        unique_struct: list[UniqueStructure],
+        struct_properties: list[dict],
+        energy_diff=1e-8,
+    ):
+        analyzer = UniqueStructureAnalyzer()
 
-    def _update_iteration_stats(self, _res, is_nonduplicate):
+        for idx, unique_struct in enumerate(unique_struct):
+            is_unique, _ = analyzer.identify_duplicate_struct(
+                unique_struct,
+                other_properties=struct_properties[idx],
+                energy_diff=energy_diff,
+            )
+            self._update_iteration_stats(struct_properties[idx], is_unique)
+
+        return analyzer.unique_str, analyzer.unique_str_prop
+
+    def _update_iteration_stats(self, _res, is_unique):
         """Update iteration statistics."""
         if "iter" not in _res:
             return
@@ -270,7 +192,7 @@ class SortStructure:
             self.iter_str[-1] += _res["iter"]
             self.fval_str[-1] += _res["fval"]
             self.gval_str[-1] += _res["gval"]
-        if is_nonduplicate:
+        if is_unique:
             self.iter_str.append(self.iter_str[-1])
             self.fval_str.append(self.fval_str[-1])
             self.gval_str.append(self.gval_str[-1])
@@ -278,33 +200,40 @@ class SortStructure:
             _res["fval"] = self.fval_str[-1]
             _res["gval"] = self.gval_str[-1]
 
-    def run_sorting(self, args):
+    def run_rss_analysis(self, args):
         """Sort structures and write the results to a log file."""
         time_start = time()
+
         with open("finish.log") as f:
             finished_set = [line.strip() for line in f]
         with open("success.log") as f:
             sucessed_set = [line.strip() for line in f]
-        if args.num_sort_str is not None:
-            sucessed_set = sucessed_set[: args.num_sort_str]
+        if args.num_str is not None:
+            sucessed_set = sucessed_set[: args.num_str]
             fin_poscar = sucessed_set[-1]
             index = finished_set.index(fin_poscar)
             finished_set = finished_set[: index + 1]
         self.logfiles = [f"log/{p}.log" for p in finished_set]
-        self._get_result_from_logfiles()
+        unique_structs, struct_properties = self._load_rss_logfiles()
+
+        unique_str, unique_str_prop = self._analysis_unique_structure(
+            unique_structs, struct_properties
+        )
+
         time_finish = time() - time_start
 
         # Sort structures by energy
-        energies = np.array([s.energy for s in self.nondup_str])
+        energies = np.array([s.energy for s in unique_str])
+        volumes = np.array([s.volume for s in unique_str])
         sort_indices = np.argsort(energies)
-        self.nondup_str = [self.nondup_str[i] for i in sort_indices]
-        self.nondup_str_prop = [self.nondup_str_prop[i] for i in sort_indices]
+        unique_str = [unique_str[i] for i in sort_indices]
+        unique_str_prop = [unique_str_prop[i] for i in sort_indices]
 
         # Get minimum energy value
-        energy_min = -10
-        for _str in self.nondup_str:
-            if energy_min < _str.energy:
-                energy_min = _str.energy
+        maybe_outlier = detect_outlier(energies[sort_indices], volumes[sort_indices])
+        for i in range(len(unique_str)):
+            if not maybe_outlier[i]:
+                energy_min = unique_str[i].energy
                 break
 
         # Calculate total error count
@@ -332,8 +261,8 @@ class SortStructure:
         prop_success = round(success_count / finish_count, 2)
 
         # Write results to log file
-        if args.num_sort_str is not None:
-            file_name = f"rss_results_{args.num_sort_str}.log"
+        if args.num_str is not None:
+            file_name = f"rss_results_{args.num_str}.log"
         else:
             file_name = "rss_results.log"
         with open(file_name, "w") as f:
@@ -341,7 +270,7 @@ class SortStructure:
             print("Sorting time (sec.):            ", round(time_finish, 2), file=f)
             print(
                 "Selected potential:             ",
-                self.nondup_str_prop[0]["potential"],
+                unique_str_prop[0]["potential"],
                 file=f,
             )
             print("Max number of structures in RSS:", max_init_str, file=f)
@@ -379,8 +308,8 @@ class SortStructure:
             )
             print("", file=f)
             print("---- Nonduplicate structures ----", file=f)
-            for idx, _str in enumerate(self.nondup_str):
-                _prop = self.nondup_str_prop[idx]
+            for idx, _str in enumerate(unique_str):
+                _prop = unique_str_prop[idx]
                 e_diff = round((_str.energy - energy_min) * 1000, 2)
                 print(f"No. {idx+1}", file=f)
                 print(
@@ -400,6 +329,11 @@ class SortStructure:
                     f'/ iteration {_prop["iter"]}',
                     file=f,
                 )
+                if maybe_outlier[idx]:
+                    print(
+                        " - WARNING    : This structure might be an outlier.",
+                        file=f,
+                    )
             print("", file=f)
             print("---- Evaluation count per structure ----", file=f)
             print("Iteration (list):           ", self.iter_str, file=f)

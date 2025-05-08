@@ -7,21 +7,26 @@ from time import time
 import joblib
 import numpy as np
 
-from rsspolymlp.rss.struct_sort import SortStructure, generate_sort_struct
-from rsspolymlp.utils.parse_arg import ParseArgument
-from rsspolymlp.utils.property import PropUtil
+from rsspolymlp.analysis.unique_struct import (
+    UniqueStructure,
+    UniqueStructureAnalyzer,
+    generate_unique_struct,
+)
+from rsspolymlp.common.parse_arg import ParseArgument
+from rsspolymlp.common.property import PropUtil
+from rsspolymlp.rss.rss_analysis import detect_outlier
 
 
 def run():
-    args = ParseArgument.get_sorting_args2()
-    sorter_all = SortStructAll(
+    args = ParseArgument.get_summarize_args()
+    analyzer_all = RSSResultSummarizer(
         args.elements,
         args.result_paths,
         args.use_joblib,
         args.num_process,
         args.backend,
     )
-    sorter_all.run_sorting()
+    analyzer_all.run_sorting()
 
 
 def extract_composition_ratio(path_name: str, target_elements: list):
@@ -69,40 +74,26 @@ def load_rss_results(result_path: str, absolute_path=False) -> list[dict]:
     return rss_results
 
 
-def generate_sort_structs(
+def generate_unique_structs(
     rss_results, use_joblib=True, num_process=-1, backend="loky"
-) -> list[SortStructure]:
+) -> list[UniqueStructure]:
     if use_joblib:
-        sort_structs = joblib.Parallel(n_jobs=num_process, backend=backend)(
-            joblib.delayed(generate_sort_struct)(
+        unique_structs = joblib.Parallel(n_jobs=num_process, backend=backend)(
+            joblib.delayed(generate_unique_struct)(
                 res["enthalpy"], res["spg_list"], res["poscar"]
             )
             for res in rss_results
         )
     else:
-        sort_structs = []
+        unique_structs = []
         for res in rss_results:
-            sort_structs.append(
-                generate_sort_struct(res["enthalpy"], res["spg_list"], res["poscar"])
+            unique_structs.append(
+                generate_unique_struct(res["enthalpy"], res["spg_list"], res["poscar"])
             )
-    return sort_structs
+    return unique_structs
 
 
-def detect_outlier(energies: np.array, volumes: np.array):
-    energy_diff = np.abs(np.diff(energies))
-    volume_diff = np.abs(np.diff(volumes))
-
-    maybe_outlier = np.full_like(energies, fill_value=False, dtype=bool)
-    for i in range(len(energy_diff)):
-        if energy_diff[i] > 0.5 or volume_diff[i] > 4:
-            maybe_outlier[i] = True
-        else:
-            break
-
-    return maybe_outlier
-
-
-class SortStructAll:
+class RSSResultSummarizer:
 
     def __init__(
         self,
@@ -133,30 +124,30 @@ class SortStructAll:
 
             time_start = time()
 
-            nondup_str, num_opt_struct, integrated_res_paths = (
+            unique_str, num_opt_struct, integrated_res_paths = (
                 self._sorting_in_same_comp(comp_ratio, res_paths)
             )
 
             time_finish = time() - time_start
 
-            energies = np.array([s.energy for s in nondup_str])
-            volumes = np.array([s.volume for s in nondup_str])
+            energies = np.array([s.energy for s in unique_str])
+            volumes = np.array([s.volume for s in unique_str])
             sort_indices = np.argsort(energies)
-            nondup_str = [nondup_str[i] for i in sort_indices]
-            
+            unique_str = [unique_str[i] for i in sort_indices]
+
             maybe_outlier = detect_outlier(
                 energies[sort_indices], volumes[sort_indices]
             )
-            for i in range(len(nondup_str)):
+            for i in range(len(unique_str)):
                 if not maybe_outlier[i]:
-                    energy_min = nondup_str[i].energy
+                    energy_min = unique_str[i].energy
                     break
 
             with open(log_name + ".log", "w") as f:
                 print("---- General outputs ----", file=f)
                 print("Sorting time (sec.):           ", round(time_finish, 2), file=f)
                 print("Number of optimized strcts:    ", num_opt_struct, file=f)
-                print("Number of nonduplicate structs:", len(nondup_str), file=f)
+                print("Number of nonduplicate structs:", len(unique_str), file=f)
                 print(
                     "Input file names:              ",
                     integrated_res_paths,
@@ -164,7 +155,7 @@ class SortStructAll:
                 )
                 print("", file=f)
                 print("---- Nonduplicate structures ----", file=f)
-                for idx, _str in enumerate(nondup_str):
+                for idx, _str in enumerate(unique_str):
                     objprop = PropUtil(_str.original_axis.T, _str.original_positions.T)
                     e_diff = round((_str.energy - energy_min) * 1000, 2)
                     print(f"No. {idx+1}", file=f)
@@ -185,7 +176,10 @@ class SortStructAll:
                         file=f,
                     )
                     if maybe_outlier[idx]:
-                        print(" - WARNING    : This structure might be an outlier.", file=f)
+                        print(
+                            " - WARNING    : This structure might be an outlier.",
+                            file=f,
+                        )
                 print("", file=f)
 
     def _sorting_in_same_comp(self, comp_ratio, result_paths):
@@ -194,7 +188,7 @@ class SortStructAll:
             if not comp_ratio[i] == 0:
                 log_name += f"{self.elements[i]}{comp_ratio[i]}"
 
-        sorter = SortStructure()
+        analyzer = UniqueStructureAnalyzer()
         num_opt_struct = 0
         pre_result_paths = []
         if os.path.isfile(log_name + ".log"):
@@ -209,13 +203,13 @@ class SortStructAll:
                         break
 
             rss_results1 = load_rss_results(log_name + ".log", absolute_path=True)
-            sort_structs1 = generate_sort_structs(
+            unique_structs1 = generate_unique_structs(
                 rss_results1,
                 use_joblib=self.use_joblib,
                 num_process=self.num_process,
                 backend=self.backend,
             )
-            sorter.nondup_str = sort_structs1
+            analyzer.unique_str = unique_structs1
 
         not_processed_path = list(set(result_paths) - set(pre_result_paths))
         integrated_res_paths = list(set(result_paths) | set(pre_result_paths))
@@ -224,15 +218,15 @@ class SortStructAll:
         for res_path in not_processed_path:
             rss_res = load_rss_results(res_path)
             rss_results2.extend(rss_res)
-        sort_structs2 = generate_sort_structs(
+        unique_structs2 = generate_unique_structs(
             rss_results2,
             use_joblib=self.use_joblib,
             num_process=self.num_process,
             backend=self.backend,
         )
-        num_opt_struct += len(sort_structs2)
+        num_opt_struct += len(unique_structs2)
 
-        for res in sort_structs2:
-            sorter.identify_duplicate_struct(res)
+        for res in unique_structs2:
+            analyzer.identify_duplicate_struct(res)
 
-        return sorter.nondup_str, num_opt_struct, integrated_res_paths
+        return analyzer.unique_str, num_opt_struct, integrated_res_paths

@@ -9,7 +9,7 @@ from rsspolymlp.utils.spglib_utils import SymCell
 
 
 @dataclass
-class IrrepStruct:
+class IrrepStructure:
     axis: np.ndarray
     positions: np.ndarray
     elements: np.ndarray
@@ -18,8 +18,8 @@ class IrrepStruct:
 
 
 def struct_match(
-    st_1: IrrepStruct,
-    st_2: IrrepStruct,
+    st_1: IrrepStructure,
+    st_2: IrrepStructure,
     axis_tol: float = 0.01,
     pos_tol: float = 0.01,
 ) -> bool:
@@ -46,7 +46,7 @@ def get_irrep_positions(
     struct: PolymlpStructure = None,
     symprec_primitive: float = 1e-3,
     symprec_irreps: list = [1e-5],
-) -> IrrepStruct:
+) -> IrrepStructure:
 
     if poscar_name is not None:
         symutil = SymCell(poscar_name=poscar_name, symprec=symprec_primitive)
@@ -63,7 +63,7 @@ def get_irrep_positions(
         )
         irrep_positions.append(rep_pos)
 
-    return IrrepStruct(
+    return IrrepStructure(
         axis=_axis,
         positions=np.stack(irrep_positions, axis=0),
         elements=sorted_elements,

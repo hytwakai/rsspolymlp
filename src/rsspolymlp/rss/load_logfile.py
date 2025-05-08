@@ -1,4 +1,4 @@
-class ReadFile:
+class LogfileLoader:
 
     def __init__(self, logfile):
         self.logfile = logfile

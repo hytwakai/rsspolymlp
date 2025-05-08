@@ -5,7 +5,7 @@ import tarfile
 import time
 
 from rsspolymlp.utils import pymatgen_utils
-from rsspolymlp.struct_matcher.struct_match import get_irrep_positions, struct_match
+from rsspolymlp.analysis.struct_matcher.struct_match import get_irrep_positions, struct_match
 from rsspolymlp.utils.spglib_utils import SymCell
 
 pymat = pymatgen_utils.PymatUtil()

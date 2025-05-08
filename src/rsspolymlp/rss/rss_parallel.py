@@ -12,8 +12,8 @@ import time
 
 import joblib
 
-from rsspolymlp.rss.rss_mlp import RandomStructureOptimization
-from rsspolymlp.utils.parse_arg import ParseArgument
+from rsspolymlp.rss.rss_mlp import RandomStructureSearch
+from rsspolymlp.common.parse_arg import ParseArgument
 
 
 def run():
@@ -36,7 +36,7 @@ def run():
     if args.parallel_method == "joblib":
         # Perform parallel optimization with joblib
         time_pra = time.time()
-        rssobj = RandomStructureOptimization(args)
+        rssobj = RandomStructureSearch(args)
         joblib.Parallel(n_jobs=args.num_process, backend=args.backend)(
             joblib.delayed(rssobj.run_optimization)(poscar)
             for poscar in poscar_path_all
@@ -95,7 +95,7 @@ def run_single_srun():
     poscar_path_all = sorted(poscar_path_all, key=lambda x: int(x.split("_")[-1]))
     poscar_list = [p for p in poscar_path_all if os.path.basename(p)]
 
-    rssobj = RandomStructureOptimization(args)
+    rssobj = RandomStructureSearch(args)
 
     while True:
         lock = acquire_lock()

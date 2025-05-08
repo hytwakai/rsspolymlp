@@ -23,15 +23,15 @@ class ParseArgument:
         return parser.parse_args()
 
     @classmethod
-    def get_sorting_args(cls):
+    def get_analysis_args(cls):
         parser = argparse.ArgumentParser()
-        cls.add_sorting_arguments(parser)
+        cls.add_analysis_arguments(parser)
         return parser.parse_args()
 
     @classmethod
-    def get_sorting_args2(cls):
+    def get_summarize_args(cls):
         parser = argparse.ArgumentParser()
-        cls.add_sorting_arguments2(parser)
+        cls.add_summarize_arguments(parser)
         cls.add_parallelization_arguments(parser)
         return parser.parse_args()
 
@@ -136,13 +136,13 @@ class ParseArgument:
         )
 
     @staticmethod
-    def add_sorting_arguments(parser):
+    def add_analysis_arguments(parser):
         # Settings for sorting
         parser.add_argument(
-            "--num_sort_str",
+            "--num_str",
             type=int,
             default=None,
-            help="(Optional) Maximum number of optimized structures used for sorting",
+            help="(Optional) Maximum number of optimized structures used for analysis",
         )
         parser.add_argument(
             "--cutoff",
@@ -152,7 +152,7 @@ class ParseArgument:
         )
 
     @staticmethod
-    def add_sorting_arguments2(parser):
+    def add_summarize_arguments(parser):
         parser.add_argument(
             "--elements",
             nargs="*",

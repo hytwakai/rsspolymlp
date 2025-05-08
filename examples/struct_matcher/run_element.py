@@ -2,7 +2,7 @@ import numpy as np
 
 from rsspolymlp.utils import pymatgen_utils
 from pypolymlp.utils.spglib_utils import SymCell
-from rsspolymlp.struct_matcher.irrep_position import IrrepPos
+from rsspolymlp.analysis.struct_matcher.irrep_position import IrrepPos
 from rsspolymlp.utils.property import PropUtil
 
 pymat = pymatgen_utils.PymatUtil()

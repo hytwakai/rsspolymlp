@@ -10,7 +10,7 @@ from pypolymlp.utils.spglib_utils import SymCell
 from rsspolymlp.utils.wait_readfile import wait_for_file_lines
 
 
-class RandomStructureOptimization:
+class RandomStructureSearch:
 
     def __init__(self, args):
         # Parsed command-line arguments containing optimization settings.
