@@ -41,33 +41,20 @@ pip install .
 
 ## Usage
 
-The command-line interface of `rsspolylmp` is divided into three sections.
-Each section corresponds to a different phase of the workflow:
-1. Generating initial structures (`gen-rand-struct`)
-2. Geometry optimization performed in parallel (`rss-parallel`)
-3. Sorting optimization results (`sort-struct`)
+The command-line interface of `rsspolylmp` is organized into three sections, each corresponding to a different phase of the workflow:
+1. Generating initial structures (`rss-init-struct`)
+2. Performing parallel geometry optimization (`rss-parallel`)
+3. Analyzing RSS results (`rss-analysis`)
 
 ### Example Commands
 
-#### Generating Initial Structures
 ```shell
-gen-rand-struct --elements Al Cu --atom_counts 4 4 --num_init_str 2000
-```
-#### Geometry optimization performed in parallel
-```shell
+rss-init-struct --elements Al Cu --atom_counts 4 4 --num_init_str 2000
 rss-parallel --pot polymlp.yaml --num_opt_str 1000
-```
-#### Sorting the optimization results
-```shell
-sort-struct
+rss-analysis
 ```
 
-## Additional Options
-
-### 1. Random Structure Generation Arguments
-
-These options configure the generation of random initial structures:
-
+#### Arguments
 - `--elements`  
   **Type**: string (list)  
   **Description**: List of chemical element symbols (e.g., `Al`, `Cu`).
@@ -80,6 +67,22 @@ These options configure the generation of random initial structures:
   **Type**: int  
   **Default**: 5000  
   **Description**: Number of randomly generated initial structures.
+
+- `--pot`  
+  **Type**: string (list)  
+  **Default**: `polymlp.yaml`  
+  **Description**: Potential file used by the polynomial MLP.
+
+- `--num_opt_str`  
+  **Type**: int  
+  **Default**: 1000  
+  **Description**: Maximum number of optimized structures obtained from RSS.
+
+## Additional Options
+
+### 1. Random Structure Generation Arguments
+
+These options configure the generation of random initial structures in `rss-init-struct`:
 
 - `--least_distance`  
   **Type**: float  
@@ -97,17 +100,7 @@ These options configure the generation of random initial structures:
   **Description**: Minimum volume per atom for the initial structure (A³/atom).
 
 ### 2.1. Geometry Optimization Arguments
-These options control the settings for geometry optimizations:
-
-- `--pot`  
-  **Type**: string (list)  
-  **Default**: `polymlp.yaml`  
-  **Description**: Potential file used by the polynomial MLP.
-
-- `--num_opt_str`  
-  **Type**: int  
-  **Default**: 1000  
-  **Description**: Maximum number of optimized structures obtained from RSS.
+These options control the settings for geometry optimizations in `rss-parallel`:
 
 - `--pressure`  
   **Type**: float  
@@ -125,7 +118,7 @@ These options control the settings for geometry optimizations:
   **Description**: Maximum number of iterations allowed when adjusting optimization parameters (e.g., `c1` and `c2` values).
 
 ### 2.2. Parallelization Arguments
-These options the geometry optimization settings to enable parallel processing:
+These options the geometry optimization settings to enable parallel processing in `rss-parallel`:
 
 - `--parallel_method`  
   **Type**: string (choice)  

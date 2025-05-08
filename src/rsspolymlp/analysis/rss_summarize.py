@@ -52,7 +52,9 @@ def extract_composition_ratio(path_name: str, target_elements: list):
     return comp_ratio
 
 
-def load_rss_results(result_path: str, absolute_path=False) -> list[dict]:
+def load_rss_results(
+    result_path: str, absolute_path=False, get_warning=False
+) -> list[dict]:
     rss_results = []
     parent_path = os.path.dirname(result_path)
     with open(result_path) as f:
@@ -69,6 +71,11 @@ def load_rss_results(result_path: str, absolute_path=False) -> list[dict]:
             spg = re.search(r"- Space group: (.+)", lines[line_idx + 6])
             _res["spg_list"] = ast.literal_eval(spg[1])
             _res["volume"] = float(lines[line_idx + 7].split("volume")[-1].split()[0])
+            if get_warning:
+                if "WARNING" in lines[line_idx + 8]:
+                    _res["outlier"] = True
+                else:
+                    _res["outlier"] = False
             rss_results.append(_res)
 
     return rss_results

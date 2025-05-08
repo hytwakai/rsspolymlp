@@ -34,7 +34,7 @@ tools = ["pymatgen", "matplotlib", "seaborn"]
 homepage = "https://github.com/hytwakai/rsspolymlp"
 
 [project.scripts]
-gen-rand-struct = "rsspolymlp.rss.random_struct:run"
+rss-init-struct = "rsspolymlp.rss.random_struct:run"
 rss-single-srun = "rsspolymlp.rss.rss_parallel:run_single_srun"
 rss-parallel = "rsspolymlp.rss.rss_parallel:run"
 rss-analysis = "rsspolymlp.rss.rss_analysis:run"
