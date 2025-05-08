@@ -54,24 +54,11 @@ rss-parallel --pot polymlp.yaml --num_opt_str 1000
 rss-analysis
 ```
 
-- `--elements`: 
-    
-  List of element symbols (e.g., `Al Cu`).
-
-- `--atom_counts`: 
-
-  Number of atoms for each element (must match the order of `--elements`).
-
-- `--num_init_str`: 
-
-  Number of random initial structures to generate. *(default: 5000)*
-
-- `--pot`: 
-
-  Path to the polynomial MLP potential file. *(default: polymlp.yaml)*
-
-- `--num_opt_str`: 
-
-  Maximum number of optimized structures to obtain from RSS. *(default: 1000)*
+#### Arguments
+- `--elements`: List of element symbols (e.g., `Al Cu`).
+- `--atom_counts`: Number of atoms for each element (must match the order of `--elements`).
+- `--num_init_str`: Number of random initial structures to generate. *(default: 5000)*
+- `--pot`: Path to the polynomial MLP potential file. *(default: polymlp.yaml)*
+- `--num_opt_str`: Maximum number of optimized structures to obtain from RSS. *(default: 1000)*
 
 - [Additional information is here](docs/rss.md)
