@@ -28,6 +28,10 @@ If you use `rsspolymlp` in your study, please cite the following articles.
 - spglib
 - joblib
 
+[Optional]
+- matplotlib (if plotting RSS results)
+- seaborn (if plotting RSS results)
+
 ### How to install
 
 ```shell
