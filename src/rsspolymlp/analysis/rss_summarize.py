@@ -71,10 +71,8 @@ def load_rss_results(
             _res["spg_list"] = ast.literal_eval(spg[1])
             _res["volume"] = float(lines[line_idx + 7].split("volume")[-1].split()[0])
             if get_warning:
-                if "WARNING" in lines[line_idx + 8]:
-                    _res["outlier"] = True
-                else:
-                    _res["outlier"] = False
+                warning_line = lines[line_idx + 8] if line_idx + 8 < len(lines) else ""
+                _res["outlier"] = "WARNING" in warning_line
             rss_results.append(_res)
 
     return rss_results
