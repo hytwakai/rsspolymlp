@@ -164,7 +164,7 @@ class RSSResultSummarizer:
                 print("Number of nonduplicate structs:", len(unique_str), file=f)
                 print(
                     "Input file names:              ",
-                    integrated_res_paths,
+                    sorted(integrated_res_paths),
                     file=f,
                 )
                 print("", file=f)
