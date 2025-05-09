@@ -60,5 +60,4 @@ rss-analysis
 - `--num_init_str`: Number of random initial structures to generate. *(default: 5000)*
 - `--pot`: Path to the polynomial MLP potential file. *(default: polymlp.yaml)*
 - `--num_opt_str`: Maximum number of optimized structures to obtain from RSS. *(default: 1000)*
-
 - [Additional information is here](docs/rss.md)

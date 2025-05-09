@@ -39,6 +39,7 @@ rss-single-srun = "rsspolymlp.rss.rss_parallel:run_single_srun"
 rss-parallel = "rsspolymlp.rss.rss_parallel:run"
 rss-analysis = "rsspolymlp.rss.rss_analysis:run"
 rss-summarize = "rsspolymlp.analysis.rss_summarize:run"
+analysis-ch = "rsspolymlp.analysis.convex_hull:run"
 
 [tool.setuptools]
 package-dir = {"" = "src"}

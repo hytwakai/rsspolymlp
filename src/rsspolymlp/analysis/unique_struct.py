@@ -23,6 +23,7 @@ class UniqueStructure:
     original_axis: np.ndarray
     original_positions: np.ndarray
     original_elements: np.ndarray
+    axis_abc: np.ndarray
     n_atoms: int
     volume: float
     least_distance: float
@@ -55,6 +56,7 @@ def generate_unique_struct(
         original_axis=_st.axis.T,
         original_positions=_st.positions.T,
         original_elements=_st.elements,
+        axis_abc=objprop.axis_to_abc,
         n_atoms=int(len(_st.elements)),
         volume=objprop.volume,
         least_distance=objprop.least_distance,

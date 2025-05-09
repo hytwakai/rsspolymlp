@@ -19,9 +19,9 @@ from rsspolymlp.analysis.unique_struct import (
     UniqueStructureAnalyzer,
     generate_unique_struct,
 )
-from rsspolymlp.rss.load_logfile import LogfileLoader
 from rsspolymlp.common.parse_arg import ParseArgument
 from rsspolymlp.common.property import PropUtil
+from rsspolymlp.rss.load_logfile import LogfileLoader
 
 
 def run():
@@ -32,18 +32,62 @@ def run():
     analyzer.run_rss_analysis(args)
 
 
-def detect_outlier(energies: np.array, volumes: np.array):
-    energy_diff = np.abs(np.diff(energies))
-    volume_diff = np.abs(np.diff(volumes))
-
+def detect_outlier(energies: np.array):
     maybe_outlier = np.full_like(energies, fill_value=False, dtype=bool)
-    for i in range(len(energy_diff)):
-        if energy_diff[i] > 0.5 or volume_diff[i] > 4:
+    window = 5
+
+    for i in range(len(energies) - window):
+        energy_diff = np.abs(energies[i] - energies[i + 1 : i + 1 + window])
+        if np.any(energy_diff > 0.2):
             maybe_outlier[i] = True
         else:
             break
-
     return maybe_outlier
+
+
+def log_unique_structures(file_name, unique_structs, unique_struct_iters=None):
+    # Sort structures by energy
+    energies = np.array([s.energy for s in unique_structs])
+    sort_indices = np.argsort(energies)
+    unique_str = [unique_structs[i] for i in sort_indices]
+    if unique_struct_iters is not None:
+        _iters = [unique_struct_iters[i] for i in sort_indices]
+
+    # Get minimum energy value
+    maybe_outlier = detect_outlier(energies[sort_indices])
+    for i in range(len(unique_str)):
+        if not maybe_outlier[i]:
+            energy_min = unique_str[i].energy
+            break
+
+    with open(file_name, "a") as f:
+        print("---- Unique structures ----", file=f)
+        for idx, _str in enumerate(unique_str):
+            e_diff = round((_str.energy - energy_min) * 1000, 2)
+            print(f"No. {idx+1}", file=f)
+            print(
+                f"{_str.input_poscar} ({e_diff} meV/atom, {_str.dup_count} duplicates)",
+                file=f,
+            )
+            print(" - Enthalpy:   ", _str.energy, file=f)
+            print(" - Axis:       ", _str.axis_abc, file=f)
+            print(" - Postions:   ", _str.original_positions.T.tolist(), file=f)
+            print(" - Elements:   ", _str.original_elements, file=f)
+            print(" - Space group:", _str.spg_list, file=f)
+            info = [
+                " - Other Info.:",
+                f"{_str.n_atoms} atom",
+                f"/ distance {round(_str.least_distance, 3)} (Ang.)",
+                f"/ volume {round(_str.volume, 2)} (A^3/atom)",
+            ]
+            if unique_struct_iters is not None:
+                info.append(f"/ iteration {_iters[idx]}")
+            print(*info, file=f)
+            if maybe_outlier[idx]:
+                print(
+                    " - WARNING    : This structure might be an outlier.",
+                    file=f,
+                )
 
 
 class RSSResultAnalyzer:
@@ -51,6 +95,7 @@ class RSSResultAnalyzer:
     def __init__(self):
         """Initialize data structures for sorting structures."""
         self.cutoff = None
+        self.potential = None
         self.iter_str = []  # Iteration statistics
         self.fval_str = []  # Function evaluation statistics
         self.gval_str = []  # Gradient evaluation statistics
@@ -82,11 +127,14 @@ class RSSResultAnalyzer:
 
             if judge is not True or any(
                 struct_prop[key] is None
-                for key in ["time", "spg", "energy", "res_f", "res_s"]
+                for key in ["potential", "time", "spg", "energy", "res_f", "res_s"]
             ):
                 self.errors["else_err"] += 1
                 self.error_poscar["else_err"].append(poscar_name)
                 continue
+
+            self.time_all += struct_prop["time"]
+            self.potential = struct_prop["potential"]
 
             # Convergence checks
             if struct_prop["res_f"] > 10**-4:
@@ -108,9 +156,8 @@ class RSSResultAnalyzer:
                 self.error_poscar["else_err"].append(poscar_name)
                 continue
 
-            self.time_all += struct_prop["time"]
-            unique_struct, struct_prop = self._preprocess_optimized_struct(
-                struct_prop, optimized_poscar
+            unique_struct = self._validate_optimized_struct(
+                optimized_poscar, struct_prop["energy"], struct_prop["spg"]
             )
             if unique_struct is None:
                 self.errors["invalid_layer_struct"] += 1
@@ -122,12 +169,9 @@ class RSSResultAnalyzer:
 
         return unique_structs, struct_properties
 
-    def _preprocess_optimized_struct(self, struct_properties, poscar_name):
-        """Extract structural properties from the optimized structure file."""
-        _prop = struct_properties
-
+    def _validate_optimized_struct(self, poscar_name, energy, spg):
         if self.cutoff is None:
-            _params, _ = load_mlps(_prop["potential"])
+            _params, _ = load_mlps(self.potential)
             if not isinstance(_params, list):
                 self.cutoff = _params.as_dict()["model"]["cutoff"]
             else:
@@ -141,25 +185,24 @@ class RSSResultAnalyzer:
 
         polymlp_st = Poscar(poscar_name).structure
         objprop = PropUtil(polymlp_st.axis.T, polymlp_st.positions.T)
-        _prop["axis_abc"] = objprop.axis_to_abc
-        _prop["position_list"] = polymlp_st.positions.T.tolist()
+        axis_abc = objprop.axis_to_abc
 
         distance_cluster = get_distance_cluster(struct=polymlp_st, symprec_irrep=1e-5)
         if distance_cluster is not None:
             max_layer_diff = max(
                 [
-                    np.max(distance_cluster[0]) * _prop["axis_abc"][0],
-                    np.max(distance_cluster[1]) * _prop["axis_abc"][1],
-                    np.max(distance_cluster[2]) * _prop["axis_abc"][2],
+                    np.max(distance_cluster[0]) * axis_abc[0],
+                    np.max(distance_cluster[1]) * axis_abc[1],
+                    np.max(distance_cluster[2]) * axis_abc[2],
                 ]
             )
             if max_layer_diff > self.cutoff:
-                return None, _prop
+                return None
 
         unique_struct = generate_unique_struct(
-            _prop["energy"], _prop["spg"], poscar_name, original_polymlp_st=polymlp_st
+            energy, spg, poscar_name, original_polymlp_st=polymlp_st
         )
-        return unique_struct, _prop
+        return unique_struct
 
     def _analysis_unique_structure(
         self,
@@ -222,20 +265,6 @@ class RSSResultAnalyzer:
 
         time_finish = time() - time_start
 
-        # Sort structures by energy
-        energies = np.array([s.energy for s in unique_str])
-        volumes = np.array([s.volume for s in unique_str])
-        sort_indices = np.argsort(energies)
-        unique_str = [unique_str[i] for i in sort_indices]
-        unique_str_prop = [unique_str_prop[i] for i in sort_indices]
-
-        # Get minimum energy value
-        maybe_outlier = detect_outlier(energies[sort_indices], volumes[sort_indices])
-        for i in range(len(unique_str)):
-            if not maybe_outlier[i]:
-                energy_min = unique_str[i].energy
-                break
-
         # Calculate total error count
         error_count = sum(
             [
@@ -266,11 +295,11 @@ class RSSResultAnalyzer:
         else:
             file_name = "rss_results.log"
         with open(file_name, "w") as f:
-            print("---- General outputs ----", file=f)
+            print("---- General informantion ----", file=f)
             print("Sorting time (sec.):            ", round(time_finish, 2), file=f)
             print(
                 "Selected potential:             ",
-                unique_str_prop[0]["potential"],
+                self.potential,
                 file=f,
             )
             print("Max number of structures in RSS:", max_init_str, file=f)
@@ -307,33 +336,11 @@ class RSSResultAnalyzer:
                 file=f,
             )
             print("", file=f)
-            print("---- Nonduplicate structures ----", file=f)
-            for idx, _str in enumerate(unique_str):
-                _prop = unique_str_prop[idx]
-                e_diff = round((_str.energy - energy_min) * 1000, 2)
-                print(f"No. {idx+1}", file=f)
-                print(
-                    f"{_str.input_poscar} ({e_diff} meV/atom, {_str.dup_count} duplicates)",
-                    file=f,
-                )
-                print(" - Enthalpy:   ", _str.energy, file=f)
-                print(" - Axis:       ", _prop["axis_abc"], file=f)
-                print(" - Postions:   ", _prop["position_list"], file=f)
-                print(" - Elements:   ", _str.original_elements, file=f)
-                print(" - Space group:", _str.spg_list, file=f)
-                print(
-                    " - Other Info.:",
-                    f"{_str.n_atoms} atom",
-                    f"/ distance {round(_str.least_distance, 3)} (Ang.)",
-                    f"/ volume {round(_str.volume, 2)} (A^3/atom)",
-                    f'/ iteration {_prop["iter"]}',
-                    file=f,
-                )
-                if maybe_outlier[idx]:
-                    print(
-                        " - WARNING    : This structure might be an outlier.",
-                        file=f,
-                    )
+
+        _iters = np.array([s["iter"] for s in unique_str_prop])
+        log_unique_structures(file_name, unique_str, _iters)
+
+        with open(file_name, "a") as f:
             print("", file=f)
             print("---- Evaluation count per structure ----", file=f)
             print("Iteration (list):           ", self.iter_str, file=f)

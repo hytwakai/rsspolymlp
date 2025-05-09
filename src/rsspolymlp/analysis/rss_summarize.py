@@ -13,8 +13,7 @@ from rsspolymlp.analysis.unique_struct import (
     generate_unique_struct,
 )
 from rsspolymlp.common.parse_arg import ParseArgument
-from rsspolymlp.common.property import PropUtil
-from rsspolymlp.rss.rss_analysis import detect_outlier
+from rsspolymlp.rss.rss_analysis import log_unique_structures
 
 
 def run():
@@ -137,21 +136,8 @@ class RSSResultSummarizer:
 
             time_finish = time() - time_start
 
-            energies = np.array([s.energy for s in unique_str])
-            volumes = np.array([s.volume for s in unique_str])
-            sort_indices = np.argsort(energies)
-            unique_str = [unique_str[i] for i in sort_indices]
-
-            maybe_outlier = detect_outlier(
-                energies[sort_indices], volumes[sort_indices]
-            )
-            for i in range(len(unique_str)):
-                if not maybe_outlier[i]:
-                    energy_min = unique_str[i].energy
-                    break
-
             with open(log_name + ".log", "w") as f:
-                print("---- General outputs ----", file=f)
+                print("---- General informantion ----", file=f)
                 print("Sorting time (sec.):           ", round(time_finish, 2), file=f)
                 print("Number of optimized strcts:    ", num_opt_struct, file=f)
                 print("Number of nonduplicate structs:", len(unique_str), file=f)
@@ -161,33 +147,7 @@ class RSSResultSummarizer:
                     file=f,
                 )
                 print("", file=f)
-                print("---- Nonduplicate structures ----", file=f)
-                for idx, _str in enumerate(unique_str):
-                    objprop = PropUtil(_str.original_axis.T, _str.original_positions.T)
-                    e_diff = round((_str.energy - energy_min) * 1000, 2)
-                    print(f"No. {idx+1}", file=f)
-                    print(
-                        f"{_str.input_poscar} ({e_diff} meV/atom, {_str.dup_count} duplicates)",
-                        file=f,
-                    )
-                    print(" - Enthalpy:   ", _str.energy, file=f)
-                    print(" - Axis:       ", objprop.axis_to_abc, file=f)
-                    print(" - Postions:   ", _str.original_positions.T.tolist(), file=f)
-                    print(" - Elements:   ", _str.original_elements, file=f)
-                    print(" - Space group:", _str.spg_list, file=f)
-                    print(
-                        " - Other Info.:",
-                        f"{_str.n_atoms} atom",
-                        f"/ distance {round(_str.least_distance, 3)} (Ang.)",
-                        f"/ volume {round(_str.volume, 2)} (A^3/atom)",
-                        file=f,
-                    )
-                    if maybe_outlier[idx]:
-                        print(
-                            " - WARNING    : This structure might be an outlier.",
-                            file=f,
-                        )
-                print("", file=f)
+            log_unique_structures(log_name + ".log", unique_str)
 
     def _sorting_in_same_comp(self, comp_ratio, result_paths):
         log_name = ""
