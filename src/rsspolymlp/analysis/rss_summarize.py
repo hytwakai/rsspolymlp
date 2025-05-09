@@ -24,6 +24,7 @@ def run():
         args.use_joblib,
         args.num_process,
         args.backend,
+        args.num_str,
     )
     analyzer_all.run_sorting()
 
@@ -55,6 +56,7 @@ def load_rss_results(
     result_path: str, absolute_path=False, get_warning=False
 ) -> list[dict]:
     rss_results = []
+
     parent_path = os.path.dirname(result_path)
     with open(result_path) as f:
         lines = [i.strip() for i in f]
@@ -106,18 +108,22 @@ class RSSResultSummarizer:
         use_joblib,
         num_process: int = -1,
         backend: str = "loky",
+        num_str: int = 0,
     ):
         self.elements = elements
         self.result_paths = result_paths
         self.use_joblib = use_joblib
         self.num_process = num_process
         self.backend = backend
+        self.num_str = num_str
 
     def run_sorting(self):
         result_path_comp = defaultdict(list)
         for path_name in self.result_paths:
-            comp_ratio = extract_composition_ratio(path_name, self.elements)
-            result_path_comp[comp_ratio].append(path_name)
+            suffix = f"_{self.num_str}" if self.num_str != 0 else ""
+            rss_res_path = f"{path_name}/rss_results{suffix}.log"
+            comp_ratio = extract_composition_ratio(rss_res_path, self.elements)
+            result_path_comp[comp_ratio].append(rss_res_path)
         result_path_comp = dict(result_path_comp)
 
         for comp_ratio, res_paths in result_path_comp.items():
@@ -146,6 +152,7 @@ class RSSResultSummarizer:
                 )
                 print("", file=f)
             log_unique_structures(log_name + ".log", unique_str)
+            print(log_name, "finished", flush=True)
 
     def _sorting_in_same_comp(self, comp_ratio, result_paths):
         log_name = ""
@@ -174,7 +181,7 @@ class RSSResultSummarizer:
                 num_process=self.num_process,
                 backend=self.backend,
             )
-            analyzer.unique_str = unique_structs1
+            analyzer._initialize_unique_structs(unique_structs1)
 
         not_processed_path = list(set(result_paths) - set(pre_result_paths))
         integrated_res_paths = list(set(result_paths) | set(pre_result_paths))

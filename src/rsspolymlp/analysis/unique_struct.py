@@ -74,7 +74,7 @@ class UniqueStructureAnalyzer:
     def identify_duplicate_struct(
         self,
         unique_struct: UniqueStructure,
-        other_properties: dict = {},
+        other_properties: Optional[dict] = None,
         energy_diff=1e-8,
     ):
         """
@@ -100,6 +100,8 @@ class UniqueStructureAnalyzer:
         _energy = unique_struct.energy
         _spg_list = unique_struct.spg_list
         _irrep_struct = unique_struct.irrep_struct
+        if other_properties is None:
+            other_properties = {}
 
         for idx, ndstr in enumerate(self.unique_str):
             if abs(ndstr.energy - _energy) < energy_diff and any(
@@ -138,3 +140,13 @@ class UniqueStructureAnalyzer:
             for s in spg_list
             if re.search(r"\((\d+)\)", s)
         )
+
+    def _initialize_unique_structs(
+        self, unique_structs, unique_str_prop: Optional[list[dict]] = None
+    ):
+        """Initialize unique structures and their associated properties."""
+        self.unique_str = unique_structs
+        if unique_str_prop is None:
+            self.unique_str_prop = [{} for _ in unique_structs]
+        else:
+            self.unique_str_prop = unique_str_prop

@@ -41,7 +41,8 @@ class ConvexHullAnalyzer:
         e_ends = []
         keys = np.array(list(self.rss_result_fe))
         valid_keys = keys[np.any(keys == 1, axis=1)]
-        for key in valid_keys:
+        sorted_keys = sorted(valid_keys, key=lambda x: np.argmax(x))
+        for key in sorted_keys:
             key_tuple = tuple(key)
             is_outlier = self.rss_result_fe[key_tuple]["is_outliers"]
             first_valid_index = np.where(~is_outlier)[0][0]

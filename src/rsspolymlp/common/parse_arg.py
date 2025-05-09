@@ -137,7 +137,6 @@ class ParseArgument:
 
     @staticmethod
     def add_analysis_arguments(parser):
-        # Settings for sorting
         parser.add_argument(
             "--num_str",
             type=int,
@@ -171,4 +170,10 @@ class ParseArgument:
             "--use_joblib",
             action="store_true",
             help="Enable parallel processing using joblib.",
+        )
+        parser.add_argument(
+            "--num_str",
+            type=int,
+            default=0,
+            help="(Optional) Maximum number of optimized structures used for analysis",
         )
