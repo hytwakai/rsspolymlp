@@ -60,7 +60,7 @@ def detect_outlier(energies: np.array):
             is_weak_outlier[i] = True
         else:
             break
-        
+
     return is_strong_outlier, is_weak_outlier
 
 
@@ -275,7 +275,7 @@ class RSSResultAnalyzer:
             finished_set = [line.strip() for line in f]
         with open("success.log") as f:
             sucessed_set = [line.strip() for line in f]
-        if args.num_str is not None:
+        if not args.num_str == -1:
             sucessed_set = sucessed_set[: args.num_str]
             fin_poscar = sucessed_set[-1]
             index = finished_set.index(fin_poscar)
@@ -314,7 +314,7 @@ class RSSResultAnalyzer:
         prop_success = round(success_count / finish_count, 2)
 
         # Write results to log file
-        if args.num_str is not None:
+        if not args.num_str == -1:
             file_name = f"rss_results_{args.num_str}.log"
         else:
             file_name = "rss_results.log"

@@ -20,7 +20,7 @@ def run():
         "--result_paths",
         nargs="+",
         type=str,
-        default=["rss_results.log"],
+        required=True,
         help="Paths to RSS result log files",
     )
     args = parser.parse_args()
@@ -87,3 +87,7 @@ def run():
         pad_inches=0.01,
         dpi=600,
     )
+
+
+if __name__ == "__main__":
+    run()

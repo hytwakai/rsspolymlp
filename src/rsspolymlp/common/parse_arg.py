@@ -6,8 +6,7 @@ class ParseArgument:
     def get_initial_structure_args(cls):
         parser = argparse.ArgumentParser()
         cls.add_initial_structure_arguments(parser)
-        args = parser.parse_args()
-        return args
+        return parser.parse_args()
 
     @classmethod
     def get_optimization_args(cls):
@@ -28,13 +27,6 @@ class ParseArgument:
         cls.add_analysis_arguments(parser)
         return parser.parse_args()
 
-    @classmethod
-    def get_summarize_args(cls):
-        parser = argparse.ArgumentParser()
-        cls.add_summarize_arguments(parser)
-        cls.add_parallelization_arguments(parser)
-        return parser.parse_args()
-
     @staticmethod
     def add_initial_structure_arguments(parser):
         # Settings in generating initial structures
@@ -42,14 +34,14 @@ class ParseArgument:
             "--elements",
             type=str,
             nargs="+",
-            default=None,
+            required=True,
             help="List of element symbols",
         )
         parser.add_argument(
             "--atom_counts",
             type=int,
             nargs="+",
-            default=None,
+            required=True,
             help="Number of atoms for each element",
         )
         parser.add_argument(
@@ -140,40 +132,12 @@ class ParseArgument:
         parser.add_argument(
             "--num_str",
             type=int,
-            default=None,
-            help="(Optional) Maximum number of optimized structures used for analysis",
+            default=-1,
+            help="Number of optimized structures to analyze (-1 means all)",
         )
         parser.add_argument(
             "--cutoff",
             type=float,
             default=None,
-            help="(Optional) Cutoff radius used in the MLP",
-        )
-
-    @staticmethod
-    def add_summarize_arguments(parser):
-        parser.add_argument(
-            "--elements",
-            nargs="*",
-            type=str,
-            default=None,
-            help="List of target element symbols",
-        )
-        parser.add_argument(
-            "--result_paths",
-            nargs="*",
-            type=str,
-            default="rss_results.log",
-            help="Path(s) to RSS result log file(s).",
-        )
-        parser.add_argument(
-            "--use_joblib",
-            action="store_true",
-            help="Enable parallel processing using joblib.",
-        )
-        parser.add_argument(
-            "--num_str",
-            type=int,
-            default=0,
-            help="(Optional) Maximum number of optimized structures used for analysis",
+            help="Cutoff radius used in the MLP model (optional)",
         )

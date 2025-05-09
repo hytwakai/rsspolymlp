@@ -1,3 +1,4 @@
+import argparse
 import ast
 import os
 import re
@@ -12,15 +13,39 @@ from rsspolymlp.analysis.unique_struct import (
     UniqueStructureAnalyzer,
     generate_unique_struct,
 )
+from rsspolymlp.common.comp_ratio import CompositionResult, compute_composition
 from rsspolymlp.common.parse_arg import ParseArgument
 from rsspolymlp.rss.rss_analysis import log_unique_structures
 
 
 def run():
-    args = ParseArgument.get_summarize_args()
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--elements",
+        nargs="*",
+        type=str,
+        default=None,
+        help="List of target element symbols",
+    )
+    parser.add_argument(
+        "--rss_paths",
+        nargs="*",
+        type=str,
+        required=True,
+        help="Path(s) to directories where RSS was performed",
+    )
+    parser.add_argument(
+        "--use_joblib",
+        action="store_true",
+        help="Enable parallel processing using joblib.",
+    )
+    ParseArgument.add_parallelization_arguments(parser)
+    ParseArgument.add_analysis_arguments(parser)
+    args = parser.parse_args()
+
     analyzer_all = RSSResultSummarizer(
         args.elements,
-        args.result_paths,
+        args.rss_paths,
         args.use_joblib,
         args.num_process,
         args.backend,
@@ -29,27 +54,17 @@ def run():
     analyzer_all.run_sorting()
 
 
-def extract_composition_ratio(path_name: str, target_elements: list):
-    comp_ratio = None
+def extract_composition_ratio(path_name: str, element_order: list) -> CompositionResult:
     with open(path_name) as f:
         for line in f:
             if "- Elements:" in line:
                 line_strip = line.strip()
                 log = re.search(r"- Elements: (.+)", line_strip)
                 element_list = np.array(ast.literal_eval(log[1]))
-                counts = np.array(
-                    [np.count_nonzero(element_list == el) for el in target_elements]
-                )
-                if not np.any(counts):
-                    raise ValueError(
-                        "None of the specified elements were found in the result."
-                    )
-                g = np.gcd.reduce(counts[counts > 0])
-                reduced = counts // g
-                comp_ratio = tuple(reduced)
+                comp_res = compute_composition(element_list, element_order)
                 break
 
-    return comp_ratio
+    return comp_res
 
 
 def load_rss_results(
@@ -105,14 +120,14 @@ class RSSResultSummarizer:
     def __init__(
         self,
         elements,
-        result_paths,
+        rss_paths,
         use_joblib,
         num_process: int = -1,
         backend: str = "loky",
-        num_str: int = 0,
+        num_str: int = -1,
     ):
         self.elements = elements
-        self.result_paths = result_paths
+        self.rss_paths = rss_paths
         self.use_joblib = use_joblib
         self.num_process = num_process
         self.backend = backend
@@ -120,11 +135,12 @@ class RSSResultSummarizer:
 
     def run_sorting(self):
         result_path_comp = defaultdict(list)
-        for path_name in self.result_paths:
-            suffix = f"_{self.num_str}" if self.num_str != 0 else ""
-            rss_res_path = f"{path_name}/rss_results{suffix}.log"
-            comp_ratio = extract_composition_ratio(rss_res_path, self.elements)
-            result_path_comp[comp_ratio].append(rss_res_path)
+        for path_name in self.rss_paths:
+            suffix = f"_{self.num_str}" if self.num_str != -1 else ""
+            rss_result_path = f"{path_name}/rss_results{suffix}.log"
+            comp_res = extract_composition_ratio(rss_result_path, self.elements)
+            comp_ratio = comp_res.comp_ratio
+            result_path_comp[comp_ratio].append(rss_result_path)
         result_path_comp = dict(result_path_comp)
 
         for comp_ratio, res_paths in result_path_comp.items():
