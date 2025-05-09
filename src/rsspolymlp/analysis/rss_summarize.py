@@ -74,7 +74,8 @@ def load_rss_results(
             _res["volume"] = float(lines[line_idx + 7].split("volume")[-1].split()[0])
             if get_warning:
                 warning_line = lines[line_idx + 8] if line_idx + 8 < len(lines) else ""
-                _res["outlier"] = "WARNING" in warning_line
+                _res["is_strong_outlier"] = "WARNING" in warning_line
+                _res["is_weak_outlier"] = "NOTE" in warning_line
             rss_results.append(_res)
 
     return rss_results

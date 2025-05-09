@@ -33,16 +33,35 @@ def run():
 
 
 def detect_outlier(energies: np.array):
-    maybe_outlier = np.full_like(energies, fill_value=False, dtype=bool)
+    """
+    Detect outliers and potential outliers in a 1D energy array.
+
+    Returns
+    -------
+    is_strong_outlier: np.ndarray of bool
+        Boolean array marking strong outliers (energy diff > 1.0).
+    is_weak_outlier : np.ndarray of bool
+        Boolean array marking potential outliers (energy diff > 0.2).
+    """
+    is_strong_outlier = np.full(energies.shape, False, dtype=bool)
+    is_weak_outlier = np.full(energies.shape, False, dtype=bool)
     window = 5
 
-    for i in range(len(energies) - window):
-        energy_diff = np.abs(energies[i] - energies[i + 1 : i + 1 + window])
-        if np.any(energy_diff > 0.2):
-            maybe_outlier[i] = True
+    n = len(energies)
+    if n < 2:
+        return is_strong_outlier, is_weak_outlier
+
+    for i in range(n - 1):
+        end = min(i + 1 + window, n)
+        energy_diff = np.abs(energies[i] - energies[i + 1 : end])
+        if np.any(energy_diff > 1.0):
+            is_strong_outlier[i] = True
+        if np.any(energy_diff > 0.1):
+            is_weak_outlier[i] = True
         else:
             break
-    return maybe_outlier
+        
+    return is_strong_outlier, is_weak_outlier
 
 
 def log_unique_structures(file_name, unique_structs, unique_struct_iters=None):
@@ -54,9 +73,9 @@ def log_unique_structures(file_name, unique_structs, unique_struct_iters=None):
         _iters = [unique_struct_iters[i] for i in sort_indices]
 
     # Get minimum energy value
-    maybe_outlier = detect_outlier(energies[sort_indices])
+    is_strong_outlier, is_weak_outlier = detect_outlier(energies[sort_indices])
     for i in range(len(unique_str)):
-        if not maybe_outlier[i]:
+        if not is_weak_outlier[i]:
             energy_min = unique_str[i].energy
             break
 
@@ -83,9 +102,14 @@ def log_unique_structures(file_name, unique_structs, unique_struct_iters=None):
             if unique_struct_iters is not None:
                 info.append(f"/ iteration {_iters[idx]}")
             print(*info, file=f)
-            if maybe_outlier[idx]:
+            if is_strong_outlier[idx]:
                 print(
-                    " - WARNING    : This structure might be an outlier.",
+                    " - WARNING    : This structure is marked as a strong outlier.",
+                    file=f,
+                )
+            elif is_weak_outlier[idx]:
+                print(
+                    " - NOTE       : This structure is marked as a weak outlier.",
                     file=f,
                 )
 

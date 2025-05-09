@@ -34,7 +34,7 @@ class ConvexHullAnalyzer:
             rss_results_array = {
                 "energies": np.array([r["enthalpy"] for r in rss_results]),
                 "poscars": np.array([r["poscar"] for r in rss_results]),
-                "is_outliers": np.array([r["outlier"] for r in rss_results]),
+                "is_outliers": np.array([r["is_weak_outlier"] for r in rss_results]),
             }
             self.rss_result_fe[comp_ratio] = rss_results_array
 
