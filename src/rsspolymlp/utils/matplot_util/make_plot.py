@@ -1,5 +1,5 @@
 import numpy as np
-from matplot_util.custom_plt import CustomPlt
+from rsspolymlp.utils.matplot_util.custom_plt import CustomPlt
 from matplotlib import gridspec
 from matplotlib.ticker import LogLocator, MultipleLocator
 

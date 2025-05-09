@@ -5,15 +5,6 @@ from rsspolymlp.analysis.rss_summarize import (
     extract_composition_ratio,
     load_rss_results,
 )
-from rsspolymlp.common.parse_arg import ParseArgument
-
-
-def run():
-    args = ParseArgument.get_summarize_args()
-    elements = args.elements
-    result_paths = args.result_paths
-    ch_analyzer = ConvexHullAnalyzer(elements, result_paths)
-    ch_analyzer.run_calc()
 
 
 class ConvexHullAnalyzer:
@@ -75,21 +66,24 @@ class ConvexHullAnalyzer:
         e_min_array = np.array(e_min_list).reshape(-1, 1)
         label_array = np.array(label_list)
 
-        data = np.hstack([comp_array[:, :-1], e_min_array])
-        self.ch_obj = ConvexHull(data)
+        data_ch = np.hstack([comp_array[:, 1:], e_min_array])
+        self.ch_obj = ConvexHull(data_ch)
 
         v_convex = np.unique(self.ch_obj.simplices)
         _fe_ch = e_min_array[v_convex].astype(float)
         mask = np.where(_fe_ch <= 1e-10)[0]
 
-        self.fe_ch = _fe_ch[mask]
-        self.comp_ch = comp_array[v_convex][mask]
-        self.poscar_ch = label_array[v_convex][mask]
+        _comp_ch = comp_array[v_convex][mask]
+        sort_idx = np.lexsort(_comp_ch[mask][:, ::-1].T)
+
+        self.fe_ch = _fe_ch[mask][sort_idx]
+        self.comp_ch = _comp_ch[sort_idx]
+        self.poscar_ch = label_array[v_convex][mask][sort_idx]
 
     def calc_fe_convex_hull(self, comp):
         ehull = -1e10
         for eq in self.ch_obj.equations:
-            face_val_comp = -(np.dot(eq[:-2], comp[:-1]) + eq[-1])
+            face_val_comp = -(np.dot(eq[:-2], comp[1:]) + eq[-1])
             ehull_trial = face_val_comp / eq[-2]
             if ehull_trial > ehull and abs(ehull_trial) > 1e-8:
                 ehull = ehull_trial
