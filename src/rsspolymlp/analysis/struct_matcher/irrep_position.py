@@ -2,7 +2,9 @@ import itertools
 
 import numpy as np
 
-from rsspolymlp.common.property import PropUtil
+from rsspolymlp.analysis.struct_matcher.invert_and_permute import (
+    invert_and_permute_positions,
+)
 
 
 class IrrepPos:
@@ -14,13 +16,11 @@ class IrrepPos:
         Numerical tolerance when comparing fractional coordinates (default: 1e-3).
     """
 
-    def __init__(self, symprec: float = 1e-3, get_recommend_symprecs=False):
+    def __init__(self, symprec: float = 1e-3):
         """Init method."""
         self.symprec = float(symprec)
-        self.get_recommend_symprecs = get_recommend_symprecs
-        self.distance_cluster = None
 
-    def irrep_positions(self, axis, positions, elements):
+    def irrep_positions(self, axis, positions, elements, spg_number):
         """Return a irreducible representation of atomic positions
         and two recommended `symprec` values.
 
@@ -44,9 +44,6 @@ class IrrepPos:
         sorted_elements : ndarray
             Chemical element symbols sorted in the same order as used
             in the irreducible representation.
-        recommend_symprecs : list[float]
-            Two recommended `symprec` values that is useful as starting points
-            for subsequent analyses.
         """
 
         _lattice = np.asarray(axis, dtype=float)
@@ -61,21 +58,13 @@ class IrrepPos:
         unique_ordered = _elements[np.sort(idx)]
         types = np.array([np.where(unique_ordered == el)[0][0] for el in _elements])
 
-        pos_cands1 = self.invert_and_swap_positions(_lattice, _positions)
+        pos_cands1 = invert_and_permute_positions(
+            _lattice, _positions, spg_number, self.symprec
+        )
 
         irrep_position = None
-        get_recom_symprec = False
         for pos1 in pos_cands1:
             pos_cls_id, snapped_pos = self.assign_clusters(pos1, types)
-
-            if not get_recom_symprec:
-                self.distance_cluster = self.inter_cluster_diffs(
-                    snapped_pos, pos_cls_id
-                )
-                recommend_symprecs = self._recommended_symprec(self.distance_cluster)
-                get_recom_symprec = True
-                if self.get_recommend_symprecs:
-                    return None, None, recommend_symprecs
 
             pos_cands2, id_cands = self.centroid_positions(
                 snapped_pos, types, pos_cls_id
@@ -107,69 +96,7 @@ class IrrepPos:
         sort_idx = np.argsort(types)
         sorted_elements = _elements[sort_idx]
 
-        return irrep_position, sorted_elements, recommend_symprecs
-
-    def invert_and_swap_positions(self, lattice, positions):
-        """Return all position arrays reachable by inverting/swapping
-        crystallographically equivalent lattice axes."""
-        # Axis lengths (a, b, c) and angles (α, β, γ)
-        prop = PropUtil(lattice, positions)
-        abc_angle = np.asarray(prop.axis_to_abc, dtype=float)  # (6,)
-        abc, angles = abc_angle[:3], abc_angle[3:]
-        tol = self.symprec * 10.0
-
-        angle_similar = np.isclose(angles[:, None], angles[None, :], atol=tol)
-        near_90 = np.isclose(angles, 90.0, atol=tol)
-        near_90_pair = near_90[:, None] & near_90[None, :]
-        same_angle_90_flag = np.any(
-            angle_similar & near_90_pair & ~np.eye(3, dtype=bool), axis=1
-        )
-
-        length_similar = np.isclose(abc[:, None], abc[None, :], atol=tol)
-        same_axis_flag = np.any(
-            length_similar & angle_similar[:3, :3] & ~np.eye(3, dtype=bool), axis=1
-        )
-
-        pos_candidates = [positions.copy(), (-positions) % 1.0]
-
-        # Inverting atomic positions
-        original_candidates = pos_candidates.copy()
-        for pos in original_candidates:
-            if np.all(same_angle_90_flag):
-                for pattern in [1, 2, 4]:
-                    _pos = pos.copy()
-                    mask = np.array([(pattern >> i) & 1 for i in range(3)], dtype=bool)
-                    _pos[:, mask] = (-_pos[:, mask]) % 1.0
-                    pos_candidates.append(_pos)
-            elif np.any(same_angle_90_flag):
-                _pos = pos.copy()
-                idx = np.argmax(~same_angle_90_flag)
-                _pos[:, idx] = (-_pos[:, idx]) % 1.0
-                pos_candidates.append(_pos)
-            # else: all False ⇒ only the original array
-
-        # Swapping equivalent axes.
-        original_candidates = pos_candidates.copy()
-        for pos in original_candidates:
-            _pos = pos.copy()
-            active_cols = np.nonzero(same_axis_flag)[0]
-            if len(active_cols) == 3:
-                # If all 3 are equivalent: generate all 6 non‑trivial permutations
-                perms = np.array(
-                    [[0, 2, 1], [1, 0, 2], [1, 2, 0], [2, 0, 1], [2, 1, 0]], dtype=int
-                )
-                for perm in perms:
-                    pos_candidates.append(_pos[:, perm])
-            elif len(active_cols) == 2:
-                _pos[:, (active_cols[1], active_cols[0])] = _pos[
-                    :, (active_cols[0], active_cols[1])
-                ]
-                pos_candidates.append(_pos)
-            elif len(active_cols) <= 1:
-                # No axis is considered equivalent ⇒ do nothing (only original is used)
-                pass
-
-        return pos_candidates
+        return irrep_position, sorted_elements
 
     def assign_clusters(self, positions: np.ndarray, types: np.ndarray):
         _pos = positions.copy()
@@ -259,7 +186,6 @@ class IrrepPos:
             reorder_cluster_ids = np.lexsort((cluster_types, centre_cls_id_origin))
             for new_id, old_id in enumerate(reorder_cluster_ids):
                 pos_cls_id2[cls_id == old_id, ax] = new_id
-
         return pos_cls_id2
 
     def centroid_positions(self, positions, types, pos_cls_id):
@@ -357,38 +283,3 @@ class IrrepPos:
         if not non_zero.size:
             return 0
         return -1 if diff[non_zero[0]] < 0 else 1
-
-    def inter_cluster_diffs(self, positions: np.ndarray, pos_cls_id: np.ndarray):
-        pos = positions.copy()
-        distance_cluster = []
-
-        for ax in range(3):
-            id_bins = np.bincount(pos_cls_id[:, ax])
-            if len(id_bins) == 1:
-                distance_cluster.append(np.array([0]))
-
-            # Distance between consecutive centres (cyclic)
-            centres = np.bincount(pos_cls_id[:, ax], weights=pos[:, ax]) / id_bins
-            centres = np.sort(centres, kind="mergesort")
-            centre_gap = np.roll(centres, -1) - centres
-            centre_gap[-1] += 1.0
-            distance_cluster.append(centre_gap)
-
-        return distance_cluster
-
-    def _recommended_symprec(self, diffs: np.ndarray):
-        """Determine and return two suitable symprec values derived from the distances
-        between identified clusters."""
-        recommend_order = np.inf
-        for ax in range(3):
-            diffs_ax = diffs[ax]
-            diffs_pos = diffs_ax[diffs_ax > 0]
-            if diffs_pos.size == 0:
-                continue
-            orders = np.log10(diffs_pos)
-            orders_valid = orders[~np.all(np.isnan(orders))]
-            max_orders = np.nanmax(orders_valid)
-            if max_orders < recommend_order:
-                recommend_order = max_orders
-
-        return [10 ** (recommend_order - 1), 10 ** (recommend_order - 2)]
