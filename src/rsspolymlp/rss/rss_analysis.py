@@ -13,6 +13,7 @@ import numpy as np
 
 from pypolymlp.core.interface_vasp import Poscar
 from pypolymlp.core.io_polymlp import load_mlps
+from rsspolymlp.analysis.outlier_cands import detect_outlier
 from rsspolymlp.analysis.struct_matcher.struct_match import get_distance_cluster
 from rsspolymlp.analysis.unique_struct import (
     UniqueStructure,
@@ -30,38 +31,6 @@ def run():
     if args.cutoff is not None:
         analyzer.cutoff = args.cutoff
     analyzer.run_rss_analysis(args)
-
-
-def detect_outlier(energies: np.array):
-    """
-    Detect outliers and potential outliers in a 1D energy array.
-
-    Returns
-    -------
-    is_strong_outlier: np.ndarray of bool
-        Boolean array marking strong outliers (energy diff > 1.0).
-    is_weak_outlier : np.ndarray of bool
-        Boolean array marking potential outliers (energy diff > 0.2).
-    """
-    is_strong_outlier = np.full(energies.shape, False, dtype=bool)
-    is_weak_outlier = np.full(energies.shape, False, dtype=bool)
-    window = 5
-
-    n = len(energies)
-    if n < 2:
-        return is_strong_outlier, is_weak_outlier
-
-    for i in range(n - 1):
-        end = min(i + 1 + window, n)
-        energy_diff = np.abs(energies[i] - energies[i + 1 : end])
-        if np.any(energy_diff > 1.0):
-            is_strong_outlier[i] = True
-        if np.any(energy_diff > 0.1):
-            is_weak_outlier[i] = True
-        else:
-            break
-
-    return is_strong_outlier, is_weak_outlier
 
 
 def log_unique_structures(file_name, unique_structs, unique_struct_iters=None):
