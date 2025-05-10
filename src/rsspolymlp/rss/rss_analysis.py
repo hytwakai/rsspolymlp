@@ -211,7 +211,6 @@ class RSSResultAnalyzer:
         self,
         unique_struct: list[UniqueStructure],
         struct_properties: list[dict],
-        energy_diff=1e-8,
     ):
         analyzer = UniqueStructureAnalyzer()
 
@@ -219,7 +218,6 @@ class RSSResultAnalyzer:
             is_unique, _ = analyzer.identify_duplicate_struct(
                 unique_struct,
                 other_properties=struct_properties[idx],
-                energy_diff=energy_diff,
             )
             self._update_iteration_stats(struct_properties[idx], is_unique)
 
