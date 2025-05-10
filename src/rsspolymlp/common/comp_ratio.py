@@ -6,6 +6,8 @@ import numpy as np
 
 @dataclass
 class CompositionResult:
+    elements: np.ndarray
+    types: np.ndarray
     unique_elements: np.ndarray
     atom_counts: np.ndarray
     comp_ratio: tuple[int, ...]
@@ -38,6 +40,8 @@ def compute_composition(
         unique_elements, first_indices = np.unique(_elements, return_index=True)
         sorted_elements = unique_elements[np.argsort(first_indices)]
 
+    label_to_type = {el: i for i, el in enumerate(sorted_elements)}
+    types = np.array([label_to_type[el] for el in elements])
     atom_counts = np.array(
         [np.count_nonzero(_elements == el) for el in sorted_elements]
     )
@@ -52,6 +56,8 @@ def compute_composition(
     )
 
     return CompositionResult(
+        elements=elements,
+        types=types,
         unique_elements=sorted_elements,
         atom_counts=atom_counts,
         comp_ratio=reduced_comp_ratio,

@@ -4,8 +4,11 @@ import os
 import tarfile
 import time
 
+from rsspolymlp.analysis.struct_matcher.struct_match import (
+    generate_irrep_struct,
+    struct_match,
+)
 from rsspolymlp.utils import pymatgen_utils
-from rsspolymlp.analysis.struct_matcher.struct_match import get_irrep_positions, struct_match
 from rsspolymlp.utils.spglib_utils import SymCell
 
 pymat = pymatgen_utils.PymatUtil()
@@ -37,7 +40,9 @@ print(f"  (elapsed time per structure: {(el_time1) * 1000 / poscar_num})")
 
 start = time.time()
 for i in range(len(sym_st)):
-    irrep_st = get_irrep_positions(struct=sym_st[i]["structure"], symprec_irreps=[1e-5])
+    irrep_st = generate_irrep_struct(
+        primitive_st=sym_st[i]["structure"], symprec_irreps=[1e-5]
+    )
     sym_st[i]["irrep_st"] = irrep_st
     # print(sym_st[i]["poscar"])
 el_time2 = round(time.time() - start, 3)
@@ -69,8 +74,8 @@ print(" number of nonduplicate structures:", len(nondup_st))
 print("--- Comparing irrep atomic position (in recommended symprec) ---")
 start = time.time()
 for i in range(len(nondup_st)):
-    irrep_st = get_irrep_positions(
-        struct=nondup_st[i]["structure"],
+    irrep_st = generate_irrep_struct(
+        primitive_st=nondup_st[i]["structure"],
         symprec_irreps=nondup_st[i]["irrep_st"].recommend_symprecs,
     )
     nondup_st[i]["irrep_st"] = irrep_st

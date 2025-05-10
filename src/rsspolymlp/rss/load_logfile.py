@@ -1,3 +1,9 @@
+import ast
+import re
+
+import numpy as np
+
+
 class LogfileLoader:
 
     def __init__(self, logfile):
@@ -16,6 +22,7 @@ class LogfileLoader:
             "gval": 0,
             "dup_count": 1,
             "poscar": self.logfile.split("/")[-1].removesuffix(".log"),
+            "struct": None,
         }
 
         keyword_parsers = {
@@ -39,26 +46,63 @@ class LogfileLoader:
         }
 
         with open(self.logfile) as f:
-            lines = iter(line.strip() for line in f)
+            lines = [line.strip() for line in f]
 
-            for line in lines:
-                for keyword, parser in keyword_parsers.items():
-                    if keyword in line:
-                        if keyword == "Space group set":
-                            line = next(lines)
-                        parser(line, _res)
+        axis = []
+        positions = []
+        elements = []
+        parse_struct = False
+        in_axis = False
+        in_frac_coords = False
+        for i in range(len(lines)):
+            line = lines[i]
+            for keyword, parser in keyword_parsers.items():
+                if keyword in line:
+                    if keyword == "Space group set":
+                        _line = lines[i + 1]
+                    else:
+                        _line = line
+                    parser(_line, _res)
 
-                # check errors
-                if "Maximum number of relaxation iterations has been exceeded" in line:
-                    return _res, "iteration"
-                if "Geometry optimization failed: Huge" in line:
-                    return _res, (
-                        "energy_zero" if abs(_res["energy"]) < 10**-3 else "energy_low"
-                    )
-                if "Refining cell failed" in line:
-                    return _res, "anom_struct"
-                if "Analyzing space group failed" in line:
-                    return _res, "anom_struct"
+            if "Final structure" in line:
+                parse_struct = True
+            if "Axis basis vectors:" in line and parse_struct is True:
+                in_axis = True
+                in_frac_coords = False
+                continue
+            elif "Fractional coordinates:" in line and parse_struct is True:
+                in_frac_coords = True
+                in_axis = False
+                continue
+
+            if in_axis and line.startswith("- ["):
+                vec = self.parse_vector_line(line[2:].strip())
+                axis.append(vec)
+
+            elif in_frac_coords and line.startswith("-"):
+                match = re.match(r"-\s*(\w+)\s*(\[.*\])", line)
+                if match:
+                    el = match.group(1)
+                    coord = self.parse_vector_line(match.group(2))
+                    elements.append(el)
+                    positions.append(coord)
+
+            # check errors
+            if "Maximum number of relaxation iterations has been exceeded" in line:
+                return _res, "iteration"
+            if "Geometry optimization failed: Huge" in line:
+                return _res, (
+                    "energy_zero" if abs(_res["energy"]) < 10**-3 else "energy_low"
+                )
+            if "Refining cell failed" in line:
+                return _res, "anom_struct"
+            if "Analyzing space group failed" in line:
+                return _res, "anom_struct"
+
+        _res["struct"] = {}
+        _res["struct"]["axis"] = np.array(axis, dtype=np.float64)
+        _res["struct"]["positions"] = np.array(positions, dtype=np.float64)
+        _res["struct"]["elements"] = np.array(elements, dtype=str)
 
         return _res, True
 
@@ -85,3 +129,11 @@ class LogfileLoader:
 
     def parse_gval(self, line, _res):
         _res["gval"] += int(line.split()[-1])
+
+    def parse_vector_line(self, line):
+        return [
+            float(x)
+            for x in re.findall(
+                r"np\.float64\(([-+]?[0-9]*\.?[0-9]+(?:[eE][-+]?[0-9]+)?)\)", line
+            )
+        ]

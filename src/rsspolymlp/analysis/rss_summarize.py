@@ -136,8 +136,7 @@ class RSSResultSummarizer:
     def run_sorting(self):
         result_path_comp = defaultdict(list)
         for path_name in self.rss_paths:
-            suffix = f"_{self.num_str}" if self.num_str != -1 else ""
-            rss_result_path = f"{path_name}/rss_results{suffix}.log"
+            rss_result_path = f"{path_name}/rss_results.log"
             comp_res = extract_composition_ratio(rss_result_path, self.elements)
             comp_ratio = comp_res.comp_ratio
             result_path_comp[comp_ratio].append(rss_result_path)
@@ -219,3 +218,7 @@ class RSSResultSummarizer:
             analyzer.identify_duplicate_struct(res)
 
         return analyzer.unique_str, num_opt_struct, integrated_res_paths
+
+
+if __name__ == "__main__":
+    run()

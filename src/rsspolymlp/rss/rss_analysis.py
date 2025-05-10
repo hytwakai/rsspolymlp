@@ -120,7 +120,15 @@ class RSSResultAnalyzer:
 
             if judge is not True or any(
                 struct_prop[key] is None
-                for key in ["potential", "time", "spg", "energy", "res_f", "res_s"]
+                for key in [
+                    "potential",
+                    "time",
+                    "spg",
+                    "energy",
+                    "res_f",
+                    "res_s",
+                    "struct",
+                ]
             ):
                 self.errors["else_err"] += 1
                 self.error_poscar["else_err"].append(poscar_name)
@@ -180,7 +188,9 @@ class RSSResultAnalyzer:
         objprop = PropUtil(polymlp_st.axis.T, polymlp_st.positions.T)
         axis_abc = objprop.axis_to_abc
 
-        distance_cluster = get_distance_cluster(struct=polymlp_st, symprec_irrep=1e-5)
+        distance_cluster = get_distance_cluster(
+            polymlp_st=polymlp_st, symprec_irrep=1e-5
+        )
         if distance_cluster is not None:
             max_layer_diff = max(
                 [
@@ -193,7 +203,7 @@ class RSSResultAnalyzer:
                 return None
 
         unique_struct = generate_unique_struct(
-            energy, spg, poscar_name, original_polymlp_st=polymlp_st
+            energy, spg, poscar_name=poscar_name, polymlp_st=polymlp_st
         )
         return unique_struct
 
@@ -283,10 +293,7 @@ class RSSResultAnalyzer:
         prop_success = round(success_count / finish_count, 2)
 
         # Write results to log file
-        if not args.num_str == -1:
-            file_name = f"rss_results_{args.num_str}.log"
-        else:
-            file_name = "rss_results.log"
+        file_name = "rss_results.log"
         with open(file_name, "w") as f:
             print("---- General informantion ----", file=f)
             print("Sorting time (sec.):            ", round(time_finish, 2), file=f)
@@ -352,3 +359,7 @@ class RSSResultAnalyzer:
             print(
                 "Layer structure:   ", self.error_poscar["invalid_layer_struct"], file=f
             )
+
+
+if __name__ == "__main__":
+    run()

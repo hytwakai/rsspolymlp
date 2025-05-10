@@ -4,8 +4,6 @@ import shutil
 
 import numpy as np
 
-from rsspolymlp.analysis.rss_summarize import load_rss_results
-
 
 def detect_outlier(energies: np.array):
     """
@@ -40,6 +38,8 @@ def detect_outlier(energies: np.array):
 
 
 def run():
+    from rsspolymlp.analysis.rss_summarize import load_rss_results
+
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--result_paths",

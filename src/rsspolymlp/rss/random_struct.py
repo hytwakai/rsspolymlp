@@ -215,3 +215,7 @@ class GenerateRandomStructure:
                     "{0:15.15f}".format(float(n[2])),
                     file=f,
                 )
+
+
+if __name__ == "__main__":
+    run()

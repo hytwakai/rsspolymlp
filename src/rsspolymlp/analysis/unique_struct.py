@@ -8,7 +8,8 @@ from pypolymlp.core.data_format import PolymlpStructure
 from pypolymlp.core.interface_vasp import Poscar
 from rsspolymlp.analysis.struct_matcher.struct_match import (
     IrrepStructure,
-    get_irrep_positions,
+    generate_irrep_struct,
+    generate_primitive_cell,
     get_recommend_symprecs,
     struct_match,
 )
@@ -27,37 +28,82 @@ class UniqueStructure:
     n_atoms: int
     volume: float
     least_distance: float
-    input_poscar: str
+    input_poscar: Optional[str]
     dup_count: int = 1
 
 
 def generate_unique_struct(
     energy: float,
     spg_list: list[str],
-    poscar_name: str,
-    original_polymlp_st: Optional[PolymlpStructure] = None,
-):
-    if original_polymlp_st is None:
-        original_polymlp_st = Poscar(poscar_name).structure
-    _st = original_polymlp_st
-    objprop = PropUtil(_st.axis.T, _st.positions.T)
+    poscar_name: Optional[str] = None,
+    polymlp_st: Optional[PolymlpStructure] = None,
+    axis: Optional[np.ndarray] = None,
+    positions: Optional[np.ndarray] = None,
+    elements: Optional[np.ndarray] = None,
+    symprec_primitive: float = 1e-2,
+) -> UniqueStructure:
+    """
+    Generate a UniqueStructure object from various structure inputs.
 
-    struct, recommend_symprecs = get_recommend_symprecs(
-        poscar_name=poscar_name, symprec_irrep=1e-5
+    Parameters
+    ----------
+    energy : float
+        Enthalpy or energy value of the structure.
+    spg_list : list of str
+        List of space group labels.
+    poscar_name : str, optional
+        Path to POSCAR file.
+    polymlp_st : PolymlpStructure, optional
+        Already parsed structure object.
+    axis : np.ndarray, optional
+        3x3 lattice vectors (used if no POSCAR is provided).
+    positions : np.ndarray, optional
+        Fractional atomic positions (N x 3).
+    elements : np.ndarray, optional
+        Element symbols (N).
+
+    Returns
+    -------
+    UniqueStructure
+        A standardized structure object for uniqueness evaluation.
+    """
+    if poscar_name is None and polymlp_st is None:
+        _axis = axis
+        _positions = positions
+        _elements = elements
+        primitive_st, spg_number = generate_primitive_cell(
+            axis=_axis,
+            positions=_positions,
+            elements=_elements,
+            symprec_primitive=symprec_primitive,
+        )
+    else:
+        if polymlp_st is None:
+            polymlp_st = Poscar(poscar_name).structure
+        _axis = polymlp_st.axis.T
+        _positions = polymlp_st.positions.T
+        _elements = polymlp_st.elements
+        primitive_st, spg_number = generate_primitive_cell(
+            polymlp_st=polymlp_st, symprec_primitive=symprec_primitive
+        )
+
+    objprop = PropUtil(_axis, _positions)
+
+    recommend_symprecs = get_recommend_symprecs(primitive_st, symprec_irrep=1e-5)
+    symprec_list = [1e-5] + recommend_symprecs
+    irrep_struct = generate_irrep_struct(
+        primitive_st, spg_number, symprec_irreps=symprec_list
     )
-    symprec_list = [1e-5]
-    symprec_list.extend(recommend_symprecs)
-    irrep_struct = get_irrep_positions(struct=struct, symprec_irreps=symprec_list)
 
     return UniqueStructure(
         energy=energy,
         spg_list=spg_list,
         irrep_struct=irrep_struct,
-        original_axis=_st.axis.T,
-        original_positions=_st.positions.T,
-        original_elements=_st.elements,
+        original_axis=_axis,
+        original_positions=_positions,
+        original_elements=_elements,
         axis_abc=objprop.axis_to_abc,
-        n_atoms=int(len(_st.elements)),
+        n_atoms=int(len(_elements)),
         volume=objprop.volume,
         least_distance=objprop.least_distance,
         input_poscar=poscar_name,
@@ -75,7 +121,7 @@ class UniqueStructureAnalyzer:
         self,
         unique_struct: UniqueStructure,
         other_properties: Optional[dict] = None,
-        energy_diff=1e-8,
+        energy_diff: float = 1e-8,
     ):
         """
         Identify and manage duplicate structures based on energy, space group,
@@ -104,7 +150,7 @@ class UniqueStructureAnalyzer:
             other_properties = {}
 
         for idx, ndstr in enumerate(self.unique_str):
-            if abs(ndstr.energy - _energy) < energy_diff and any(
+            """if abs(ndstr.energy - _energy) < energy_diff and any(
                 spg in _spg_list for spg in ndstr.spg_list
             ):
                 is_unique = False
@@ -112,8 +158,8 @@ class UniqueStructureAnalyzer:
                     ndstr.spg_list
                 ):
                     is_change_struct = True
-                break
-            elif struct_match(ndstr.irrep_struct, _irrep_struct):
+                break"""
+            if struct_match(ndstr.irrep_struct, _irrep_struct):
                 is_unique = False
                 if self._extract_spg_count(_spg_list) > self._extract_spg_count(
                     ndstr.spg_list
@@ -124,6 +170,7 @@ class UniqueStructureAnalyzer:
         if not is_unique:
             # Update duplicate count and replace with better data if necessary
             if is_change_struct:
+                unique_struct.dup_count = self.unique_str[idx].dup_count
                 self.unique_str[idx] = unique_struct
                 self.unique_str_prop[idx] = other_properties
             self.unique_str[idx].dup_count += 1
