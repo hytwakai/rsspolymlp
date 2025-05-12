@@ -40,7 +40,7 @@ def generate_unique_struct(
     axis: Optional[np.ndarray] = None,
     positions: Optional[np.ndarray] = None,
     elements: Optional[np.ndarray] = None,
-    symprec_primitive: float = 1e-2,
+    symprec: float = 1e-2,
 ) -> UniqueStructure:
     """
     Generate a UniqueStructure object from various structure inputs.
@@ -75,7 +75,7 @@ def generate_unique_struct(
             axis=_axis,
             positions=_positions,
             elements=_elements,
-            symprec_primitive=symprec_primitive,
+            symprec=symprec,
         )
     else:
         if polymlp_st is None:
@@ -84,7 +84,7 @@ def generate_unique_struct(
         _positions = polymlp_st.positions.T
         _elements = polymlp_st.elements
         primitive_st, spg_number = generate_primitive_cell(
-            polymlp_st=polymlp_st, symprec_primitive=symprec_primitive
+            polymlp_st=polymlp_st, symprec=symprec
         )
 
     objprop = PropUtil(_axis, _positions)
@@ -130,7 +130,7 @@ class UniqueStructureAnalyzer:
         If `use_energy_spg_check=True`, a structure is considered a duplicate if its energy
         is within `energy_diff` of an existing structure, and it shares at least one space group.
         Note: This method does not distinguish between chiral structures, as enantiomorphs
-        can exist with identical energy and space group..
+        can exist with identical energy and space group.
 
         2. Irreducible structural representation:
         A structure is considered a duplicate if it matches an existing structure based on

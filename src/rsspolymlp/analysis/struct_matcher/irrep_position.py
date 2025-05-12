@@ -52,7 +52,7 @@ class IrrepPos:
 
         # Trivial case: single‑atom cell → nothing to do
         if _positions.shape[0] == 1:
-            return np.array([0, 0, 0]), _elements, np.array([0, 0])
+            return np.array([0, 0, 0]), _elements
 
         _, idx = np.unique(_elements, return_index=True)
         unique_ordered = _elements[np.sort(idx)]

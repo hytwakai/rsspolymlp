@@ -6,33 +6,34 @@ import time
 
 from rsspolymlp.analysis.struct_matcher.struct_match import (
     generate_irrep_struct,
+    generate_primitive_cell,
+    get_recommend_symprecs,
     struct_match,
 )
 from rsspolymlp.utils import pymatgen_utils
-from rsspolymlp.utils.spglib_utils import SymCell
 
 pymat = pymatgen_utils.PymatUtil()
 
-poscar_num = 1000
+poscar_num = 2000
 compare_pymatgen = False
 
-if not os.path.exists("./poscar_element2"):
-    os.makedirs("./poscar_element2")
+if not os.path.exists("./poscar_element3"):
+    os.makedirs("./poscar_element3")
     with tarfile.open("./poscar_element.tar.gz", "r:gz") as tar:
         tar.extractall(path="./poscar_element2", filter="data")
 
-poscar_all = glob.glob("./poscar_element2/*")
+poscar_all = sorted(glob.glob("./poscar_element3/*"))
 poscar_all = poscar_all[:poscar_num]
 
 print("--- Comparing irrep atomic position ---")
 sym_st = []
 start = time.time()
 for p_name in poscar_all:
-    symutil = SymCell(poscar_name=p_name, symprec=1e-3)
-    st = symutil.primitive_cell()
+    st, spg = generate_primitive_cell(poscar_name=p_name, symprec=1e-3)
     _res = {}
     _res["poscar"] = p_name
     _res["structure"] = st
+    _res["spg_number"] = spg
     sym_st.append(_res)
 el_time1 = round(time.time() - start, 3)
 print(" convert to primitive cell:", (el_time1) * 1000)
@@ -40,7 +41,12 @@ print(f"  (elapsed time per structure: {(el_time1) * 1000 / poscar_num})")
 
 start = time.time()
 for i in range(len(sym_st)):
-    irrep_st = generate_irrep_struct(sym_st[i]["structure"], symprec_irreps=[1e-5])
+    recommend_symprecs = get_recommend_symprecs(sym_st[i]["structure"])
+    irrep_st = generate_irrep_struct(
+        sym_st[i]["structure"],
+        sym_st[i]["spg_number"],
+        symprec_irreps=[1e-5] + recommend_symprecs,
+    )
     sym_st[i]["irrep_st"] = irrep_st
     # print(sym_st[i]["poscar"])
 el_time2 = round(time.time() - start, 3)
@@ -72,9 +78,11 @@ print(" number of nonduplicate structures:", len(nondup_st))
 print("--- Comparing irrep atomic position (in recommended symprec) ---")
 start = time.time()
 for i in range(len(nondup_st)):
+    recommend_symprecs = get_recommend_symprecs(nondup_st[i]["structure"])
     irrep_st = generate_irrep_struct(
         nondup_st[i]["structure"],
-        symprec_irreps=nondup_st[i]["irrep_st"].recommend_symprecs,
+        sym_st[i]["spg_number"],
+        symprec_irreps=recommend_symprecs,
     )
     nondup_st[i]["irrep_st"] = irrep_st
 _sym_st = copy.copy(nondup_st)
@@ -157,3 +165,21 @@ if compare_pymatgen:
     print(set(pos_irpos) - set(pos_pymat))
     print("set(pymatgen) - set(irrep_pos):")
     print(set(pos_pymat) - set(pos_irpos))
+
+    with open(f"myresult/result_element{poscar_num}.log", "w") as f:
+        print("generate sym_st:", (el_time1) * 1000, file=f)
+        print("get irrep_pos:", (el_time2) * 1000, file=f)
+        print("sorting sym_st:", (el_time3) * 1000, file=f)
+        print(count1, file=f)
+        print("get irrep_pos (recom. symprec):", (el_time4) * 1000, file=f)
+        print("sorting sym_st (recom. symprec):", (el_time5) * 1000, file=f)
+        print(count2, file=f)
+        print("generate sym_st (pymatgen):", (el_time6) * 1000, file=f)
+        print("sorting sym_st (pymatgen):", (el_time7) * 1000, file=f)
+        print(count3, file=f)
+        print(len(nondup_st), file=f)
+        print(len(nondup_st_pymat), file=f)
+        print(set(pos_irpos) - set(pos_pymat), file=f)
+        print(set(pos_pymat) - set(pos_irpos), file=f)
+        for st in nondup_st_pymat:
+            print(st["duplicate"], file=f)

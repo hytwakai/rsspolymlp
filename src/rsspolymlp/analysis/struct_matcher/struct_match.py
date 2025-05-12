@@ -6,6 +6,7 @@ from typing import Optional
 import numpy as np
 
 from pypolymlp.core.data_format import PolymlpStructure
+from pypolymlp.utils.vasp_utils import write_poscar_file
 from rsspolymlp.analysis.struct_matcher.irrep_position import IrrepPos
 from rsspolymlp.analysis.struct_matcher.utils import IrrepUtil
 from rsspolymlp.common.comp_ratio import compute_composition
@@ -50,7 +51,7 @@ def generate_primitive_cell(
     axis: Optional[np.ndarray] = None,
     positions: Optional[np.ndarray] = None,
     elements: Optional[np.ndarray] = None,
-    symprec_primitive: float = 1e-5,
+    symprec: float = 1e-5,
 ) -> PolymlpStructure:
 
     if poscar_name is None and polymlp_st is None:
@@ -64,9 +65,9 @@ def generate_primitive_cell(
         )
 
     if poscar_name is not None:
-        symutil = SymCell(poscar_name=poscar_name, symprec=symprec_primitive)
+        symutil = SymCell(poscar_name=poscar_name, symprec=symprec)
     elif polymlp_st is not None:
-        symutil = SymCell(st=polymlp_st, symprec=symprec_primitive)
+        symutil = SymCell(st=polymlp_st, symprec=symprec)
     primitive_st = symutil.primitive_cell()
     spg_str = symutil.get_spacegroup()
     spg_number = int(re.search(r"\((\d+)\)", spg_str).group(1))
@@ -121,3 +122,20 @@ def get_distance_cluster(
     distance_cluster = irrep_util.inter_cluster_diffs()
 
     return distance_cluster
+
+
+def write_poscar_irrep_struct(irrep_st: IrrepStructure, file_name: str = "POSCAR"):
+    axis = irrep_st.axis
+    positions = irrep_st.positions[-1].reshape(3, -1)
+    print(positions)
+    elements = irrep_st.elements
+    print(elements)
+    comp_res = compute_composition(elements)
+    polymlp_st = PolymlpStructure(
+        axis.T,
+        positions,
+        comp_res.atom_counts,
+        elements,
+        comp_res.types,
+    )
+    write_poscar_file(polymlp_st, filename=file_name)
