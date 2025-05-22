@@ -103,22 +103,22 @@ class LammpsUtil:
         lmp = self.lmp
 
         lmp.command("run 0")
-        self.lmp.command("thermo 1")
-        self.lmp.command(
+        lmp.command("thermo 1")
+        lmp.command(
             "thermo_style custom step temp pe press " + "pxx pyy pzz pxy pxz pyz"
         )
-        self.lmp.command("thermo_modify norm no")
-        self.lmp.command("variable pxx0 equal pxx")
-        self.lmp.command("variable pyy0 equal pyy")
-        self.lmp.command("variable pzz0 equal pzz")
-        self.lmp.command("variable pyz0 equal pyz")
-        self.lmp.command("variable pxz0 equal pxz")
-        self.lmp.command("variable pxy0 equal pxy")
+        lmp.command("thermo_modify norm no")
+        lmp.command("variable energy equal pe")
+        lmp.command("variable pxx0 equal pxx")
+        lmp.command("variable pyy0 equal pyy")
+        lmp.command("variable pzz0 equal pzz")
+        lmp.command("variable pyz0 equal pyz")
+        lmp.command("variable pxz0 equal pxz")
+        lmp.command("variable pxy0 equal pxy")
         lmp.command("run 0")
 
         n = lmp.get_natoms()
 
-        lmp.command("variable energy equal pe")
         energy = lmp.extract_variable("energy", "all", 0)
         energy = energy / n
         forces = lmp.extract_atom("f", 3)
