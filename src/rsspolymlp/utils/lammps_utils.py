@@ -1,6 +1,5 @@
 import collections
 import math
-import os
 
 import numpy as np
 from lammps import lammps
@@ -91,7 +90,6 @@ class LammpsUtil:
         press=0,  # bar (10^5 Pa)
         ftol=1e-6,
     ):
-
         lmp = self.lmp
         if box == "tri":
             lmp.command("fix f1 all box/relax tri " + str(press))
@@ -110,7 +108,6 @@ class LammpsUtil:
             "thermo_style custom step temp pe press " + "pxx pyy pzz pxy pxz pyz"
         )
         self.lmp.command("thermo_modify norm no")
-
         self.lmp.command("variable pxx0 equal pxx")
         self.lmp.command("variable pyy0 equal pyy")
         self.lmp.command("variable pzz0 equal pzz")
@@ -118,6 +115,7 @@ class LammpsUtil:
         self.lmp.command("variable pxz0 equal pxz")
         self.lmp.command("variable pxy0 equal pxy")
         lmp.command("run 0")
+
         n = lmp.get_natoms()
 
         lmp.command("variable energy equal pe")
@@ -134,14 +132,14 @@ class LammpsUtil:
         pyz = self.lmp.extract_variable("pyz0", None, 0)
         pxz = self.lmp.extract_variable("pxz0", None, 0)
         pxy = self.lmp.extract_variable("pxy0", None, 0)
-        stresses = np.array([pxx, pyy, pzz, pyz, pxz, pxy])
+        stress = np.array([pxx, pyy, pzz, pyz, pxz, pxy])
 
         struct = self.get_structure()
         struct[6:] = struct[6:] % 1.0
 
         lmp.close()
 
-        return energy, forces, stresses, struct
+        return energy, forces, stress, struct
 
     def get_structure(self):
         lmp = self.lmp
