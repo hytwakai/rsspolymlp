@@ -1,7 +1,8 @@
 import numpy as np
-from rsspolymlp.utils.matplot_util.custom_plt import CustomPlt
 from matplotlib import gridspec
 from matplotlib.ticker import LogLocator, MultipleLocator
+
+from rsspolymlp.utils.matplot_util.custom_plt import CustomPlt
 
 
 class MakePlot:
@@ -141,7 +142,7 @@ class MakePlot:
                 y,
                 markeredgewidth=self._plot_size * 0.15,
                 markersize=self._plot_size,
-                lw=self._line_size * 0.8,
+                lw=self._line_size * 0.8 * plot_size,
                 linestyle=self.line,
                 marker=self.marker,
                 label=label,

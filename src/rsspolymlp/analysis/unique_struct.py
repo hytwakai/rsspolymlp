@@ -86,6 +86,8 @@ def generate_unique_struct(
         primitive_st, spg_number = generate_primitive_cell(
             polymlp_st=polymlp_st, symprec=symprec
         )
+    if primitive_st is None:
+        return None
 
     objprop = PropUtil(_axis, _positions)
 

@@ -112,6 +112,7 @@ def generate_unique_structs(
             unique_structs.append(
                 generate_unique_struct(res["enthalpy"], res["spg_list"], res["poscar"])
             )
+    unique_structs = [s for s in unique_structs if s is not None]
     return unique_structs
 
 

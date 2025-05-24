@@ -39,21 +39,32 @@ class CustomPlt:
     ytick_size: float = 8.0
     xtick_pad: float = 3.0
     ytick_pad: float = 3.0
+    font_mode: str = "sans"
 
     def __post_init__(self):
+        if self.font_mode == "serif":
+            font_settings = {
+                "font.family": "serif",
+                "font.serif": "cmr10",
+                "mathtext.fontset": "cm",
+            }
+        else:
+            font_settings = {
+                "font.family": "sans-serif",
+                "font.sans-serif": "Arial",
+                "mathtext.fontset": "cm",
+            }
         self.customrc = {
             # Font settings
             "pdf.fonttype": 42,
             "ps.fonttype": 42,
             "axes.formatter.use_mathtext": True,
-            "font.family": "sans-serif",
-            "font.sans-serif": "Arial",
-            'mathtext.fontset': 'cm',
             "axes.labelsize": self.label_size,
             "axes.labelpad": self.label_pad,
             "axes.titlesize": self.title_size,
             "axes.titlepad": self.title_pad,
             "legend.fontsize": self.legend_size,
+            **font_settings,
             # Spine settings
             "axes.spines.top": True,
             "axes.spines.right": True,

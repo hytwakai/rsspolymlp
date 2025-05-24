@@ -68,7 +68,11 @@ def generate_primitive_cell(
         symutil = SymCell(poscar_name=poscar_name, symprec=symprec)
     elif polymlp_st is not None:
         symutil = SymCell(st=polymlp_st, symprec=symprec)
-    primitive_st = symutil.primitive_cell()
+    try:
+        primitive_st = symutil.primitive_cell()
+    except TypeError:
+        return None, None
+    
     spg_str = symutil.get_spacegroup()
     spg_number = int(re.search(r"\((\d+)\)", spg_str).group(1))
 

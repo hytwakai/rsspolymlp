@@ -23,6 +23,13 @@ def run():
         required=True,
         help="Paths to RSS result log files",
     )
+    parser.add_argument(
+        "--threshold",
+        type=float,
+        default=-1,
+        help="Threshold for energy above the convex hull in meV/atom "
+        "(default: -1 means no threshold applied)",
+    )
     args = parser.parse_args()
 
     custom_template = CustomPlt(
@@ -59,18 +66,32 @@ def run():
         line_size=1,
         zorder=2,
     )
+    fe_min = np.min(fe_ch)
 
-    fe_min = 1e10
-    plotter.set_visuality(n_color=3, n_line=4, n_marker=0, color_type="grad")
     for key, _dict in rss_result_fe.items():
-        _energies = _dict["energies"][~_dict["is_outliers"]]
-        _e_min = np.min(_energies)
-        if fe_min > _e_min:
-            fe_min = _e_min
-        _comps = np.full_like(_energies, fill_value=key[1])
-        plotter.ax_scatter(
-            _comps, _energies, plot_type="open", label=None, plot_size=0.4
-        )
+        plotter.set_visuality(n_color=3, n_line=0, n_marker=0, color_type="grad")
+        if not args.threshold == -1:
+            is_not_near = (
+                _dict["fe_above_ch"][~_dict["is_outliers"]] > args.threshold / 1000
+            )
+            _energies = _dict["formation_e"][~_dict["is_outliers"]][is_not_near]
+            _comps = np.full_like(_energies, fill_value=key[1])
+            plotter.ax_scatter(
+                _comps, _energies, plot_type="open", label=None, plot_size=0.4
+            )
+
+            plotter.set_visuality(n_color=1, n_line=0, n_marker=1)
+            _energies = _dict["formation_e"][~_dict["is_outliers"]][~is_not_near]
+            _comps = np.full_like(_energies, fill_value=key[1])
+            plotter.ax_scatter(
+                _comps, _energies, plot_type="open", label=None, plot_size=0.5
+            )
+        else:
+            _energies = _dict["formation_e"][~_dict["is_outliers"]]
+            _comps = np.full_like(_energies, fill_value=key[1])
+            plotter.ax_scatter(
+                _comps, _energies, plot_type="open", label=None, plot_size=0.4
+            )
 
     plotter.finalize_ax(
         xlabel=rf"$x$ in {args.elements[0]}$_{{1-x}}${args.elements[1]}$_{{x}}$",
