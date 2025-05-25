@@ -34,14 +34,12 @@ class ConvexHullAnalyzer:
             rss_results = load_rss_results(
                 res_path, absolute_path=True, get_warning=True
             )
+            rss_results_valid = [r for r in rss_results if not r["is_strong_outlier"]]
             rss_results_array = {
-                "formation_e": np.array([r["enthalpy"] for r in rss_results]),
-                "poscars": np.array([r["poscar"] for r in rss_results]),
+                "formation_e": np.array([r["enthalpy"] for r in rss_results_valid]),
+                "poscars": np.array([r["poscar"] for r in rss_results_valid]),
                 "is_outliers": np.array(
-                    [
-                        r["is_weak_outlier"] or r["is_strong_outlier"]
-                        for r in rss_results
-                    ]
+                    [r["is_weak_outlier"] for r in rss_results_valid]
                 ),
             }
             self.rss_result_fe[comp_ratio] = rss_results_array
@@ -105,3 +103,15 @@ class ConvexHullAnalyzer:
                 ehull = ehull_trial
 
         return ehull
+
+    def get_struct_near_convex_hull(self, threshold):
+        near_ch = {}
+        rss_result_fe = self.rss_result_fe
+        for key in rss_result_fe:
+            is_near = rss_result_fe[key]["fe_above_ch"] < threshold / 1000
+            near_ch[key]["formation_e"] = rss_result_fe[key]["formation_e"][is_near]
+            near_ch[key]["poscars"] = rss_result_fe[key]["poscars"][is_near]
+            near_ch[key]["is_outliers"] = rss_result_fe[key]["is_outliers"][is_near]
+            near_ch[key]["fe_above_ch"] = rss_result_fe[key]["fe_above_ch"][is_near]
+
+        return near_ch
