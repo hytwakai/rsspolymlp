@@ -35,12 +35,10 @@ If you use `rsspolymlp` in your study, please cite the following articles.
 ### How to install
 
 ```shell
-git clone https://github.com/hytwakai/rsspolymlp.git
-cd rsspolymlp
-conda create -n rsspolymlp
+conda create -n rsspolymlp python=3.11
 conda activate rsspolymlp
 conda install -c conda-forge pypolymlp symfc spglib joblib
-pip install .
+pip install rsspolymlp
 ```
 
 ## Usage
