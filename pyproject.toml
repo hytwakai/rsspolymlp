@@ -15,13 +15,10 @@ requires-python = ">=3.9"
 dependencies = [
     "numpy",
     "scipy",
-    "setuptools",
-    "pyyaml",
-    "pybind11",
-    "joblib",
     "pypolymlp",
-    "spglib",
     "symfc",
+    "spglib",
+    "joblib",
 ]
 
 [project.optional-dependencies]
