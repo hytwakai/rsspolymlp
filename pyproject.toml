@@ -20,7 +20,6 @@ dependencies = [
     "spglib",
     "joblib",
 ]
-homepage = "https://github.com/hytwakai/rsspolymlp"
 
 [project.optional-dependencies]
 pymatgen = ["pymatgen"]
