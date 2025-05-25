@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "rsspolymlp"
 version = "0.0.2"
 description = "A framework for random structure search using polynomial MLPs"
-license = {text = "MIT"}
+license = "MIT"
 authors = [
     {name = "Hayato Wakai", email = "wakai@cms.mtl.kyoto-u.ac.jp"},
 ]
@@ -20,6 +20,7 @@ dependencies = [
     "spglib",
     "joblib",
 ]
+homepage = "https://github.com/hytwakai/rsspolymlp"
 
 [project.optional-dependencies]
 pymatgen = ["pymatgen"]
@@ -29,6 +30,7 @@ tools = ["pymatgen", "matplotlib", "seaborn"]
 
 [project.urls]
 homepage = "https://github.com/hytwakai/rsspolymlp"
+repository = "https://github.com/hytwakai/rsspolymlp"
 
 [project.scripts]
 rss-init-struct = "rsspolymlp.rss.random_struct:run"
