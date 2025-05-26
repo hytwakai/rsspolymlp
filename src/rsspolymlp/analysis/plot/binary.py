@@ -30,9 +30,10 @@ def run():
         help="Path to file listing outlier structure names to be excluded",
     )
     parser.add_argument(
-        "--threshold",
+        "--thresholds",
+        nargs="*",
         type=float,
-        default=-1,
+        default=None,
         help="Threshold for energy above the convex hull in meV/atom "
         "(default: -1 means no threshold applied)",
     )
@@ -61,8 +62,11 @@ def run():
     fe_ch = ch_analyzer.fe_ch
     comp_ch = ch_analyzer.comp_ch
     rss_result_fe = ch_analyzer.rss_result_fe
-    if not args.threshold == -1:
-        near_ch, not_near_ch = ch_analyzer.get_struct_near_convex_hull(args.threshold)
+
+    if args.thresholds is not None:
+        threshold_list = sorted(args.thresholds)
+        for threshold in threshold_list:
+            near_ch, not_near_ch = ch_analyzer.get_struct_near_ch(threshold)
 
     plotter.set_visuality(n_color=4, n_line=4, n_marker=1, color_type="grad")
     plotter.ax_plot(
@@ -78,7 +82,7 @@ def run():
 
     for key, _dict in rss_result_fe.items():
         plotter.set_visuality(n_color=3, n_line=0, n_marker=0, color_type="grad")
-        if not args.threshold == -1:
+        if args.thresholds is not None:
             _energies = not_near_ch[key]["formation_e"]
             _comps = np.full_like(_energies, fill_value=key[1])
             plotter.ax_scatter(
@@ -92,7 +96,7 @@ def run():
                 _comps, _energies, plot_type="open", label=None, plot_size=0.5
             )
         else:
-            _energies = _dict["formation_e"][~_dict["is_outliers"]]
+            _energies = _dict["formation_e"]
             _comps = np.full_like(_energies, fill_value=key[1])
             plotter.ax_scatter(
                 _comps, _energies, plot_type="open", label=None, plot_size=0.4
@@ -108,7 +112,7 @@ def run():
 
     plt.tight_layout()
     plt.savefig(
-        f"{args.elements[0]}{args.elements[1]}.png",
+        f"ch/ch_plot_{args.elements[0]}{args.elements[1]}.png",
         bbox_inches="tight",
         pad_inches=0.01,
         dpi=600,

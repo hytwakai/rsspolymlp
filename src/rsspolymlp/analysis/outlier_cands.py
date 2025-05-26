@@ -58,15 +58,13 @@ def run():
     args = parser.parse_args()
 
     # Prepare output directory: remove existing files if already exists
-    out_dir = "outlier_candidates"
-    if os.path.exists(out_dir):
-        for filename in os.listdir(out_dir):
-            if "POSCAR" in filename:
-                file_path = os.path.join(out_dir, filename)
-                if os.path.isfile(file_path):
-                    os.remove(file_path)
-    else:
-        os.makedirs(out_dir)
+    os.makedirs("outlier/outlier_candidates", exist_ok=True)
+    out_dir = "outlier/outlier_candidates"
+    for filename in os.listdir(out_dir):
+        if "POSCAR" in filename:
+            file_path = os.path.join(out_dir, filename)
+            if os.path.isfile(file_path):
+                os.remove(file_path)
 
     # Copy weak outlier POSCARs
     outliers_all = []
@@ -78,12 +76,12 @@ def run():
 
         for res in rss_results:
             if res.get("is_weak_outlier"):
-                dest = f"outlier_candidates/POSCAR_{logname}_No{res['struct_no']}"
+                dest = f"outlier/outlier_candidates/POSCAR_{logname}_No{res['struct_no']}"
                 shutil.copy(res["poscar"], dest)
                 _res = res
                 _res["outlier_poscar"] = f"POSCAR_{logname}_No{res['struct_no']}"
                 outliers_all.append(_res)
-    with open("outlier_candidates.log", "w") as f:
+    with open("outlier/outlier_candidates.log", "w") as f:
         for res in outliers_all:
             print(res, file=f)
 
@@ -101,7 +99,7 @@ def run_compare_dft():
 
     # Load outlier candidates
     outliers_all = []
-    with open("outlier_candidates.log") as f:
+    with open("outlier/outlier_candidates.log") as f:
         for line in f:
             outliers_all.append(ast.literal_eval(line.strip()))
 
@@ -145,7 +143,7 @@ def run_compare_dft():
         )
 
     # Write results
-    with open("outlier_detection.log", "w") as f:
+    with open("outlier/outlier_detection.log", "w") as f:
         for diff in diff_all:
             poscar = diff["res"]["outlier_poscar"]
             delta = diff["diff"]

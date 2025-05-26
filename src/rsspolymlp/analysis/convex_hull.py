@@ -21,6 +21,7 @@ class ConvexHullAnalyzer:
         self.fe_ch = None
         self.comp_ch = None
         self.poscar_ch = None
+        os.makedirs("ch", exist_ok=True)
 
     def run_calc(self):
         self.calc_formation_e()
@@ -119,7 +120,7 @@ class ConvexHullAnalyzer:
         self.comp_ch = _comp_ch[sort_idx]
         self.poscar_ch = label_array[v_convex][mask][sort_idx]
 
-        with open("convex_hull.log", "w") as f:
+        with open("ch/convex_hull.log", "w") as f:
             for i in range(len(self.comp_ch)):
                 print(f"Composition: {self.comp_ch[i]}", file=f)
                 print(f"Structure: {self.poscar_ch[i]}", file=f)
@@ -146,7 +147,7 @@ class ConvexHullAnalyzer:
 
         return ehull
 
-    def get_struct_near_convex_hull(self, threshold):
+    def get_struct_near_ch(self, threshold):
         near_ch = {}
         not_near_ch = {}
 
@@ -171,7 +172,25 @@ class ConvexHullAnalyzer:
             not_near_ch[key]["fe_above_ch"] = rss_result_fe[key]["fe_above_ch"][
                 is_not_near
             ]
-        with open("struct_near_convex_hull.log", "w") as f:
+        element_count = 0
+        multi_count = 0
+        for key, res in near_ch.items():
+            if len(res["formation_e"]) == 0:
+                continue
+            if np.any(np.array(key) == 1):
+                element_count += len(res["formation_e"])
+            else:
+                multi_count += len(res["formation_e"])
+
+        with open(f"ch/near_ch_{threshold}meV.log", "w") as f:
+            print(
+                f"--- Number of structures within {threshold} meV/atom from the convex hull ---",
+                file=f,
+            )
+            print("Single-element systems:", element_count, file=f)
+            print("Multicomponent systems:", multi_count, file=f)
+            print("", file=f)
+            print("--- Structures close to the convex hull ---", file=f)
             for key, res in near_ch.items():
                 if len(res["formation_e"]) == 0:
                     continue
