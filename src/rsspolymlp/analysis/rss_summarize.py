@@ -75,6 +75,12 @@ def load_rss_results(
     parent_path = os.path.dirname(result_path)
     with open(result_path) as f:
         lines = [i.strip() for i in f]
+    pressure = None
+    for line in lines:
+        if "Pressure (GPa):" in line:
+            pressure = float(line.split()[-1])
+            break
+    struct_no = 1
     for line_idx in range(len(lines)):
         if "No." in lines[line_idx]:
             _res = {}
@@ -84,6 +90,7 @@ def load_rss_results(
                 poscar_name = str(lines[line_idx + 1]).split()[0].split("/")[-1]
                 _res["poscar"] = parent_path + "/opt_struct/" + poscar_name
             _res["enthalpy"] = float(lines[line_idx + 2].split()[-1])
+            _res["pressure"] = pressure
             spg = re.search(r"- Space group: (.+)", lines[line_idx + 6])
             _res["spg_list"] = ast.literal_eval(spg[1])
             _res["volume"] = float(lines[line_idx + 7].split("volume")[-1].split()[0])
@@ -91,9 +98,11 @@ def load_rss_results(
                 warning_line = lines[line_idx + 8] if line_idx + 8 < len(lines) else ""
                 _res["is_strong_outlier"] = "WARNING" in warning_line
                 _res["is_weak_outlier"] = "NOTE" in warning_line
+            _res["struct_no"] = struct_no
             rss_results.append(_res)
+            struct_no += 1
 
-    return rss_results
+    return rss_results, pressure
 
 
 def generate_unique_structs(
@@ -151,7 +160,7 @@ class RSSResultSummarizer:
 
             time_start = time()
 
-            unique_str, num_opt_struct, integrated_res_paths = (
+            unique_str, num_opt_struct, integrated_res_paths, pressure = (
                 self._sorting_in_same_comp(comp_ratio, res_paths)
             )
 
@@ -160,6 +169,7 @@ class RSSResultSummarizer:
             with open(log_name + ".log", "w") as f:
                 print("---- General informantion ----", file=f)
                 print("Sorting time (sec.):           ", round(time_finish, 2), file=f)
+                print("Pressure (GPa):                ", pressure, file=f)
                 print("Number of optimized strcts:    ", num_opt_struct, file=f)
                 print("Number of nonduplicate structs:", len(unique_str), file=f)
                 print(
@@ -179,6 +189,7 @@ class RSSResultSummarizer:
 
         analyzer = UniqueStructureAnalyzer()
         num_opt_struct = 0
+        pressure = None
         pre_result_paths = []
         if os.path.isfile(log_name + ".log"):
             with open(log_name + ".log") as f:
@@ -191,7 +202,9 @@ class RSSResultSummarizer:
                         pre_result_paths = ast.literal_eval(paths[1])
                         break
 
-            rss_results1 = load_rss_results(log_name + ".log", absolute_path=True)
+            rss_results1, pressure = load_rss_results(
+                log_name + ".log", absolute_path=True
+            )
             unique_structs1 = generate_unique_structs(
                 rss_results1,
                 use_joblib=self.use_joblib,
@@ -205,7 +218,7 @@ class RSSResultSummarizer:
 
         rss_results2 = []
         for res_path in not_processed_path:
-            rss_res = load_rss_results(res_path)
+            rss_res, pressure = load_rss_results(res_path)
             rss_results2.extend(rss_res)
         unique_structs2 = generate_unique_structs(
             rss_results2,
@@ -218,7 +231,7 @@ class RSSResultSummarizer:
         for res in unique_structs2:
             analyzer.identify_duplicate_struct(res)
 
-        return analyzer.unique_str, num_opt_struct, integrated_res_paths
+        return analyzer.unique_str, num_opt_struct, integrated_res_paths, pressure
 
 
 if __name__ == "__main__":

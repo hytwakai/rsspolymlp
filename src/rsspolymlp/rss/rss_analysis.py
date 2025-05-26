@@ -89,6 +89,7 @@ class RSSResultAnalyzer:
         """Initialize data structures for sorting structures."""
         self.cutoff = None
         self.potential = None
+        self.pressure = None
         self.iter_str = []  # Iteration statistics
         self.fval_str = []  # Function evaluation statistics
         self.gval_str = []  # Gradient evaluation statistics
@@ -102,40 +103,9 @@ class RSSResultAnalyzer:
         struct_properties = []
 
         for logfile in self.logfiles:
-            try:
-                struct_prop, judge = LogfileLoader(logfile).read_file()
-            except (TypeError, ValueError):
-                self.errors["else_err"] += 1
-                self.error_poscar["else_err"].append(
-                    logfile.split("/")[-1].removesuffix(".log")
-                )
+            struct_prop, poscar_name = self._read_and_validate_logfile(logfile)
+            if struct_prop is None:
                 continue
-            poscar_name = struct_prop["poscar"]
-
-            # Handle different error cases
-            if judge in {"iteration", "energy_low", "energy_zero", "anom_struct"}:
-                self.errors[judge] += 1
-                self.error_poscar[judge].append(poscar_name)
-                continue
-
-            if judge is not True or any(
-                struct_prop[key] is None
-                for key in [
-                    "potential",
-                    "time",
-                    "spg",
-                    "energy",
-                    "res_f",
-                    "res_s",
-                    "struct",
-                ]
-            ):
-                self.errors["else_err"] += 1
-                self.error_poscar["else_err"].append(poscar_name)
-                continue
-
-            self.time_all += struct_prop["time"]
-            self.potential = struct_prop["potential"]
 
             # Convergence checks
             if struct_prop["res_f"] > 10**-4:
@@ -162,13 +132,51 @@ class RSSResultAnalyzer:
             )
             if unique_struct is None:
                 self.errors["invalid_layer_struct"] += 1
-                self.error_poscar["invalid_layer_struct"].append(struct_prop["poscar"])
+                self.error_poscar["invalid_layer_struct"].append(poscar_name)
                 continue
 
             unique_structs.append(unique_struct)
             struct_properties.append(struct_prop)
 
         return unique_structs, struct_properties
+
+    def _read_and_validate_logfile(self, logfile):
+        try:
+            struct_prop, judge = LogfileLoader(logfile).read_file()
+        except (TypeError, ValueError):
+            self.errors["else_err"] += 1
+            self.error_poscar["else_err"].append(
+                logfile.split("/")[-1].removesuffix(".log")
+            )
+            return None, None
+
+        poscar_name = struct_prop["poscar"]
+
+        if judge in {"iteration", "energy_low", "energy_zero", "anom_struct"}:
+            self.errors[judge] += 1
+            self.error_poscar[judge].append(poscar_name)
+            return None, None
+
+        required_keys = [
+            "potential",
+            "time",
+            "spg",
+            "energy",
+            "res_f",
+            "res_s",
+            "struct",
+        ]
+        if judge is not True or any(struct_prop.get(k) is None for k in required_keys):
+            self.errors["else_err"] += 1
+            self.error_poscar["else_err"].append(poscar_name)
+            return None, None
+
+        self.time_all += struct_prop["time"]
+        self.potential = struct_prop["potential"]
+        if struct_prop["pressure"] is not None:
+            self.pressure = struct_prop["pressure"]
+
+        return struct_prop, poscar_name
 
     def _validate_optimized_struct(self, poscar_name, energy, spg):
         if self.cutoff is None:
@@ -246,6 +254,9 @@ class RSSResultAnalyzer:
 
     def run_rss_analysis(self, args):
         """Sort structures and write the results to a log file."""
+        if args.pressure is not None:
+            self.pressure = args.pressure
+
         time_start = time()
 
         with open("finish.log") as f:
@@ -300,6 +311,7 @@ class RSSResultAnalyzer:
                 self.potential,
                 file=f,
             )
+            print("Pressure (GPa):                 ", self.pressure, file=f)
             print("Max number of structures in RSS:", max_init_str, file=f)
             print("Number of initial structures:   ", finish_count, file=f)
             print("Number of optimized structures: ", success_count, file=f)

@@ -11,6 +11,7 @@ class LogfileLoader:
     def read_file(self):
         _res = {
             "potential": None,
+            "pressure": None,
             "spg": None,
             "res_f": None,
             "res_s": None,
@@ -26,6 +27,9 @@ class LogfileLoader:
 
         keyword_parsers = {
             "Selected potential:": self.parse_potential,
+            "Pressure (GPa):": lambda line, res: self.parse_numeric(
+                line, "pressure", res
+            ),
             "Space group set": self.parse_spg,
             "Iterations": self.parse_iterations,
             "Function evaluations": self.parse_fval,

@@ -1,8 +1,15 @@
 import argparse
+import ast
 import os
 import shutil
 
 import numpy as np
+
+from pypolymlp.core.interface_vasp import Vasprun
+from rsspolymlp.utils.ground_state_e import ground_state_energy
+
+EV = 1.602176634e-19  # [J]
+EVAngstromToGPa = EV * 1e21
 
 
 def detect_outlier(energies: np.array):
@@ -62,14 +69,100 @@ def run():
         os.makedirs(out_dir)
 
     # Copy weak outlier POSCARs
+    outliers_all = []
     for res_path in args.result_paths:
         logname = os.path.basename(res_path).split(".log")[0]
-        rss_results = load_rss_results(res_path, absolute_path=True, get_warning=True)
+        rss_results, _ = load_rss_results(
+            res_path, absolute_path=True, get_warning=True
+        )
 
-        for idx, result in enumerate(rss_results):
-            if result.get("is_weak_outlier"):
-                dest = f"outlier_candidates/POSCAR_{logname}_No{idx + 1}"
-                shutil.copy(result["poscar"], dest)
+        for res in rss_results:
+            if res.get("is_weak_outlier"):
+                dest = f"outlier_candidates/POSCAR_{logname}_No{res['struct_no']}"
+                shutil.copy(res["poscar"], dest)
+                _res = res
+                _res["outlier_poscar"] = f"POSCAR_{logname}_No{res['struct_no']}"
+                outliers_all.append(_res)
+    with open("outlier_candidates.log", "w") as f:
+        for res in outliers_all:
+            print(res, file=f)
+
+
+def run_compare_dft():
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--dft_path",
+        type=str,
+        required=True,
+        help="Path to the directory containing DFT results for outlier structures.",
+    )
+    args = parser.parse_args()
+    dft_path = args.dft_path
+
+    # Load outlier candidates
+    outliers_all = []
+    with open("outlier_candidates.log") as f:
+        for line in f:
+            outliers_all.append(ast.literal_eval(line.strip()))
+
+    diff_all = []
+    for res in outliers_all:
+        pressure = res["pressure"]
+        poscar_name = res["outlier_poscar"]
+        vasprun_path = f"{dft_path}/{poscar_name}/vasprun.xml"
+
+        try:
+            vaspobj = Vasprun(vasprun_path)
+        except Exception:
+            diff_all.append(
+                {
+                    "diff": None,
+                    "dft_value": None,
+                    "mlp_value": None,
+                    "res": res,
+                }
+            )
+        energy_dft = vaspobj.energy
+        structure = vaspobj.structure
+        for element in structure.elements:
+            energy_dft -= ground_state_energy(element)
+        energy_dft /= len(structure.elements)
+
+        # Subtract pressure term from MLP enthalpy
+        mlp_energy = res["enthalpy"]
+        mlp_energy -= (
+            pressure * structure.volume / (EVAngstromToGPa * len(structure.elements))
+        )
+
+        diff = mlp_energy - energy_dft
+        diff_all.append(
+            {
+                "diff": diff,
+                "dft_value": energy_dft,
+                "mlp_value": mlp_energy,
+                "res": res,
+            }
+        )
+
+    # Write results
+    with open("outlier_detection.log", "w") as f:
+        for diff in diff_all:
+            poscar = diff["res"]["outlier_poscar"]
+            delta = diff["diff"]
+
+            if delta is not None:
+                print(f"Structure: {poscar}", file=f)
+                print(f" - Energy difference (MLP - DFT): {delta:.3f} eV/atom", file=f)
+                if delta < -0.1:
+                    print(" - Assessment: Marked as outlier", file=f)
+                else:
+                    print(" - Assessment: Not an outlier", file=f)
+                print(f" - Details: {diff}\n", file=f)
+            else:
+                print(f"Structure: {poscar}", file=f)
+                print(f" - Energy difference (MLP - DFT): {delta}", file=f)
+                print(" - Assessment: Marked as outlier", file=f)
+                print(f" - Details: {diff}\n", file=f)
 
 
 if __name__ == "__main__":

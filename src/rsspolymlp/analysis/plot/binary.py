@@ -24,6 +24,12 @@ def run():
         help="Paths to RSS result log files",
     )
     parser.add_argument(
+        "--outlier_file",
+        type=str,
+        default=None,
+        help="Path to file listing outlier structure names to be excluded",
+    )
+    parser.add_argument(
         "--threshold",
         type=float,
         default=-1,
@@ -49,12 +55,14 @@ def run():
     )
     plotter.initialize_ax()
 
-    ch_analyzer = ConvexHullAnalyzer(args.elements, args.result_paths)
+    ch_analyzer = ConvexHullAnalyzer(args.elements, args.result_paths, args.outlier_file)
     ch_analyzer.run_calc()
 
     fe_ch = ch_analyzer.fe_ch
     comp_ch = ch_analyzer.comp_ch
     rss_result_fe = ch_analyzer.rss_result_fe
+    if not args.threshold == -1:
+        near_ch, not_near_ch = ch_analyzer.get_struct_near_convex_hull(args.threshold)
 
     plotter.set_visuality(n_color=4, n_line=4, n_marker=1, color_type="grad")
     plotter.ax_plot(
@@ -71,17 +79,14 @@ def run():
     for key, _dict in rss_result_fe.items():
         plotter.set_visuality(n_color=3, n_line=0, n_marker=0, color_type="grad")
         if not args.threshold == -1:
-            is_not_near = (
-                _dict["fe_above_ch"][~_dict["is_outliers"]] > args.threshold / 1000
-            )
-            _energies = _dict["formation_e"][~_dict["is_outliers"]][is_not_near]
+            _energies = not_near_ch[key]["formation_e"]
             _comps = np.full_like(_energies, fill_value=key[1])
             plotter.ax_scatter(
                 _comps, _energies, plot_type="open", label=None, plot_size=0.4
             )
 
             plotter.set_visuality(n_color=1, n_line=0, n_marker=1)
-            _energies = _dict["formation_e"][~_dict["is_outliers"]][~is_not_near]
+            _energies = near_ch[key]["formation_e"]
             _comps = np.full_like(_energies, fill_value=key[1])
             plotter.ax_scatter(
                 _comps, _energies, plot_type="open", label=None, plot_size=0.5

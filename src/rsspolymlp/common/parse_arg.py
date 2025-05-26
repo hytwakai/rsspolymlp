@@ -141,3 +141,9 @@ class ParseArgument:
             default=None,
             help="Cutoff radius used in the MLP model (optional)",
         )
+        parser.add_argument(
+            "--pressure",
+            type=float,
+            default=None,
+            help="Pressure settings (in GPa) (optional)",
+        )
