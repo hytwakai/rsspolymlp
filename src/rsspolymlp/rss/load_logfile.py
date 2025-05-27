@@ -89,6 +89,8 @@ class LogfileLoader:
                     coord = self.parse_vector_line(match.group(2))
                     elements.append(el)
                     positions.append(coord)
+                else:
+                    raise ValueError(f"Could not parse line: {line}")
 
             # check errors
             if "Maximum number of relaxation iterations has been exceeded" in line:

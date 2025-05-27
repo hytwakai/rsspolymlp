@@ -34,8 +34,7 @@ def run():
         nargs="*",
         type=float,
         default=None,
-        help="Threshold for energy above the convex hull in meV/atom "
-        "(default: -1 means no threshold applied)",
+        help="Threshold values for energy above the convex hull in meV/atom ",
     )
     args = parser.parse_args()
 
@@ -56,7 +55,9 @@ def run():
     )
     plotter.initialize_ax()
 
-    ch_analyzer = ConvexHullAnalyzer(args.elements, args.result_paths, args.outlier_file)
+    ch_analyzer = ConvexHullAnalyzer(
+        args.elements, args.result_paths, args.outlier_file
+    )
     ch_analyzer.run_calc()
 
     fe_ch = ch_analyzer.fe_ch

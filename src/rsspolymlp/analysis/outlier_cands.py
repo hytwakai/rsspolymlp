@@ -23,23 +23,41 @@ def detect_outlier(energies: np.array):
     is_weak_outlier : np.ndarray of bool
         Boolean array marking potential outliers (energy diff > 0.2).
     """
-    is_strong_outlier = np.full(energies.shape, False, dtype=bool)
-    is_weak_outlier = np.full(energies.shape, False, dtype=bool)
     window = 5
 
     n = len(energies)
     if n < 2:
-        return is_strong_outlier, is_weak_outlier
+        return np.array([False]), np.array([False])
 
-    for i in range(n - 1):
-        end = min(i + 1 + window, n)
-        energy_diff = np.abs(energies[i] - energies[i + 1 : end])
-        if np.any(energy_diff > 1.0):
-            is_strong_outlier[i] = True
-        if np.any(energy_diff > 0.1):
-            is_weak_outlier[i] = True
+    energy_diffs = np.diff(energies)
+    mask = np.abs(energy_diffs) > 1e-6
+
+    group_ids = np.cumsum(mask)
+    group_ids = np.concatenate([[0], group_ids])
+
+    unique_groups = np.unique(group_ids)
+    group_means = np.array(
+        [np.mean(energies[group_ids == gid]) for gid in unique_groups]
+    )
+
+    is_strong_group = np.full(group_means.shape, False, dtype=bool)
+    is_weak_group = np.full(group_means.shape, False, dtype=bool)
+    for i in range(len(group_means) - 1):
+        end = min(i + window, len(group_means) - 1)
+        diff = abs(group_means[i] - group_means[end])
+        if diff > 1.0:
+            is_strong_group[i] = True
+        if diff > 0.1:
+            is_weak_group[i] = True
         else:
             break
+
+    is_strong_outlier = np.full_like(energies, False, dtype=bool)
+    is_weak_outlier = np.full_like(energies, False, dtype=bool)
+    for gid, strong, weak in zip(unique_groups, is_strong_group, is_weak_group):
+        idx = group_ids == gid
+        is_strong_outlier[idx] = strong
+        is_weak_outlier[idx] = weak
 
     return is_strong_outlier, is_weak_outlier
 
@@ -76,7 +94,9 @@ def run():
 
         for res in rss_results:
             if res.get("is_weak_outlier"):
-                dest = f"outlier/outlier_candidates/POSCAR_{logname}_No{res['struct_no']}"
+                dest = (
+                    f"outlier/outlier_candidates/POSCAR_{logname}_No{res['struct_no']}"
+                )
                 shutil.copy(res["poscar"], dest)
                 _res = res
                 _res["outlier_poscar"] = f"POSCAR_{logname}_No{res['struct_no']}"

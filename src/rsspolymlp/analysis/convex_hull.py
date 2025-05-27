@@ -172,6 +172,7 @@ class ConvexHullAnalyzer:
             not_near_ch[key]["fe_above_ch"] = rss_result_fe[key]["fe_above_ch"][
                 is_not_near
             ]
+
         element_count = 0
         multi_count = 0
         for key, res in near_ch.items():
