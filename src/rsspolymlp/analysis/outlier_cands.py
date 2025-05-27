@@ -23,10 +23,8 @@ def detect_outlier(energies: np.array):
     is_weak_outlier : np.ndarray of bool
         Boolean array marking potential outliers (energy diff > 0.2).
     """
-    window = 5
-
     n = len(energies)
-    if n < 2:
+    if n == 1:
         return np.array([False]), np.array([False])
 
     energy_diffs = np.diff(energies)
@@ -39,6 +37,10 @@ def detect_outlier(energies: np.array):
     group_means = np.array(
         [np.mean(energies[group_ids == gid]) for gid in unique_groups]
     )
+
+    window = int(round(len(energies) * 0.05))
+    if window == 0:
+        window = 1
 
     is_strong_group = np.full(group_means.shape, False, dtype=bool)
     is_weak_group = np.full(group_means.shape, False, dtype=bool)

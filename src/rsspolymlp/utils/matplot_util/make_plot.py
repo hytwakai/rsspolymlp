@@ -218,8 +218,10 @@ class MakePlot:
         ylabel=None,
         title=None,
         x_limits=None,
+        x_limits_hide=False,
         x_grid=None,
         y_limits=None,
+        y_limits_hide=False,
         y_grid=None,
         legend_ncol=None,
         legend_length=3.0,
@@ -257,7 +259,7 @@ class MakePlot:
             Whether to use logarithmic scale for y-axis, by default False.
         """
         self._set_axis_scale(xlog, ylog, xlog_grid, ylog_grid)
-        self._set_axis_limits(x_limits, y_limits)
+        self._set_axis_limits(x_limits, x_limits_hide, y_limits, y_limits_hide)
         self._set_axis_grid(x_limits, y_limits, x_grid, y_grid)
         self._set_axis_labels(xlabel, ylabel, title)
         self._set_twiny(twiny, x_limits, x_grid)
@@ -282,12 +284,16 @@ class MakePlot:
             if ylog_grid:
                 self.ax.set_yticks(ylog_grid)
 
-    def _set_axis_limits(self, x_limits, y_limits):
+    def _set_axis_limits(self, x_limits, x_limits_hide, y_limits, y_limits_hide):
         """Set axis limits if specified."""
         if x_limits:
             self.ax.set_xlim(*x_limits)
+        if x_limits_hide:
+            self.ax.tick_params(labelbottom=False)
         if y_limits:
             self.ax.set_ylim(*y_limits)
+        if y_limits_hide:
+            self.ax.tick_params(labelleft=False)
 
     def _set_axis_grid(self, x_limits, y_limits, x_grid, y_grid):
         """Set grid spacing for axes."""
