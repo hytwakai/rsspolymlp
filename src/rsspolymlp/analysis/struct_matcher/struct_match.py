@@ -7,7 +7,7 @@ import numpy as np
 
 from pypolymlp.core.data_format import PolymlpStructure
 from pypolymlp.utils.vasp_utils import write_poscar_file
-from rsspolymlp.analysis.struct_matcher.irrep_position import IrrepPos
+from rsspolymlp.analysis.struct_matcher.irrep_position import IrrepPosition
 from rsspolymlp.analysis.struct_matcher.utils import IrrepUtil
 from rsspolymlp.common.comp_ratio import compute_composition
 from rsspolymlp.utils.spglib_utils import SymCell
@@ -72,7 +72,7 @@ def generate_primitive_cell(
         primitive_st = symutil.primitive_cell()
     except TypeError:
         return None, None
-    
+
     spg_str = symutil.get_spacegroup()
     spg_number = int(re.search(r"\((\d+)\)", spg_str).group(1))
 
@@ -87,8 +87,8 @@ def generate_irrep_struct(
 
     irrep_positions = []
     for symprec_irrep in symprec_irreps:
-        irrep_pos = IrrepPos(symprec=symprec_irrep)
-        _axis = primitive_st.axis
+        irrep_pos = IrrepPosition(symprec=symprec_irrep)
+        _axis = primitive_st.axis.T
         _pos = primitive_st.positions.T
         _elements = primitive_st.elements
         rep_pos, sorted_elements = irrep_pos.irrep_positions(

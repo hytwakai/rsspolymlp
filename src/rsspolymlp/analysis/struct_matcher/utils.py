@@ -1,6 +1,6 @@
 import numpy as np
 
-from rsspolymlp.analysis.struct_matcher.irrep_position import IrrepPos
+from rsspolymlp.analysis.struct_matcher.irrep_position import IrrepPosition
 
 
 class IrrepUtil:
@@ -14,7 +14,7 @@ class IrrepUtil:
         self.types = np.array(
             [np.where(unique_ordered == el)[0][0] for el in self.elements]
         )
-        self.irrep_pos = IrrepPos(symprec)
+        self.irrep_pos = IrrepPosition(symprec)
         self.distance_cluster = None
 
     def inter_cluster_diffs(self):

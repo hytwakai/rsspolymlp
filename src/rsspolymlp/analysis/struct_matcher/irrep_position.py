@@ -7,7 +7,7 @@ from rsspolymlp.analysis.struct_matcher.invert_and_permute import (
 )
 
 
-class IrrepPos:
+class IrrepPosition:
     """Identify irreducible atomic positions in a periodic cell.
 
     Parameters
@@ -19,6 +19,8 @@ class IrrepPos:
     def __init__(self, symprec: float = 1e-3):
         """Init method."""
         self.symprec = float(symprec)
+        self.invert_values = None
+        self.swap_values = None
 
     def irrep_positions(self, axis, positions, elements, spg_number):
         """Return a irreducible representation of atomic positions
@@ -58,105 +60,205 @@ class IrrepPos:
         unique_ordered = _elements[np.sort(idx)]
         types = np.array([np.where(unique_ordered == el)[0][0] for el in _elements])
 
-        pos_cands1 = invert_and_permute_positions(
+        self.invert_values, self.swap_values = invert_and_permute_positions(
             _lattice, _positions, spg_number, self.symprec
         )
 
+        pos_cands_all, id_cands_all = self.centroid_positions(_positions, types)
+
         irrep_position = None
-        for pos1 in pos_cands1:
-            pos_cls_id, snapped_pos = self.assign_clusters(pos1, types)
-
-            pos_cands2, id_cands = self.centroid_positions(
-                snapped_pos, types, pos_cls_id
-            )
-
+        for n, pos_cands in enumerate(pos_cands_all):
             for i, h, g in itertools.product(
-                range(len(pos_cands2[0])),
-                range(len(pos_cands2[1])),
-                range(len(pos_cands2[2])),
+                range(len(pos_cands[0])),
+                range(len(pos_cands[1])),
+                range(len(pos_cands[2])),
             ):
                 pos2 = np.stack(
                     [
-                        pos_cands2[0][i],
-                        pos_cands2[1][h],
-                        pos_cands2[2][g],
+                        pos_cands[0][i],
+                        pos_cands[1][h],
+                        pos_cands[2][g],
                     ],
                     axis=1,
                 )
                 ids = np.stack(
-                    [id_cands[0][i], id_cands[1][h], id_cands[2][g]],
+                    [
+                        id_cands_all[n][0][i],
+                        id_cands_all[n][1][h],
+                        id_cands_all[n][2][g],
+                    ],
                     axis=1,
                 )
 
                 sorted_pos = self._sort_positions(pos2, types, ids)
-                flat_pos = sorted_pos.T.reshape(-1)
+                irrep_position = self._choose_lex_smaller_one(
+                    irrep_position, sorted_pos
+                )
 
-                irrep_position = self._choose_lex_smaller_one(irrep_position, flat_pos)
+        for swap_val in self.swap_values:
+            _pos = irrep_position.copy()
+            if np.array_equal(swap_val, [0, 1, 2]):
+                continue
+            _pos[:, [0, 1, 2]] = _pos[:, swap_val]
+            irrep_position = self._choose_lex_smaller_one(irrep_position, _pos)
 
+        irrep_position = irrep_position.T.reshape(-1)
         sort_idx = np.argsort(types)
         sorted_elements = _elements[sort_idx]
 
         return irrep_position, sorted_elements
 
+    def centroid_positions(self, positions, types):
+        _positions = positions.copy()
+        pos_cls_id, snapped_pos = self.assign_clusters(_positions, types)
+
+        pos_cands_all = []
+        id_cands_all = []
+        for invert_val in self.invert_values:
+            pos = np.zeros_like(_positions)
+            _pos_cls_id = np.zeros_like(_positions, dtype=np.int32)
+            for axis, val in enumerate(invert_val):
+                if val == 1:
+                    pos[:, axis] = snapped_pos[:, axis]
+                    _pos_cls_id[:, axis] = pos_cls_id[:, axis]
+                else:
+                    pos[:, axis] = snapped_pos[:, axis + 3]
+                    _pos_cls_id[:, axis] = pos_cls_id[:, axis + 3]
+
+            positions_cent = pos - np.mean(pos, axis=0)
+
+            pos_cands = []
+            id_cands = []
+            for axis in range(3):
+                pos = positions_cent[:, axis].copy()
+                cluster_id = _pos_cls_id[:, axis]
+                id_max = np.max(cluster_id)
+
+                pos_cands_axis = [pos]
+                id_cands_axis = [cluster_id]
+                max_all = [np.max(pos)]
+                for target_id in range(id_max):
+                    size = np.sum(cluster_id == target_id)
+                    pos = pos - size / positions_cent.shape[0]
+                    pos[cluster_id == target_id] += 1
+                    pos_cands_axis.append(pos)
+                    id_cands_axis.append((cluster_id - target_id - 1) % (id_max + 1))
+                    max_all.append(np.max(pos))
+
+                max_val = np.max(max_all)
+                cands_idx = np.where(np.isclose(max_all, max_val, atol=self.symprec))[0]
+                pos_2d = np.array(pos_cands_axis)[cands_idx]  # (id_max, N_atom)
+                id_2d = np.array(id_cands_axis)[cands_idx]  # (id_max, N_atom)
+                pos_cands.append(pos_2d)
+                id_cands.append(id_2d)
+
+            pos_cands_all.append(pos_cands)
+            id_cands_all.append(id_cands)
+        # pos_cands_all: List[List[np.ndarray]]
+        #     - Outer list: N transformation patterns (original + inverted + swapped)
+        #     - Inner list: 3 elements (per axis)
+        #     - Each np.ndarray: shape = (id_max_i, N_atom), where i = 0 (x), 1 (y), 2 (z)
+
+        all_max_vals = []
+        for i, _pos_cands in enumerate(pos_cands_all):
+            _all_max_val = 0
+            for axis in range(3):
+                max_vals = np.max(_pos_cands[axis], axis=1)
+                max_max_val = np.max(max_vals)
+                _all_max_val += max_max_val
+            all_max_vals.append(_all_max_val)
+
+        all_max_vals = np.array(all_max_vals)
+        max_all_max_vals = np.max(all_max_vals)
+        reduced_idx = np.where(
+            np.isclose(all_max_vals, max_all_max_vals, atol=self.symprec)
+        )[0]
+
+        reduced_pos_cands = [pos_cands_all[i] for i in reduced_idx]
+        reduced_id_cands = [id_cands_all[i] for i in reduced_idx]
+
+        return reduced_pos_cands, reduced_id_cands
+
     def assign_clusters(self, positions: np.ndarray, types: np.ndarray):
         _pos = positions.copy()
         _types = types.copy()
 
-        pos_cls_id, coord_unsort = self._assign_clusters_by_type(_pos, _types)
+        invert_list = [False]
+        if self.invert_values is not None and any(
+            np.any(v == -1) for v in self.invert_values
+        ):
+            invert_list = [False, True]
+
+        pos_cls_id, coord_unsort = self._assign_clusters_by_type(
+            _pos, _types, invert_list
+        )
         pos_cls_id2 = self._relabel_clusters_by_centres(
             coord_unsort, _types, pos_cls_id
         )
 
         return pos_cls_id2, coord_unsort
 
-    def _assign_clusters_by_type(self, positions, types):
-        pos_cls_id = np.full_like(positions, -1, dtype=np.int32)
-        coord_unsort = np.zeros_like(positions)
-        start_id = np.zeros((3))
+    def _assign_clusters_by_type(self, positions, types, invert_list=[False]):
+        if len(invert_list) == 1:
+            pos_cls_id = np.full_like(positions, -1, dtype=np.int32)
+            coord_unsort = np.zeros_like(positions)
+        else:
+            n_rows, n_cols = positions.shape
+            pos_cls_id = np.full((n_rows, n_cols * 2), -1, dtype=np.int32)
+            coord_unsort = np.zeros((n_rows, n_cols * 2), dtype=positions.dtype)
 
-        for type_n in range(np.max(types) + 1):
-            mask = types == type_n
-            pos_sub = positions[mask]
-            idx_sub = np.where(mask)[0]
+        for invert in invert_list:
+            if not invert:
+                _positions = positions.copy()
+                target_idx = slice(0, 3)
+            else:
+                _positions = -positions.copy() % 1.0
+                target_idx = slice(3, 6)
 
-            sort_idx = np.argsort(pos_sub, axis=0, kind="mergesort")
-            coord_sorted = np.take_along_axis(pos_sub, sort_idx, axis=0)
+            start_id = np.zeros((3))
+            for type_n in range(np.max(types) + 1):
+                mask = types == type_n
+                pos_sub = _positions[mask]
+                idx_sub = np.where(mask)[0]
 
-            # Cyclic forward difference (wrap unit cell)
-            gap = np.roll(coord_sorted, -1, axis=0) - coord_sorted
-            gap[-1, :] += 1.0
+                sort_idx = np.argsort(pos_sub, axis=0, kind="mergesort")
+                coord_sorted = np.take_along_axis(pos_sub, sort_idx, axis=0)
 
-            # New cluster starts where gap > symprec
-            is_new_cluster = gap > self.symprec
-            pos_cls_id_sorted = np.empty_like(coord_sorted, dtype=np.int32)
-            pos_cls_id_sorted[0, :] = start_id
-            pos_cls_id_sorted[1:, :] = (
-                np.cumsum(is_new_cluster[:-1, :], axis=0) + start_id
-            )
+                # Cyclic forward difference (wrap unit cell)
+                gap = np.roll(coord_sorted, -1, axis=0) - coord_sorted
+                gap[-1, :] += 1.0
 
-            merge_mask = ~is_new_cluster[-1, :]
-            for ax in np.where(merge_mask)[0]:
-                max_id = pos_cls_id_sorted[-1, ax]
-                merged = pos_cls_id_sorted[:, ax] == max_id
-                coord_sorted[merged, ax] -= 1.0
-                pos_cls_id_sorted[merged, ax] = start_id[ax]
+                # New cluster starts where gap > symprec
+                is_new_cluster = gap > self.symprec
+                pos_cls_id_sorted = np.empty_like(coord_sorted, dtype=np.int32)
+                pos_cls_id_sorted[0, :] = start_id
+                pos_cls_id_sorted[1:, :] = (
+                    np.cumsum(is_new_cluster[:-1, :], axis=0) + start_id
+                )
 
-            pos_cls_id_sub = np.empty_like(coord_sorted, dtype=np.int32)
-            coord_unsort_sub = np.empty_like(coord_sorted)
-            for ax in range(3):
-                pos_cls_id_sub[sort_idx[:, ax], ax] = pos_cls_id_sorted[:, ax]
-                coord_unsort_sub[sort_idx[:, ax], ax] = coord_sorted[:, ax]
+                merge_mask = ~is_new_cluster[-1, :]
+                for ax in np.where(merge_mask)[0]:
+                    max_id = pos_cls_id_sorted[-1, ax]
+                    merged = pos_cls_id_sorted[:, ax] == max_id
+                    coord_sorted[merged, ax] -= 1.0
+                    pos_cls_id_sorted[merged, ax] = start_id[ax]
 
-            pos_cls_id[idx_sub, :] = pos_cls_id_sub
-            coord_unsort[idx_sub, :] = coord_unsort_sub
-            start_id = np.max(pos_cls_id_sub, axis=0) + 1
+                pos_cls_id_sub = np.empty_like(coord_sorted, dtype=np.int32)
+                coord_unsort_sub = np.empty_like(coord_sorted)
+                for ax in range(3):
+                    pos_cls_id_sub[sort_idx[:, ax], ax] = pos_cls_id_sorted[:, ax]
+                    coord_unsort_sub[sort_idx[:, ax], ax] = coord_sorted[:, ax]
+
+                pos_cls_id[idx_sub, target_idx] = pos_cls_id_sub
+                coord_unsort[idx_sub, target_idx] = coord_unsort_sub
+                start_id = np.max(pos_cls_id_sub, axis=0) + 1
 
         return pos_cls_id, coord_unsort
 
     def _relabel_clusters_by_centres(self, positions, types, pos_cls_id):
         pos_cls_id2 = np.full_like(positions, -1, dtype=np.int32)
 
-        for ax in range(3):
+        for ax in range(positions.shape[1]):
             cls_id = pos_cls_id[:, ax]
             coord = positions[:, ax]
 
@@ -186,60 +288,8 @@ class IrrepPos:
             reorder_cluster_ids = np.lexsort((cluster_types, centre_cls_id_origin))
             for new_id, old_id in enumerate(reorder_cluster_ids):
                 pos_cls_id2[cls_id == old_id, ax] = new_id
+
         return pos_cls_id2
-
-    def centroid_positions(self, positions, types, pos_cls_id):
-        rep_pos_cands = []
-        rep_id_cands = []
-        positions_cent = positions - np.mean(positions, axis=0)
-
-        for axis in range(3):
-            pos = positions_cent[:, axis].copy()
-            cluster_id = pos_cls_id[:, axis]
-            id_max = np.max(cluster_id)
-
-            pos_cands = [pos]
-            id_cands = [cluster_id]
-            max_all = [np.max(pos)]
-            for target_id in range(id_max):
-                size = np.sum(cluster_id == target_id)
-                pos = pos - size / positions_cent.shape[0]
-                pos[cluster_id == target_id] += 1
-                pos_cands.append(pos)
-                id_cands.append((cluster_id - target_id - 1) % (id_max + 1))
-                max_all.append(np.max(pos))
-
-            max_val = np.max(max_all)
-            cands_idx = np.where(np.isclose(max_all, max_val, atol=self.symprec))[0]
-
-            rep_positions = []
-            rep_ids = []
-            target_idx = None
-            for idx in cands_idx:
-                if target_idx is None:
-                    target_idx = idx
-                    rep_positions.append(pos_cands[idx])
-                    rep_ids.append(id_cands[idx])
-                    continue
-
-                chosen_idx = self._choose_lex_smaller_index(
-                    pos_cands, types, target_idx, idx
-                )
-
-                if chosen_idx is None:
-                    rep_positions.append(pos_cands[idx])
-                    rep_ids.append(id_cands[idx])
-                elif chosen_idx == target_idx:
-                    continue
-                else:
-                    rep_positions = [pos_cands[chosen_idx]]
-                    rep_ids = [id_cands[chosen_idx]]
-                    target_idx = idx
-
-            rep_pos_cands.append(rep_positions)
-            rep_id_cands.append(rep_ids)
-
-        return rep_pos_cands, rep_id_cands
 
     def _sort_positions(
         self, positions: np.ndarray, types: np.ndarray, pos_cls_id: np.ndarray
@@ -251,20 +301,12 @@ class IrrepPos:
         sorted_positions = positions[sort_idx]
         return sorted_positions
 
-    def _choose_lex_smaller_index(self, positions_all: np.ndarray, types, idx1, idx2):
-        sort_idx1 = np.lexsort((positions_all[idx1], types))
-        A = positions_all[idx1][sort_idx1]
-        sort_idx2 = np.lexsort((positions_all[idx2], types))
-        B = positions_all[idx2][sort_idx2]
-        result = self._compare_lex_order(A, B)
-        if result == 0:
-            return None
-        return idx1 if result == -1 else idx2
-
     def _choose_lex_smaller_one(self, A: np.ndarray, B: np.ndarray):
         if A is None:
             return B
-        result = self._compare_lex_order(A, B)
+        A_flat = A.T.reshape(-1)
+        B_flat = B.T.reshape(-1)
+        result = self._compare_lex_order(A_flat, B_flat)
         if result == 0:
             return (A + B) / 2
         return A if result == -1 else B

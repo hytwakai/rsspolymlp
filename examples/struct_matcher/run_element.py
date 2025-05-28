@@ -1,12 +1,17 @@
 import numpy as np
 
-from rsspolymlp.utils import pymatgen_utils
 from pypolymlp.utils.spglib_utils import SymCell
-from rsspolymlp.analysis.struct_matcher.irrep_position import IrrepPos
+from rsspolymlp.analysis.struct_matcher.irrep_position import IrrepPosition
+from rsspolymlp.analysis.struct_matcher.struct_match import (
+    generate_primitive_cell,
+    get_recommend_symprecs,
+)
+from rsspolymlp.utils import pymatgen_utils
 from rsspolymlp.utils.property import PropUtil
 
 pymat = pymatgen_utils.PymatUtil()
 all_test_mode = ["example", "invert", "swap", "symprec"]
+all_test_mode = ["invert"]
 final_res = []
 pymatgen_res = []
 
@@ -30,19 +35,25 @@ for test_mode in all_test_mode:
     else:
         raise ValueError(f"Unknown test_mode: {test_mode}")
 
+    st1, spg1 = generate_primitive_cell(poscar_name=pos1)
+    st2, spg2 = generate_primitive_cell(poscar_name=pos2)
+    print(spg1)
+    print(spg2)
     symutil = SymCell(poscar_name=pos1, symprec=1e-3)
     symutil2 = SymCell(poscar_name=pos2, symprec=1e-3)
     st1 = symutil.refine_cell(standardize_cell=True)
     st2 = symutil2.refine_cell(standardize_cell=True)
 
-    irrep_pos = IrrepPos(symprec=symprec)
+    irrep_pos = IrrepPosition(symprec=symprec)
 
-    rep_pos1, sorted_elements1, order1 = irrep_pos.irrep_positions(
-        st1.axis, st1.positions.T, st1.elements
+    rep_pos1, sorted_elements1 = irrep_pos.irrep_positions(
+        st1.axis, st1.positions.T, st1.elements, spg1
     )
-    rep_pos2, sorted_elements2, order2 = irrep_pos.irrep_positions(
-        st2.axis, st2.positions.T, st2.elements
+    order1 = get_recommend_symprecs(st1)
+    rep_pos2, sorted_elements2 = irrep_pos.irrep_positions(
+        st2.axis, st2.positions.T, st2.elements, spg2
     )
+    order2 = get_recommend_symprecs(st2)
 
     print(f"----- test_mode: {test_mode} -----")
     print("--- Stucture 1 ---")
@@ -86,10 +97,9 @@ for test_mode in all_test_mode:
     judge = pymat.match_str(
         pymat_st1,
         pymat_st2,
-        primitive_cell=False,
-        ltol=0.01,
-        stol=0.01,
-        angle_tol=0.01,
+        ltol=0.1,
+        stol=0.02,
+        angle_tol=1,
     )
     print("--- Pymatgen.StructureMatcher result ---")
     print(judge)

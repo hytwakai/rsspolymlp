@@ -9,45 +9,41 @@ def allow_all_invert(spg_number):
     return spg_number not in chiral_spg
 
 
-def invert_positions(pos_candidates, same_angle_90_flag):
-    original_candidates = pos_candidates.copy()
-    for pos in original_candidates:
+def invert_positions(invert_values, same_angle_90_flag):
+    _invert_values = invert_values.copy()
+    for val in _invert_values:
+        _val = val.copy()
         if np.all(same_angle_90_flag):
             for pattern in [1, 2, 4]:
-                _pos = pos.copy()
                 mask = np.array([(pattern >> i) & 1 for i in range(3)], dtype=bool)
-                _pos[:, mask] = (-_pos[:, mask]) % 1.0
-                pos_candidates.append(_pos)
+                _val[mask] = -_val[mask]
+                invert_values.append(_val)
         elif np.any(same_angle_90_flag):
-            _pos = pos.copy()
             idx = np.argmax(~same_angle_90_flag)
-            _pos[:, idx] = (-_pos[:, idx]) % 1.0
-            pos_candidates.append(_pos)
+            _val[idx] = -_val[idx]
+            invert_values.append(_val)
         # else: all False ⇒ only the original array
-    return pos_candidates
+    return invert_values
 
 
-def swap_positions(pos_candidates, same_axis_flag):
-    original_candidates = pos_candidates.copy()
-    for pos in original_candidates:
-        _pos = pos.copy()
+def swap_positions(swap_values, same_axis_flag):
+    _swap_values = swap_values.copy()
+    for val in _swap_values:
+        _val = val.copy()
         active_cols = np.nonzero(same_axis_flag)[0]
         if len(active_cols) == 3:
             # If all 3 are equivalent: generate all 6 non‑trivial permutations
             perms = np.array(
                 [[0, 2, 1], [1, 0, 2], [1, 2, 0], [2, 0, 1], [2, 1, 0]], dtype=int
             )
-            for perm in perms:
-                pos_candidates.append(_pos[:, perm])
+            swap_values.extend([row for row in perms])
         elif len(active_cols) == 2:
-            _pos[:, (active_cols[1], active_cols[0])] = _pos[
-                :, (active_cols[0], active_cols[1])
-            ]
-            pos_candidates.append(_pos)
+            _val[active_cols[1]], _val[active_cols[0]] = _val[active_cols[0]], _val[active_cols[1]]
+            swap_values.append(_val)
         elif len(active_cols) <= 1:
             # No axis is considered equivalent ⇒ do nothing (only original is used)
             pass
-    return pos_candidates
+    return swap_values
 
 
 def invert_and_permute_positions(lattice, positions, spg_number, symprec):
@@ -73,12 +69,13 @@ def invert_and_permute_positions(lattice, positions, spg_number, symprec):
 
     # Inverting atomic positions
     if allow_all_invert(spg_number):
-        pos_candidates = [positions.copy(), -positions.copy() % 1.0]
+        invert_values = [np.array([1, 1, 1]), np.array([-1, -1, -1])]
     else:
-        pos_candidates = [positions.copy()]
-    pos_candidates = invert_positions(pos_candidates, same_angle_90_flag)
+        invert_values = [np.array([1, 1, 1])]
+    invert_values = invert_positions(invert_values, same_angle_90_flag)
 
     # Swapping equivalent axes.
-    pos_candidates = swap_positions(pos_candidates, same_axis_flag)
+    swap_values = [np.array([0, 1, 2])]
+    swap_values = swap_positions(swap_values, same_axis_flag)
 
-    return pos_candidates
+    return invert_values, swap_values
