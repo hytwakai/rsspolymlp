@@ -16,15 +16,15 @@ class IrrepPosition:
         Numerical tolerance when comparing fractional coordinates (default: 1e-3).
     """
 
-    def __init__(self, symprec: float = 1e-3):
+    def __init__(self, symprec: float = 1e-3, original_element_order: bool = False):
         """Init method."""
         self.symprec = float(symprec)
+        self.original_element_order = original_element_order
         self.invert_values = None
         self.swap_values = None
 
     def irrep_positions(self, axis, positions, elements, spg_number):
-        """Return a irreducible representation of atomic positions
-        and two recommended `symprec` values.
+        """Derive a irreducible representation of atomic positions.
 
         Parameters
         ----------
@@ -56,9 +56,15 @@ class IrrepPosition:
         if _positions.shape[0] == 1:
             return np.array([0, 0, 0]), _elements
 
-        _, idx = np.unique(_elements, return_index=True)
-        unique_ordered = _elements[np.sort(idx)]
-        types = np.array([np.where(unique_ordered == el)[0][0] for el in _elements])
+        if self.original_element_order:
+            # Preserve the order of elements as they appear in the input
+            _, idx = np.unique(_elements, return_index=True)
+            unique_ordered = _elements[np.sort(idx)]
+            types = np.array([np.where(unique_ordered == el)[0][0] for el in _elements])
+        else:
+            # Assign types based on lexicographic (alphabetical) order of elements
+            unique_sorted = np.sort(np.unique(_elements))
+            types = np.array([np.where(unique_sorted == el)[0][0] for el in _elements])
 
         self.invert_values, self.swap_values = invert_and_permute_positions(
             _lattice, _positions, spg_number, self.symprec
@@ -147,17 +153,17 @@ class IrrepPosition:
 
                 max_val = np.max(max_all)
                 cands_idx = np.where(np.isclose(max_all, max_val, atol=self.symprec))[0]
-                pos_2d = np.array(pos_cands_axis)[cands_idx]  # (id_max, N_atom)
-                id_2d = np.array(id_cands_axis)[cands_idx]  # (id_max, N_atom)
+                pos_2d = np.array(pos_cands_axis)[cands_idx]
+                id_2d = np.array(id_cands_axis)[cands_idx]
                 pos_cands.append(pos_2d)
                 id_cands.append(id_2d)
 
             pos_cands_all.append(pos_cands)
             id_cands_all.append(id_cands)
         # pos_cands_all: List[List[np.ndarray]]
-        #     - Outer list: N transformation patterns (original + inverted + swapped)
+        #     - Outer list: M transformation patterns (original + inverted + swapped)
         #     - Inner list: 3 elements (per axis)
-        #     - Each np.ndarray: shape = (id_max_i, N_atom), where i = 0 (x), 1 (y), 2 (z)
+        #     - Each np.ndarray: shape = (cands_idx_i, N_atom), where i = 0 (x), 1 (y), 2 (z)
 
         all_max_vals = []
         for i, _pos_cands in enumerate(pos_cands_all):
@@ -180,6 +186,11 @@ class IrrepPosition:
         return reduced_pos_cands, reduced_id_cands
 
     def assign_clusters(self, positions: np.ndarray, types: np.ndarray):
+        """
+        Assigns cluster IDs along each axis based on element type; same-type atoms at identical
+        positions share the same ID. The IDs are then relabeled by cluster center and element type
+        to prepare for subsequent centroid calculations.
+        """
         _pos = positions.copy()
         _types = types.copy()
 
@@ -189,23 +200,24 @@ class IrrepPosition:
         ):
             invert_list = [False, True]
 
-        pos_cls_id, coord_unsort = self._assign_clusters_by_type(
+        pos_cls_id, snapped_positions = self._assign_clusters_by_type(
             _pos, _types, invert_list
         )
         pos_cls_id2 = self._relabel_clusters_by_centres(
-            coord_unsort, _types, pos_cls_id
+            snapped_positions, _types, pos_cls_id
         )
 
-        return pos_cls_id2, coord_unsort
+        return pos_cls_id2, snapped_positions
 
     def _assign_clusters_by_type(self, positions, types, invert_list=[False]):
+        """Assigns cluster IDs by element and axis."""
         if len(invert_list) == 1:
             pos_cls_id = np.full_like(positions, -1, dtype=np.int32)
-            coord_unsort = np.zeros_like(positions)
+            snapped_positions = np.zeros_like(positions)
         else:
             n_rows, n_cols = positions.shape
             pos_cls_id = np.full((n_rows, n_cols * 2), -1, dtype=np.int32)
-            coord_unsort = np.zeros((n_rows, n_cols * 2), dtype=positions.dtype)
+            snapped_positions = np.zeros((n_rows, n_cols * 2), dtype=positions.dtype)
 
         for invert in invert_list:
             if not invert:
@@ -216,6 +228,8 @@ class IrrepPosition:
                 target_idx = slice(3, 6)
 
             start_id = np.zeros((3))
+
+            # Group atoms by element type
             for type_n in range(np.max(types) + 1):
                 mask = types == type_n
                 pos_sub = _positions[mask]
@@ -224,7 +238,7 @@ class IrrepPosition:
                 sort_idx = np.argsort(pos_sub, axis=0, kind="mergesort")
                 coord_sorted = np.take_along_axis(pos_sub, sort_idx, axis=0)
 
-                # Cyclic forward difference (wrap unit cell)
+                # Compute forward differences with periodic wrapping
                 gap = np.roll(coord_sorted, -1, axis=0) - coord_sorted
                 gap[-1, :] += 1.0
 
@@ -236,6 +250,7 @@ class IrrepPosition:
                     np.cumsum(is_new_cluster[:-1, :], axis=0) + start_id
                 )
 
+                # Merge last cluster if gap is small (periodic condition)
                 merge_mask = ~is_new_cluster[-1, :]
                 for ax in np.where(merge_mask)[0]:
                     max_id = pos_cls_id_sorted[-1, ax]
@@ -243,6 +258,7 @@ class IrrepPosition:
                     coord_sorted[merged, ax] -= 1.0
                     pos_cls_id_sorted[merged, ax] = start_id[ax]
 
+                # Restore original order
                 pos_cls_id_sub = np.empty_like(coord_sorted, dtype=np.int32)
                 coord_unsort_sub = np.empty_like(coord_sorted)
                 for ax in range(3):
@@ -250,12 +266,16 @@ class IrrepPosition:
                     coord_unsort_sub[sort_idx[:, ax], ax] = coord_sorted[:, ax]
 
                 pos_cls_id[idx_sub, target_idx] = pos_cls_id_sub
-                coord_unsort[idx_sub, target_idx] = coord_unsort_sub
+                snapped_positions[idx_sub, target_idx] = coord_unsort_sub
                 start_id = np.max(pos_cls_id_sub, axis=0) + 1
 
-        return pos_cls_id, coord_unsort
+        return pos_cls_id, snapped_positions
 
     def _relabel_clusters_by_centres(self, positions, types, pos_cls_id):
+        """
+        Relabels cluster IDs so that cluster centers are ordered in ascending position.
+        Different element types within the same center are assigned separate IDs.
+        """
         pos_cls_id2 = np.full_like(positions, -1, dtype=np.int32)
 
         for ax in range(positions.shape[1]):
@@ -265,10 +285,11 @@ class IrrepPosition:
             # The index of `centres` corresponds directly to the cluster ID
             centres = np.bincount(cls_id, weights=coord) / np.bincount(cls_id)
 
-            # Select a representative type for each cluster (first occurrence)
+            # Assign a element type to each cluster
             _, unique_idx = np.unique(cls_id, return_index=True)
             cluster_types = types[unique_idx]
 
+            # Create cluster IDs based on centre positions only (ignoring types)
             sort_idx = np.argsort(centres)
             centres_sorted = centres[sort_idx]
             gap = np.roll(centres_sorted, -1) - centres_sorted
@@ -279,7 +300,7 @@ class IrrepPosition:
             if not is_new_cluster[-1]:
                 centre_cls_id[centre_cls_id == centre_cls_id[-1]] = 0
 
-            # Map cluster center IDs back to their original order.
+            # Map cluster center IDs back to their atomic order
             centre_cls_id_origin = np.empty_like(centre_cls_id)
             centre_cls_id_origin[sort_idx] = centre_cls_id
 

@@ -9,6 +9,7 @@ import os
 from collections import Counter, defaultdict
 from time import time
 
+import joblib
 import numpy as np
 
 from pypolymlp.core.interface_vasp import Poscar
@@ -83,6 +84,36 @@ def log_unique_structures(file_name, unique_structs, unique_struct_iters=None):
                 )
 
 
+def generate_unique_structs(
+    rss_results, use_joblib=True, num_process=-1, backend="loky"
+) -> list[UniqueStructure]:
+    if use_joblib:
+        unique_structs = joblib.Parallel(n_jobs=num_process, backend=backend)(
+            joblib.delayed(generate_unique_struct)(
+                res["energy"],
+                res["spg_list"],
+                res["poscar"],
+                res["structure"],
+                original_element_order=True,
+            )
+            for res in rss_results
+        )
+    else:
+        unique_structs = []
+        for res in rss_results:
+            unique_structs.append(
+                generate_unique_struct(
+                    res["energy"],
+                    res["spg_list"],
+                    res["poscar"],
+                    res["structure"],
+                    original_element_order=True,
+                )
+            )
+    unique_structs = [s for s in unique_structs if s is not None]
+    return unique_structs
+
+
 class RSSResultAnalyzer:
 
     def __init__(self):
@@ -99,7 +130,6 @@ class RSSResultAnalyzer:
 
     def _load_rss_logfiles(self):
         """Read and process log files, filtering based on convergence criteria."""
-        unique_structs = []
         struct_properties = []
 
         for logfile in self.logfiles:
@@ -127,18 +157,15 @@ class RSSResultAnalyzer:
                 self.error_poscar["else_err"].append(poscar_name)
                 continue
 
-            unique_struct = self._validate_optimized_struct(
-                optimized_poscar, struct_prop["energy"], struct_prop["spg"]
-            )
-            if unique_struct is None:
+            struct_prop = self._validate_optimized_struct(optimized_poscar, struct_prop)
+            if struct_prop is None:
                 self.errors["invalid_layer_struct"] += 1
                 self.error_poscar["invalid_layer_struct"].append(poscar_name)
                 continue
 
-            unique_structs.append(unique_struct)
             struct_properties.append(struct_prop)
 
-        return unique_structs, struct_properties
+        return struct_properties
 
     def _read_and_validate_logfile(self, logfile):
         try:
@@ -160,7 +187,7 @@ class RSSResultAnalyzer:
         required_keys = [
             "potential",
             "time",
-            "spg",
+            "spg_list",
             "energy",
             "res_f",
             "res_s",
@@ -178,7 +205,7 @@ class RSSResultAnalyzer:
 
         return struct_prop, poscar_name
 
-    def _validate_optimized_struct(self, poscar_name, energy, spg):
+    def _validate_optimized_struct(self, poscar_name, struct_prop):
         if self.cutoff is None:
             _params, _ = load_mlps(self.potential)
             if not isinstance(_params, list):
@@ -195,6 +222,8 @@ class RSSResultAnalyzer:
         polymlp_st = Poscar(poscar_name).structure
         objprop = PropUtil(polymlp_st.axis.T, polymlp_st.positions.T)
         axis_abc = objprop.axis_to_abc
+        _struct_prop = struct_prop
+        _struct_prop["structure"] = polymlp_st
 
         distance_cluster = get_distance_cluster(
             polymlp_st=polymlp_st, symprec_irrep=1e-5
@@ -210,18 +239,22 @@ class RSSResultAnalyzer:
             if max_layer_diff > self.cutoff:
                 return None
 
-        unique_struct = generate_unique_struct(
-            energy, spg, poscar_name=poscar_name, polymlp_st=polymlp_st
-        )
-        return unique_struct
+        return _struct_prop
 
     def _analysis_unique_structure(
         self,
-        unique_struct: list[UniqueStructure],
         struct_properties: list[dict],
+        use_joblib: bool = True,
+        num_process: int = -1,
+        backend: str = "locky",
     ):
         analyzer = UniqueStructureAnalyzer()
-
+        unique_struct = generate_unique_structs(
+            struct_properties,
+            use_joblib=use_joblib,
+            num_process=num_process,
+            backend=backend,
+        )
         for idx, unique_struct in enumerate(unique_struct):
             is_unique, _ = analyzer.identify_duplicate_struct(
                 unique_struct,
@@ -269,10 +302,11 @@ class RSSResultAnalyzer:
             index = finished_set.index(fin_poscar)
             finished_set = finished_set[: index + 1]
         self.logfiles = [f"log/{p}.log" for p in finished_set]
-        unique_structs, struct_properties = self._load_rss_logfiles()
+        
+        struct_properties = self._load_rss_logfiles()
 
         unique_str, unique_str_prop = self._analysis_unique_structure(
-            unique_structs, struct_properties
+            struct_properties, args.use_joblib, args.num_process, args.backend
         )
 
         time_finish = time() - time_start

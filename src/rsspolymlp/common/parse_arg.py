@@ -25,6 +25,7 @@ class ParseArgument:
     def get_analysis_args(cls):
         parser = argparse.ArgumentParser()
         cls.add_analysis_arguments(parser)
+        cls.add_parallelization_arguments(parser)
         return parser.parse_args()
 
     @staticmethod
@@ -134,6 +135,11 @@ class ParseArgument:
             type=int,
             default=-1,
             help="Number of optimized structures to analyze (-1 means all)",
+        )
+        parser.add_argument(
+            "--use_joblib",
+            action="store_true",
+            help="Enable parallel processing using joblib.",
         )
         parser.add_argument(
             "--cutoff",

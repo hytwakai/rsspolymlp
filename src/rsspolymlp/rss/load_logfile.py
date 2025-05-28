@@ -12,7 +12,7 @@ class LogfileLoader:
         _res = {
             "potential": None,
             "pressure": None,
-            "spg": None,
+            "spg_list": None,
             "res_f": None,
             "res_s": None,
             "time": None,
@@ -119,9 +119,9 @@ class LogfileLoader:
 
     def parse_spg(self, line, _res):
         try:
-            _res["spg"] = eval(line)
+            _res["spg_list"] = eval(line)
         except Exception:
-            _res["spg"] = None
+            _res["spg_list"] = None
 
     def parse_numeric(self, line, key, _res):
         _res[key] = float(line.split()[-1])

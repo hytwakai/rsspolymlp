@@ -5,17 +5,15 @@ import re
 from collections import defaultdict
 from time import time
 
-import joblib
 import numpy as np
 
+from pypolymlp.core.interface_vasp import Poscar
 from rsspolymlp.analysis.unique_struct import (
-    UniqueStructure,
     UniqueStructureAnalyzer,
-    generate_unique_struct,
 )
 from rsspolymlp.common.comp_ratio import CompositionResult, compute_composition
 from rsspolymlp.common.parse_arg import ParseArgument
-from rsspolymlp.rss.rss_analysis import log_unique_structures
+from rsspolymlp.rss.rss_analysis import log_unique_structures, generate_unique_structs
 
 
 def run():
@@ -33,11 +31,6 @@ def run():
         type=str,
         required=True,
         help="Path(s) to directories where RSS was performed",
-    )
-    parser.add_argument(
-        "--use_joblib",
-        action="store_true",
-        help="Enable parallel processing using joblib.",
     )
     ParseArgument.add_parallelization_arguments(parser)
     ParseArgument.add_analysis_arguments(parser)
@@ -89,7 +82,8 @@ def load_rss_results(
             else:
                 poscar_name = str(lines[line_idx + 1]).split()[0].split("/")[-1]
                 _res["poscar"] = parent_path + "/opt_struct/" + poscar_name
-            _res["enthalpy"] = float(lines[line_idx + 2].split()[-1])
+            _res["structure"] = Poscar(_res["poscar"]).structure
+            _res["energy"] = float(lines[line_idx + 2].split()[-1])
             _res["pressure"] = pressure
             spg = re.search(r"- Space group: (.+)", lines[line_idx + 6])
             _res["spg_list"] = ast.literal_eval(spg[1])
@@ -103,26 +97,6 @@ def load_rss_results(
             struct_no += 1
 
     return rss_results, pressure
-
-
-def generate_unique_structs(
-    rss_results, use_joblib=True, num_process=-1, backend="loky"
-) -> list[UniqueStructure]:
-    if use_joblib:
-        unique_structs = joblib.Parallel(n_jobs=num_process, backend=backend)(
-            joblib.delayed(generate_unique_struct)(
-                res["enthalpy"], res["spg_list"], res["poscar"]
-            )
-            for res in rss_results
-        )
-    else:
-        unique_structs = []
-        for res in rss_results:
-            unique_structs.append(
-                generate_unique_struct(res["enthalpy"], res["spg_list"], res["poscar"])
-            )
-    unique_structs = [s for s in unique_structs if s is not None]
-    return unique_structs
 
 
 class RSSResultSummarizer:

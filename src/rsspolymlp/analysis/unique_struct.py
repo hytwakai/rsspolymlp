@@ -41,6 +41,7 @@ def generate_unique_struct(
     positions: Optional[np.ndarray] = None,
     elements: Optional[np.ndarray] = None,
     symprec: float = 1e-2,
+    original_element_order: bool = False,
 ) -> UniqueStructure:
     """
     Generate a UniqueStructure object from various structure inputs.
@@ -94,7 +95,10 @@ def generate_unique_struct(
     recommend_symprecs = get_recommend_symprecs(primitive_st, symprec_irrep=1e-5)
     symprec_list = [1e-5] + recommend_symprecs
     irrep_struct = generate_irrep_struct(
-        primitive_st, spg_number, symprec_irreps=symprec_list
+        primitive_st,
+        spg_number,
+        symprec_irreps=symprec_list,
+        original_element_order=original_element_order,
     )
 
     return UniqueStructure(

@@ -24,7 +24,8 @@ class IrrepUtil:
         for ax in range(3):
             id_bins = np.bincount(pos_cls_id[:, ax])
             if len(id_bins) == 1:
-                distance_cluster.append(np.array([0]))
+                distance_cluster.append(np.array([1]))
+                continue
 
             # Distance between consecutive centres (cyclic)
             centres = np.bincount(pos_cls_id[:, ax], weights=pos[:, ax]) / id_bins

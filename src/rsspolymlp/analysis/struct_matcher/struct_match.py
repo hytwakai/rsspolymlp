@@ -83,11 +83,14 @@ def generate_irrep_struct(
     primitive_st: PolymlpStructure,
     spg_number: int,
     symprec_irreps: list = [1e-5],
+    original_element_order: bool = False,
 ) -> IrrepStructure:
 
     irrep_positions = []
     for symprec_irrep in symprec_irreps:
-        irrep_pos = IrrepPosition(symprec=symprec_irrep)
+        irrep_pos = IrrepPosition(
+            symprec=symprec_irrep, original_element_order=original_element_order
+        )
         _axis = primitive_st.axis.T
         _pos = primitive_st.positions.T
         _elements = primitive_st.elements
