@@ -48,10 +48,6 @@ def generate_unique_struct(
 
     Parameters
     ----------
-    energy : float
-        Enthalpy or energy value of the structure.
-    spg_list : list of str
-        List of space group labels.
     poscar_name : str, optional
         Path to POSCAR file.
     polymlp_st : PolymlpStructure, optional
@@ -62,6 +58,10 @@ def generate_unique_struct(
         Fractional atomic positions (N x 3).
     elements : np.ndarray, optional
         Element symbols (N).
+    energy : float
+        Enthalpy or energy value of the structure.
+    spg_list : list of str
+        List of space group labels.
 
     Returns
     -------
@@ -77,23 +77,16 @@ def generate_unique_struct(
             elements,
             comp_res.types,
         )
-        primitive_st_set, spg_number_set = generate_primitive_cells(
-            polymlp_st=polymlp_st,
-            symprec_set=symprec_set,
-        )
     else:
         if polymlp_st is None:
             polymlp_st = Poscar(poscar_name).structure
-        _axis = polymlp_st.axis.T
-        _positions = polymlp_st.positions.T
-        _elements = polymlp_st.elements
-        primitive_st_set, spg_number_set = generate_primitive_cells(
-            polymlp_st=polymlp_st, symprec_set=symprec_set
-        )
+
+    primitive_st_set, spg_number_set = generate_primitive_cells(
+        polymlp_st=polymlp_st,
+        symprec_set=symprec_set,
+    )
     if primitive_st_set == []:
         return None
-
-    objprop = PropUtil(_axis, _positions)
 
     irrep_struct_set = []
     for i, primitive_st in enumerate(primitive_st_set):
@@ -107,11 +100,13 @@ def generate_unique_struct(
         )
         irrep_struct_set.append(irrep_struct)
 
+    objprop = PropUtil(polymlp_st.axis.T, polymlp_st.positions.T)
+
     return UniqueStructure(
         irrep_struct_set=irrep_struct_set,
         original_structure=polymlp_st,
         axis_abc=objprop.axis_to_abc,
-        n_atoms=int(len(_elements)),
+        n_atoms=int(len(polymlp_st.elements)),
         volume=objprop.volume,
         least_distance=objprop.least_distance,
         energy=energy,
