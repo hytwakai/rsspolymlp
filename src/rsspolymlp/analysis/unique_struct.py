@@ -2,6 +2,7 @@ import re
 from dataclasses import dataclass
 from typing import Optional
 
+import joblib
 import numpy as np
 
 from pypolymlp.core.data_format import PolymlpStructure
@@ -9,38 +10,37 @@ from pypolymlp.core.interface_vasp import Poscar
 from rsspolymlp.analysis.struct_matcher.struct_match import (
     IrrepStructure,
     generate_irrep_struct,
-    generate_primitive_cell,
+    generate_primitive_cells,
     get_recommend_symprecs,
     struct_match,
 )
+from rsspolymlp.common.comp_ratio import compute_composition
 from rsspolymlp.common.property import PropUtil
 
 
 @dataclass
 class UniqueStructure:
-    energy: float
-    spg_list: list[str]
-    irrep_struct: IrrepStructure
-    original_axis: np.ndarray
-    original_positions: np.ndarray
-    original_elements: np.ndarray
+    irrep_struct_set: list[IrrepStructure]
+    original_structure: PolymlpStructure
     axis_abc: np.ndarray
     n_atoms: int
     volume: float
     least_distance: float
+    energy: Optional[float]
+    spg_list: Optional[list[str]]
     input_poscar: Optional[str]
     dup_count: int = 1
 
 
 def generate_unique_struct(
-    energy: float,
-    spg_list: list[str],
     poscar_name: Optional[str] = None,
     polymlp_st: Optional[PolymlpStructure] = None,
     axis: Optional[np.ndarray] = None,
     positions: Optional[np.ndarray] = None,
     elements: Optional[np.ndarray] = None,
-    symprec: float = 1e-2,
+    energy: Optional[float] = None,
+    spg_list: Optional[list[str]] = None,
+    symprec_set: list[float] = [1e-5, 1e-4, 1e-3, 1e-2],
     original_element_order: bool = False,
 ) -> UniqueStructure:
     """
@@ -69,14 +69,17 @@ def generate_unique_struct(
         A standardized structure object for uniqueness evaluation.
     """
     if poscar_name is None and polymlp_st is None:
-        _axis = axis
-        _positions = positions
-        _elements = elements
-        primitive_st, spg_number = generate_primitive_cell(
-            axis=_axis,
-            positions=_positions,
-            elements=_elements,
-            symprec=symprec,
+        comp_res = compute_composition(elements)
+        polymlp_st = PolymlpStructure(
+            axis,
+            positions,
+            comp_res.atom_counts,
+            elements,
+            comp_res.types,
+        )
+        primitive_st_set, spg_number_set = generate_primitive_cells(
+            polymlp_st=polymlp_st,
+            symprec_set=symprec_set,
         )
     else:
         if polymlp_st is None:
@@ -84,36 +87,67 @@ def generate_unique_struct(
         _axis = polymlp_st.axis.T
         _positions = polymlp_st.positions.T
         _elements = polymlp_st.elements
-        primitive_st, spg_number = generate_primitive_cell(
-            polymlp_st=polymlp_st, symprec=symprec
+        primitive_st_set, spg_number_set = generate_primitive_cells(
+            polymlp_st=polymlp_st, symprec_set=symprec_set
         )
-    if primitive_st is None:
+    if primitive_st_set == []:
         return None
 
     objprop = PropUtil(_axis, _positions)
 
-    recommend_symprecs = get_recommend_symprecs(primitive_st, symprec_irrep=1e-5)
-    symprec_list = [1e-5] + recommend_symprecs
-    irrep_struct = generate_irrep_struct(
-        primitive_st,
-        spg_number,
-        symprec_irreps=symprec_list,
-        original_element_order=original_element_order,
-    )
+    irrep_struct_set = []
+    for i, primitive_st in enumerate(primitive_st_set):
+        recommend_symprecs = get_recommend_symprecs(primitive_st, symprec_irrep=1e-5)
+        symprec_list = [1e-5] + recommend_symprecs
+        irrep_struct = generate_irrep_struct(
+            primitive_st,
+            spg_number_set[i],
+            symprec_irreps=symprec_list,
+            original_element_order=original_element_order,
+        )
+        irrep_struct_set.append(irrep_struct)
 
     return UniqueStructure(
-        energy=energy,
-        spg_list=spg_list,
-        irrep_struct=irrep_struct,
-        original_axis=_axis,
-        original_positions=_positions,
-        original_elements=_elements,
+        irrep_struct_set=irrep_struct_set,
+        original_structure=polymlp_st,
         axis_abc=objprop.axis_to_abc,
         n_atoms=int(len(_elements)),
         volume=objprop.volume,
         least_distance=objprop.least_distance,
+        energy=energy,
+        spg_list=spg_list,
         input_poscar=poscar_name,
     )
+
+
+def generate_unique_structs(
+    rss_results, use_joblib=True, num_process=-1, backend="loky"
+) -> list[UniqueStructure]:
+    if use_joblib:
+        unique_structs = joblib.Parallel(n_jobs=num_process, backend=backend)(
+            joblib.delayed(generate_unique_struct)(
+                res["poscar"],
+                res["structure"],
+                energy=res["energy"],
+                spg_list=res["spg_list"],
+                original_element_order=True,
+            )
+            for res in rss_results
+        )
+    else:
+        unique_structs = []
+        for res in rss_results:
+            unique_structs.append(
+                generate_unique_struct(
+                    res["poscar"],
+                    res["structure"],
+                    energy=res["energy"],
+                    spg_list=res["spg_list"],
+                    original_element_order=True,
+                )
+            )
+    unique_structs = [s for s in unique_structs if s is not None]
+    return unique_structs
 
 
 class UniqueStructureAnalyzer:
@@ -165,7 +199,7 @@ class UniqueStructureAnalyzer:
         is_change_struct = False
         _energy = unique_struct.energy
         _spg_list = unique_struct.spg_list
-        _irrep_struct = unique_struct.irrep_struct
+        _irrep_struct_set = unique_struct.irrep_struct_set
         if other_properties is None:
             other_properties = {}
 
@@ -180,7 +214,7 @@ class UniqueStructureAnalyzer:
                     ):
                         is_change_struct = True
                     break
-            if struct_match(ndstr.irrep_struct, _irrep_struct):
+            if struct_match(ndstr.irrep_struct_set, _irrep_struct_set):
                 is_unique = False
                 if self._extract_spg_count(_spg_list) > self._extract_spg_count(
                     ndstr.spg_list

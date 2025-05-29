@@ -9,7 +9,6 @@ import os
 from collections import Counter, defaultdict
 from time import time
 
-import joblib
 import numpy as np
 
 from pypolymlp.core.interface_vasp import Poscar
@@ -17,9 +16,8 @@ from pypolymlp.core.io_polymlp import load_mlps
 from rsspolymlp.analysis.outlier_cands import detect_outlier
 from rsspolymlp.analysis.struct_matcher.struct_match import get_distance_cluster
 from rsspolymlp.analysis.unique_struct import (
-    UniqueStructure,
     UniqueStructureAnalyzer,
-    generate_unique_struct,
+    generate_unique_structs,
 )
 from rsspolymlp.common.parse_arg import ParseArgument
 from rsspolymlp.common.property import PropUtil
@@ -60,8 +58,8 @@ def log_unique_structures(file_name, unique_structs, unique_struct_iters=None):
             )
             print(" - Enthalpy:   ", _str.energy, file=f)
             print(" - Axis:       ", _str.axis_abc, file=f)
-            print(" - Postions:   ", _str.original_positions.T.tolist(), file=f)
-            print(" - Elements:   ", _str.original_elements, file=f)
+            print(" - Postions:   ", _str.original_structure.positions.T.tolist(), file=f)
+            print(" - Elements:   ", _str.original_structure.elements, file=f)
             print(" - Space group:", _str.spg_list, file=f)
             info = [
                 " - Other Info.:",
@@ -82,36 +80,6 @@ def log_unique_structures(file_name, unique_structs, unique_struct_iters=None):
                     " - NOTE       : This structure is marked as a weak outlier.",
                     file=f,
                 )
-
-
-def generate_unique_structs(
-    rss_results, use_joblib=True, num_process=-1, backend="loky"
-) -> list[UniqueStructure]:
-    if use_joblib:
-        unique_structs = joblib.Parallel(n_jobs=num_process, backend=backend)(
-            joblib.delayed(generate_unique_struct)(
-                res["energy"],
-                res["spg_list"],
-                res["poscar"],
-                res["structure"],
-                original_element_order=True,
-            )
-            for res in rss_results
-        )
-    else:
-        unique_structs = []
-        for res in rss_results:
-            unique_structs.append(
-                generate_unique_struct(
-                    res["energy"],
-                    res["spg_list"],
-                    res["poscar"],
-                    res["structure"],
-                    original_element_order=True,
-                )
-            )
-    unique_structs = [s for s in unique_structs if s is not None]
-    return unique_structs
 
 
 class RSSResultAnalyzer:
@@ -302,7 +270,7 @@ class RSSResultAnalyzer:
             index = finished_set.index(fin_poscar)
             finished_set = finished_set[: index + 1]
         self.logfiles = [f"log/{p}.log" for p in finished_set]
-        
+
         struct_properties = self._load_rss_logfiles()
 
         unique_str, unique_str_prop = self._analysis_unique_structure(

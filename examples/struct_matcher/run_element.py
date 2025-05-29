@@ -1,17 +1,16 @@
 import numpy as np
 
 from pypolymlp.utils.spglib_utils import SymCell
-from rsspolymlp.analysis.struct_matcher.irrep_position import IrrepPosition
-from rsspolymlp.analysis.struct_matcher.struct_match import (
-    generate_primitive_cell,
-    get_recommend_symprecs,
-)
+from rsspolymlp.analysis.struct_matcher.struct_match import struct_match
+from rsspolymlp.analysis.unique_struct import generate_unique_struct
 from rsspolymlp.utils import pymatgen_utils
 from rsspolymlp.utils.property import PropUtil
 
 pymat = pymatgen_utils.PymatUtil()
 all_test_mode = ["example", "invert", "swap", "symprec"]
 all_test_mode = ["invert"]
+all_test_mode = ["symprec_2"]
+all_test_mode = ["test"]
 final_res = []
 pymatgen_res = []
 
@@ -32,28 +31,34 @@ for test_mode in all_test_mode:
         pos1 = "./poscar_element/symprec_1e-2_1"
         pos2 = "./poscar_element/symprec_1e-2_2"
         symprec = 1e-2
+    elif test_mode == "symprec_2":
+        pos1 = "./poscar_element/symprec_1"
+        pos2 = "./poscar_element/symprec_2"
+        symprec_set = [1e-5, 1e-4, 1e-3, 1e-2]
+    elif test_mode == "test":
+        pos1 = "./poscar_element/test_1"
+        pos2 = "./poscar_element/test_2"
+        symprec_set = [1e-5, 1e-4, 1e-3, 1e-2]
     else:
         raise ValueError(f"Unknown test_mode: {test_mode}")
 
-    st1, spg1 = generate_primitive_cell(poscar_name=pos1)
-    st2, spg2 = generate_primitive_cell(poscar_name=pos2)
-    print(spg1)
-    print(spg2)
-    symutil = SymCell(poscar_name=pos1, symprec=1e-3)
+    """symutil = SymCell(poscar_name=pos1, symprec=1e-3)
     symutil2 = SymCell(poscar_name=pos2, symprec=1e-3)
     st1 = symutil.refine_cell(standardize_cell=True)
-    st2 = symutil2.refine_cell(standardize_cell=True)
+    st2 = symutil2.refine_cell(standardize_cell=True)"""
 
-    irrep_pos = IrrepPosition(symprec=symprec)
+    unique_struct1 = generate_unique_struct(
+        pos1,
+        original_element_order=True,
+    )
+    unique_struct2 = generate_unique_struct(
+        pos2,
+        original_element_order=True,
+    )
+    st1 = unique_struct1.original_structure
+    st2 = unique_struct2.original_structure
 
-    rep_pos1, sorted_elements1 = irrep_pos.irrep_positions(
-        st1.axis, st1.positions.T, st1.elements, spg1
-    )
-    order1 = get_recommend_symprecs(st1)
-    rep_pos2, sorted_elements2 = irrep_pos.irrep_positions(
-        st2.axis, st2.positions.T, st2.elements, spg2
-    )
-    order2 = get_recommend_symprecs(st2)
+    judge = struct_match(unique_struct1.irrep_struct_set, unique_struct2.irrep_struct_set)
 
     print(f"----- test_mode: {test_mode} -----")
     print("--- Stucture 1 ---")
@@ -63,9 +68,8 @@ for test_mode in all_test_mode:
     print(np.round(st1.positions, 5))
     print(" - Elements:")
     print(st1.elements)
-    print(" - Irrep positions:")
-    print(rep_pos1.reshape(3, -1))
-    print(" - Recommended symprec:", order1)
+    for irrep_st in unique_struct1.irrep_struct_set:
+        print(irrep_st.spg_number)
     print("--- Structure 2 ---")
     print(" - Axis:")
     print(PropUtil(st2.axis.T, st2.positions.T).axis_to_abc)
@@ -73,24 +77,10 @@ for test_mode in all_test_mode:
     print(np.round(st2.positions, 5))
     print(" - Elements:")
     print(st2.elements)
-    print(" - Irrep positions:")
-    print(rep_pos2.reshape(3, -1))
-    print(" - Recommended symprec:", order2)
-    print("--- Structural similarity ---")
-    print(" - Difference of axis:")
-    residual_axis = st1.axis - st2.axis
-    residual_axis = np.sum(residual_axis**2, axis=1)
-    print(residual_axis)
-    print(" - Difference of irrep positions:")
-    print(abs(rep_pos1 - rep_pos2))
-    residual_pos = np.max(abs(rep_pos1 - rep_pos2))
-    print(" - Maximum absolute value:", residual_pos)
-    if residual_pos < 0.01 and np.max(residual_axis) < 0.01:
-        print(" - These strctures are similar ?: Yes")
-        final_res.append(True)
-    else:
-        print(" - These strctures are similar ?: No")
-        final_res.append(False)
+    for irrep_st in unique_struct2.irrep_struct_set:
+        print(irrep_st.spg_number)
+    print(f" - These strctures are similar ?: {judge}")
+    final_res.append(judge)
 
     pymat_st1 = pymat.parameter_to_pymat_st(st1.axis, st1.positions.T, st1.elements)
     pymat_st2 = pymat.parameter_to_pymat_st(st2.axis, st2.positions.T, st2.elements)

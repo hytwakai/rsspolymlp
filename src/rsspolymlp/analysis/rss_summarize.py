@@ -10,10 +10,11 @@ import numpy as np
 from pypolymlp.core.interface_vasp import Poscar
 from rsspolymlp.analysis.unique_struct import (
     UniqueStructureAnalyzer,
+    generate_unique_structs,
 )
 from rsspolymlp.common.comp_ratio import CompositionResult, compute_composition
 from rsspolymlp.common.parse_arg import ParseArgument
-from rsspolymlp.rss.rss_analysis import log_unique_structures, generate_unique_structs
+from rsspolymlp.rss.rss_analysis import log_unique_structures
 
 
 def run():
