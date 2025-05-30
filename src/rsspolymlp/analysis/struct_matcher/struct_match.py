@@ -9,6 +9,7 @@ from pypolymlp.core.data_format import PolymlpStructure
 from pypolymlp.core.interface_vasp import Poscar
 from pypolymlp.utils.vasp_utils import write_poscar_file
 from rsspolymlp.analysis.struct_matcher.irrep_position import IrrepPosition
+from rsspolymlp.analysis.struct_matcher.irrep_position_dev import IrrepPositionDev
 from rsspolymlp.analysis.struct_matcher.utils import IrrepUtil
 from rsspolymlp.common.comp_ratio import compute_composition
 from rsspolymlp.utils.spglib_utils import SymCell
@@ -96,6 +97,32 @@ def generate_irrep_struct(
         irrep_pos = IrrepPosition(
             symprec=symprec_irrep, original_element_order=original_element_order
         )
+        _axis = primitive_st.axis.T
+        _pos = primitive_st.positions.T
+        _elements = primitive_st.elements
+        rep_pos, sorted_elements = irrep_pos.irrep_positions(
+            _axis, _pos, _elements, spg_number
+        )
+        irrep_positions.append(rep_pos)
+
+    return IrrepStructure(
+        axis=_axis,
+        positions=np.stack(irrep_positions, axis=0),
+        elements=sorted_elements,
+        element_count=Counter(sorted_elements),
+        spg_number=spg_number,
+    )
+
+
+def generate_irrep_struct_dev(
+    primitive_st: PolymlpStructure,
+    spg_number: int,
+    symprec_irreps: list = [1e-5],
+) -> IrrepStructure:
+
+    irrep_positions = []
+    for symprec_irrep in symprec_irreps:
+        irrep_pos = IrrepPositionDev(symprec=symprec_irrep)
         _axis = primitive_st.axis.T
         _pos = primitive_st.positions.T
         _elements = primitive_st.elements

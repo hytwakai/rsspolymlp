@@ -101,6 +101,7 @@ def run():
                 )
                 shutil.copy(res["poscar"], dest)
                 _res = res
+                _res.pop("structure", None)
                 _res["outlier_poscar"] = f"POSCAR_{logname}_No{res['struct_no']}"
                 outliers_all.append(_res)
     with open("outlier/outlier_candidates.log", "w") as f:

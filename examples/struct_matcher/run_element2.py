@@ -1,4 +1,3 @@
-import copy
 import glob
 import os
 import tarfile
@@ -6,7 +5,8 @@ import time
 
 from rsspolymlp.analysis.struct_matcher.struct_match import (
     generate_irrep_struct,
-    generate_primitive_cell,
+    generate_irrep_struct_dev,
+    generate_primitive_cells,
     get_recommend_symprecs,
     struct_match,
 )
@@ -15,7 +15,7 @@ from rsspolymlp.utils import pymatgen_utils
 pymat = pymatgen_utils.PymatUtil()
 
 poscar_num = 2000
-compare_pymatgen = False
+compare_pymatgen = True
 
 if not os.path.exists("./poscar_element3"):
     os.makedirs("./poscar_element3")
@@ -29,7 +29,7 @@ print("--- Comparing irrep atomic position ---")
 sym_st = []
 start = time.time()
 for p_name in poscar_all:
-    st, spg = generate_primitive_cell(poscar_name=p_name, symprec=1e-3)
+    st, spg = generate_primitive_cells(poscar_name=p_name, symprec_set=[1e-3])
     _res = {}
     _res["poscar"] = p_name
     _res["structure"] = st
@@ -41,13 +41,20 @@ print(f"  (elapsed time per structure: {(el_time1) * 1000 / poscar_num})")
 
 start = time.time()
 for i in range(len(sym_st)):
-    recommend_symprecs = get_recommend_symprecs(sym_st[i]["structure"])
-    irrep_st = generate_irrep_struct(
-        sym_st[i]["structure"],
-        sym_st[i]["spg_number"],
-        symprec_irreps=[1e-5] + recommend_symprecs,
-    )
-    sym_st[i]["irrep_st"] = irrep_st
+    sym_st[i]["irrep_st"] = []
+    for h, st in enumerate(sym_st[i]["structure"]):
+        recommend_symprecs = get_recommend_symprecs(st)
+        """irrep_st = generate_irrep_struct(
+            st,
+            sym_st[i]["spg_number"][h],
+            symprec_irreps=[1e-5] + recommend_symprecs,
+        )"""
+        irrep_st = generate_irrep_struct_dev(
+            st,
+            sym_st[i]["spg_number"][h],
+            symprec_irreps=[1e-5] + recommend_symprecs,
+        )
+    sym_st[i]["irrep_st"].append(irrep_st)
     # print(sym_st[i]["poscar"])
 el_time2 = round(time.time() - start, 3)
 print(" get irrep atomic positions:", (el_time2) * 1000)
@@ -75,43 +82,6 @@ for st in nondup_st:
     pos_irpos.append(st["poscar"])
 print(" number of nonduplicate structures:", len(nondup_st))
 
-print("--- Comparing irrep atomic position (in recommended symprec) ---")
-start = time.time()
-for i in range(len(nondup_st)):
-    recommend_symprecs = get_recommend_symprecs(nondup_st[i]["structure"])
-    irrep_st = generate_irrep_struct(
-        nondup_st[i]["structure"],
-        sym_st[i]["spg_number"],
-        symprec_irreps=recommend_symprecs,
-    )
-    nondup_st[i]["irrep_st"] = irrep_st
-_sym_st = copy.copy(nondup_st)
-el_time4 = round(time.time() - start, 3)
-print(" get irrep atomic positions::", (el_time4) * 1000)
-print(f"  (elapsed time per structure: {round((el_time4) * 1000 / len(nondup_st), 2)})")
-
-start = time.time()
-count2 = 0
-nondup_st = []
-for st in _sym_st:
-    app = True
-    for st_ref in nondup_st:
-        count2 += 1
-        st_similarity = struct_match(st_ref["irrep_st"], st["irrep_st"])
-        if st_similarity:
-            app = False
-            break
-    if app:
-        nondup_st.append(st)
-el_time5 = round(time.time() - start, 3)
-print(" eliminate duplicates:", (el_time5) * 1000)
-print(" evaluation count:", count2)
-print(f"  (elapsed time per evaluation: {round((el_time5) * 1000 / count2, 3)})")
-pos_irpos = []
-for st in nondup_st:
-    pos_irpos.append(st["poscar"])
-print(" number of nonduplicate structures:", len(nondup_st))
-
 if compare_pymatgen:
     print("--- Pymatgen.StructureMatcher result ---")
     sym_st_past = sym_st
@@ -120,9 +90,9 @@ if compare_pymatgen:
     for st_in in sym_st_past:
         st = {}
         st["pymat"] = pymat.parameter_to_pymat_st(
-            st_in["structure"].axis,
-            st_in["structure"].positions.T,
-            st_in["structure"].elements,
+            st_in["structure"][0].axis,
+            st_in["structure"][0].positions.T,
+            st_in["structure"][0].elements,
         )
         st["poscar"] = st_in["poscar"]
         st["duplicate"] = [st_in["poscar"]]
@@ -171,9 +141,6 @@ if compare_pymatgen:
         print("get irrep_pos:", (el_time2) * 1000, file=f)
         print("sorting sym_st:", (el_time3) * 1000, file=f)
         print(count1, file=f)
-        print("get irrep_pos (recom. symprec):", (el_time4) * 1000, file=f)
-        print("sorting sym_st (recom. symprec):", (el_time5) * 1000, file=f)
-        print(count2, file=f)
         print("generate sym_st (pymatgen):", (el_time6) * 1000, file=f)
         print("sorting sym_st (pymatgen):", (el_time7) * 1000, file=f)
         print(count3, file=f)
