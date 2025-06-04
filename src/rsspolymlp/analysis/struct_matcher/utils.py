@@ -6,7 +6,7 @@ from rsspolymlp.analysis.struct_matcher.irrep_position import IrrepPosition
 
 class IrrepUtil:
 
-    def __init__(self, positions, elements, symprec: float = 1e-3):
+    def __init__(self, positions, elements, symprec: list[float] = [1e-5, 1e-5, 1e-5]):
         """Init method."""
         self.positions = np.asarray(positions, dtype=float)
         self.elements = np.asarray(elements, dtype=str)
@@ -61,7 +61,7 @@ class IrrepUtil:
 
 def get_recommend_symprecs(
     primitive_st: PolymlpStructure,
-    symprec_irrep: float = 1e-5,
+    symprec_irrep: list[float] = [1e-5, 1e-5, 1e-5],
 ):
     _pos = primitive_st.positions.T
     _elements = primitive_st.elements
@@ -73,7 +73,7 @@ def get_recommend_symprecs(
 
 def get_distance_cluster(
     polymlp_st: PolymlpStructure,
-    symprec_irrep: float = 1e-5,
+    symprec_irrep: list[float] = [1e-5, 1e-5, 1e-5],
 ):
     _pos = polymlp_st.positions.T
     _elements = polymlp_st.elements

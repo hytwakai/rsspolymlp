@@ -90,9 +90,7 @@ def generate_unique_struct(
 
     irrep_struct_set = []
     for i, primitive_st in enumerate(primitive_st_set):
-        recommend_symprecs = get_recommend_symprecs(
-            primitive_st, symprec_irrep=[1e-5, 1e-5, 1e-5]
-        )
+        recommend_symprecs = get_recommend_symprecs(primitive_st)
         irrep_struct = generate_irrep_struct(
             primitive_st,
             spg_number_set[i],

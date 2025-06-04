@@ -47,7 +47,7 @@ start = time.time()
 for i in range(len(sym_st)):
     sym_st[i]["irrep_st"] = []
     for h, st in enumerate(sym_st[i]["structure"]):
-        recommend_symprecs = get_recommend_symprecs(st, symprec_irrep=[1e-5] * 3)
+        recommend_symprecs = get_recommend_symprecs(st)
         symprec_list = [1e-5]
         symprec_list.extend(recommend_symprecs)
         irrep_st = generate_irrep_struct(

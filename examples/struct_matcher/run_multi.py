@@ -5,11 +5,10 @@ import time
 
 from rsspolymlp.analysis.struct_matcher.struct_match import (
     generate_irrep_struct,
-    generate_irrep_struct_dev,
     generate_primitive_cells,
-    get_recommend_symprecs,
     struct_match,
 )
+from rsspolymlp.analysis.struct_matcher.utils import get_recommend_symprecs
 from rsspolymlp.utils import pymatgen_utils
 
 pymat = pymatgen_utils.PymatUtil()
@@ -45,17 +44,14 @@ for i in range(len(sym_st)):
     for h, st in enumerate(sym_st[i]["structure"]):
         recommend_symprecs = get_recommend_symprecs(st)
         # print(sym_st[i]["spg_number"])
+        symprec_list = [1e-5]
+        symprec_list.extend(recommend_symprecs)
         irrep_st = generate_irrep_struct(
             st,
             sym_st[i]["spg_number"][h],
-            symprec_irreps=[1e-5] + recommend_symprecs,
+            symprec_irreps=symprec_list,
         )
-        """irrep_st = generate_irrep_struct_dev(
-            st,
-            sym_st[i]["spg_number"][h],
-            symprec_irreps=[1e-5] + recommend_symprecs,
-        )"""
-    sym_st[i]["irrep_st"].append(irrep_st)
+        sym_st[i]["irrep_st"].append(irrep_st)
     # print(sym_st[i]["poscar"])
 el_time2 = round(time.time() - start, 3)
 print(" get irrep atomic positions:", (el_time2) * 1000)

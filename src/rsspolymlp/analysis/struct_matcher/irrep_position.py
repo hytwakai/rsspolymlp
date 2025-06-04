@@ -141,7 +141,8 @@ class IrrepPosition:
                 cls_id = cluster_id_sub[:, ax]
 
                 id_bins = np.bincount(cls_id)
-                centres = np.bincount(cls_id, weights=pos_sub[:, ax]) / id_bins
+                with np.errstate(divide='ignore', invalid='ignore'):
+                    centres = np.bincount(cls_id, weights=pos_sub[:, ax]) / id_bins
 
                 sort_idx = np.argsort(centres)
                 centres = centres[sort_idx]
