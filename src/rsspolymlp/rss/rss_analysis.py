@@ -58,7 +58,9 @@ def log_unique_structures(file_name, unique_structs, unique_struct_iters=None):
             )
             print(" - Enthalpy:   ", _str.energy, file=f)
             print(" - Axis:       ", _str.axis_abc, file=f)
-            print(" - Postions:   ", _str.original_structure.positions.T.tolist(), file=f)
+            print(
+                " - Postions:   ", _str.original_structure.positions.T.tolist(), file=f
+            )
             print(" - Elements:   ", _str.original_structure.elements, file=f)
             print(" - Space group:", _str.spg_list, file=f)
             info = [
@@ -193,9 +195,7 @@ class RSSResultAnalyzer:
         _struct_prop = struct_prop
         _struct_prop["structure"] = polymlp_st
 
-        distance_cluster = get_distance_cluster(
-            polymlp_st=polymlp_st, symprec_irrep=1e-5
-        )
+        distance_cluster = get_distance_cluster(polymlp_st=polymlp_st)
         if distance_cluster is not None:
             max_layer_diff = max(
                 [

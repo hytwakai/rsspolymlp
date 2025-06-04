@@ -124,7 +124,6 @@ def generate_unique_structs(
                 res["structure"],
                 energy=res["energy"],
                 spg_list=res["spg_list"],
-                original_element_order=True,
             )
             for res in rss_results
         )
@@ -137,7 +136,6 @@ def generate_unique_structs(
                     res["structure"],
                     energy=res["energy"],
                     spg_list=res["spg_list"],
-                    original_element_order=True,
                 )
             )
     unique_structs = [s for s in unique_structs if s is not None]

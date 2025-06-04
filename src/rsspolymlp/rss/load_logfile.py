@@ -1,4 +1,5 @@
 import re
+import ast
 
 import numpy as np
 
@@ -113,27 +114,43 @@ class LogfileLoader:
 
     def parse_potential(self, line, _res):
         try:
-            _res["potential"] = eval(" ".join(line.split()[2:]))
+            _res["potential"] = ast.literal_eval(" ".join(line.split()[2:]))
         except Exception:
             _res["potential"] = None
 
     def parse_spg(self, line, _res):
         try:
-            _res["spg_list"] = eval(line)
+            if _res["spg_list"] is not None:
+                _res["spg_list"] = None
+                return _res, False
+            else:
+                _res["spg_list"] = ast.literal_eval(line)
         except Exception:
             _res["spg_list"] = None
 
     def parse_numeric(self, line, key, _res):
-        _res[key] = float(line.split()[-1])
+        try:
+            _res[key] = float(line.split()[-1])
+        except Exception:
+            _res[key] = None
 
     def parse_iterations(self, line, _res):
-        _res["iter"] += int(line.split()[-1])
+        try:
+            _res["iter"] += int(line.split()[-1])
+        except Exception:
+            _res["iter"] = None
 
     def parse_fval(self, line, _res):
-        _res["fval"] += int(line.split()[-1])
+        try:
+            _res["fval"] += int(line.split()[-1])
+        except Exception:
+            _res["fval"] = None
 
     def parse_gval(self, line, _res):
-        _res["gval"] += int(line.split()[-1])
+        try:
+            _res["gval"] += int(line.split()[-1])
+        except Exception:
+            _res["gval"] = None
 
     def parse_vector_line(self, line):
         return [
