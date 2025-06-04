@@ -1,5 +1,5 @@
-import re
 import ast
+import re
 
 import numpy as np
 
@@ -93,24 +93,30 @@ class LogfileLoader:
                 else:
                     raise ValueError(f"Could not parse line: {line}")
 
-            # check errors
-            if "Maximum number of relaxation iterations has been exceeded" in line:
-                return _res, "iteration"
-            if "Geometry optimization failed: Huge" in line:
-                return _res, (
-                    "energy_zero" if abs(_res["energy"]) < 10**-3 else "energy_low"
-                )
-            if "Refining cell failed" in line:
-                return _res, "anom_struct"
-            if "Analyzing space group failed" in line:
-                return _res, "anom_struct"
+            judge = self.check_errors(line, _res)
+            if judge is not True:
+                return _res, judge
 
         _res["struct"] = {}
         _res["struct"]["axis"] = np.array(axis, dtype=np.float64)
         _res["struct"]["positions"] = np.array(positions, dtype=np.float64)
         _res["struct"]["elements"] = np.array(elements, dtype=str)
+        if len(_res["struct"]["elements"]) == 0:
+            _res["struct"] = None
+            return _res, False
 
         return _res, True
+
+    def check_errors(self, line, _res):
+        if "Maximum number of relaxation iterations has been exceeded" in line:
+            return "iteration"
+        if "Geometry optimization failed: Huge" in line:
+            return "energy_zero" if abs(_res["energy"]) < 10**-3 else "energy_low"
+        if "Refining cell failed" in line:
+            return "anom_struct"
+        if "Analyzing space group failed" in line:
+            return "anom_struct"
+        return True
 
     def parse_potential(self, line, _res):
         try:
