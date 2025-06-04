@@ -1,5 +1,6 @@
 import numpy as np
 
+from pypolymlp.core.data_format import PolymlpStructure
 from rsspolymlp.analysis.struct_matcher.irrep_position import IrrepPosition
 
 
@@ -56,3 +57,27 @@ class IrrepUtil:
         recommend_orders = np.array(recommend_orders)
 
         return [10 ** (recommend_orders - 1), 10 ** (recommend_orders - 2)]
+
+
+def get_recommend_symprecs(
+    primitive_st: PolymlpStructure,
+    symprec_irrep: float = 1e-5,
+):
+    _pos = primitive_st.positions.T
+    _elements = primitive_st.elements
+    irrep_util = IrrepUtil(_pos, _elements, symprec=symprec_irrep)
+    recommend_symprecs = irrep_util.recommended_symprec()
+
+    return recommend_symprecs
+
+
+def get_distance_cluster(
+    polymlp_st: PolymlpStructure,
+    symprec_irrep: float = 1e-5,
+):
+    _pos = polymlp_st.positions.T
+    _elements = polymlp_st.elements
+    irrep_util = IrrepUtil(_pos, _elements, symprec=symprec_irrep)
+    distance_cluster = irrep_util.inter_cluster_diffs()
+
+    return distance_cluster

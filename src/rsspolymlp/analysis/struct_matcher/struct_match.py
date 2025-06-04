@@ -9,8 +9,6 @@ from pypolymlp.core.data_format import PolymlpStructure
 from pypolymlp.core.interface_vasp import Poscar
 from pypolymlp.utils.vasp_utils import write_poscar_file
 from rsspolymlp.analysis.struct_matcher.irrep_position import IrrepPosition
-from rsspolymlp.analysis.struct_matcher.irrep_position_dev import IrrepPositionDev
-from rsspolymlp.analysis.struct_matcher.utils import IrrepUtil
 from rsspolymlp.common.comp_ratio import compute_composition
 from rsspolymlp.utils.spglib_utils import SymCell
 
@@ -89,42 +87,13 @@ def generate_irrep_struct(
     primitive_st: PolymlpStructure,
     spg_number: int,
     symprec_irreps: list = [1e-5],
-    original_element_order: bool = False,
-) -> IrrepStructure:
-
-    irrep_positions = []
-    for symprec_irrep in symprec_irreps:
-        irrep_pos = IrrepPosition(
-            symprec=symprec_irrep, original_element_order=original_element_order
-        )
-        _axis = primitive_st.axis.T
-        _pos = primitive_st.positions.T
-        _elements = primitive_st.elements
-        rep_pos, sorted_elements = irrep_pos.irrep_positions(
-            _axis, _pos, _elements, spg_number
-        )
-        irrep_positions.append(rep_pos)
-
-    return IrrepStructure(
-        axis=_axis,
-        positions=np.stack(irrep_positions, axis=0),
-        elements=sorted_elements,
-        element_count=Counter(sorted_elements),
-        spg_number=spg_number,
-    )
-
-
-def generate_irrep_struct_dev(
-    primitive_st: PolymlpStructure,
-    spg_number: int,
-    symprec_irreps: list = [1e-5],
 ) -> IrrepStructure:
 
     irrep_positions = []
     for symprec_irrep in symprec_irreps:
         if isinstance(symprec_irrep, float):
             symprec_irrep = [symprec_irrep] * 3
-        irrep_pos = IrrepPositionDev(symprec=symprec_irrep)
+        irrep_pos = IrrepPosition(symprec=symprec_irrep)
         _axis = primitive_st.axis.T
         _pos = primitive_st.positions.T
         _elements = primitive_st.elements
@@ -140,30 +109,6 @@ def generate_irrep_struct_dev(
         element_count=Counter(sorted_elements),
         spg_number=spg_number,
     )
-
-
-def get_recommend_symprecs(
-    primitive_st: PolymlpStructure,
-    symprec_irrep: float = 1e-5,
-):
-    _pos = primitive_st.positions.T
-    _elements = primitive_st.elements
-    irrep_util = IrrepUtil(_pos, _elements, symprec=symprec_irrep)
-    recommend_symprecs = irrep_util.recommended_symprec()
-
-    return recommend_symprecs
-
-
-def get_distance_cluster(
-    polymlp_st: PolymlpStructure,
-    symprec_irrep: float = 1e-5,
-):
-    _pos = polymlp_st.positions.T
-    _elements = polymlp_st.elements
-    irrep_util = IrrepUtil(_pos, _elements, symprec=symprec_irrep)
-    distance_cluster = irrep_util.inter_cluster_diffs()
-
-    return distance_cluster
 
 
 def write_poscar_irrep_struct(irrep_st: IrrepStructure, file_name: str = "POSCAR"):

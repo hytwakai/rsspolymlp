@@ -65,14 +65,10 @@ for test_mode in all_test_mode:
     print("st1")
     unique_struct1 = generate_unique_struct(
         pos1,
-        original_element_order=True,
-        develop_code=True,
         symprec_set=symprec_set,
     )
     print("st2")
-    unique_struct2 = generate_unique_struct(
-        pos2, original_element_order=True, develop_code=True, symprec_set=symprec_set
-    )
+    unique_struct2 = generate_unique_struct(pos2, symprec_set=symprec_set)
     st1 = unique_struct1.original_structure
     st2 = unique_struct2.original_structure
 
@@ -109,8 +105,11 @@ for test_mode in all_test_mode:
     print("positions difference")
     try:
         print(
-            np.round(unique_struct1.irrep_struct_set[0].positions[2].reshape(3, -1)
-            - unique_struct2.irrep_struct_set[0].positions[2].reshape(3, -1), 3)
+            np.round(
+                unique_struct1.irrep_struct_set[0].positions[2].reshape(3, -1)
+                - unique_struct2.irrep_struct_set[0].positions[2].reshape(3, -1),
+                3,
+            )
         )
     except:
         pass

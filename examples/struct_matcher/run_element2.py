@@ -7,11 +7,10 @@ import numpy as np
 
 from rsspolymlp.analysis.struct_matcher.struct_match import (
     generate_irrep_struct,
-    generate_irrep_struct_dev,
     generate_primitive_cells,
-    get_recommend_symprecs,
     struct_match,
 )
+from rsspolymlp.analysis.struct_matcher.utils import get_recommend_symprecs
 from rsspolymlp.utils import pymatgen_utils
 
 pymat = pymatgen_utils.PymatUtil()
@@ -48,15 +47,10 @@ start = time.time()
 for i in range(len(sym_st)):
     sym_st[i]["irrep_st"] = []
     for h, st in enumerate(sym_st[i]["structure"]):
-        recommend_symprecs = get_recommend_symprecs(st, symprec_irrep=1e-5)
-        """irrep_st = generate_irrep_struct(
-            st,
-            sym_st[i]["spg_number"][h],
-            symprec_irreps=[1e-5] + recommend_symprecs,
-        )"""
+        recommend_symprecs = get_recommend_symprecs(st, symprec_irrep=[1e-5] * 3)
         symprec_list = [1e-5]
         symprec_list.extend(recommend_symprecs)
-        irrep_st = generate_irrep_struct_dev(
+        irrep_st = generate_irrep_struct(
             st,
             sym_st[i]["spg_number"][h],
             symprec_irreps=symprec_list,
