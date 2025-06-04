@@ -14,7 +14,7 @@ import numpy as np
 from pypolymlp.core.interface_vasp import Poscar
 from pypolymlp.core.io_polymlp import load_mlps
 from rsspolymlp.analysis.outlier_cands import detect_outlier
-from rsspolymlp.analysis.struct_matcher.struct_match import get_distance_cluster
+from rsspolymlp.analysis.struct_matcher.utils import get_distance_cluster
 from rsspolymlp.analysis.unique_struct import (
     UniqueStructureAnalyzer,
     generate_unique_structs,

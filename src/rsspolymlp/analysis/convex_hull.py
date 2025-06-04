@@ -51,7 +51,7 @@ class ConvexHullAnalyzer:
             )
             rss_results_valid = [r for r in rss_results if not r["is_strong_outlier"]]
             rss_results_array = {
-                "formation_e": np.array([r["enthalpy"] for r in rss_results_valid]),
+                "formation_e": np.array([r["energy"] for r in rss_results_valid]),
                 "poscars": np.array([r["poscar"] for r in rss_results_valid]),
                 "is_outliers": np.array(
                     [r["is_weak_outlier"] for r in rss_results_valid]
