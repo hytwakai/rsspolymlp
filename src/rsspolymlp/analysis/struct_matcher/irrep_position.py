@@ -131,7 +131,7 @@ class IrrepPosition:
                     {
                         "positions": pos,
                         "cluster_id": _cluster_id,
-                        "cands_idx": np.where(mask)[0][0],
+                        "cands_idx": np.where(mask)[0][[0]],
                     }
                 )
                 continue
