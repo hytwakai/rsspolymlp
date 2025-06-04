@@ -3,6 +3,8 @@ import os
 import tarfile
 import time
 
+import numpy as np
+
 from rsspolymlp.analysis.struct_matcher.struct_match import (
     generate_irrep_struct,
     generate_irrep_struct_dev,
@@ -29,7 +31,10 @@ print("--- Comparing irrep atomic position ---")
 sym_st = []
 start = time.time()
 for p_name in poscar_all:
-    st, spg = generate_primitive_cells(poscar_name=p_name, symprec_set=[1e-3])
+    st, spg = generate_primitive_cells(
+        poscar_name=p_name,
+        symprec_set=[1e-5, 1e-4, 1e-3, 1e-2],
+    )
     _res = {}
     _res["poscar"] = p_name
     _res["structure"] = st
@@ -43,18 +48,20 @@ start = time.time()
 for i in range(len(sym_st)):
     sym_st[i]["irrep_st"] = []
     for h, st in enumerate(sym_st[i]["structure"]):
-        recommend_symprecs = get_recommend_symprecs(st)
+        recommend_symprecs = get_recommend_symprecs(st, symprec_irrep=1e-5)
         """irrep_st = generate_irrep_struct(
             st,
             sym_st[i]["spg_number"][h],
             symprec_irreps=[1e-5] + recommend_symprecs,
         )"""
+        symprec_list = [1e-5]
+        symprec_list.extend(recommend_symprecs)
         irrep_st = generate_irrep_struct_dev(
             st,
             sym_st[i]["spg_number"][h],
-            symprec_irreps=[1e-5] + recommend_symprecs,
+            symprec_irreps=symprec_list,
         )
-    sym_st[i]["irrep_st"].append(irrep_st)
+        sym_st[i]["irrep_st"].append(irrep_st)
     # print(sym_st[i]["poscar"])
 el_time2 = round(time.time() - start, 3)
 print(" get irrep atomic positions:", (el_time2) * 1000)
@@ -90,9 +97,9 @@ if compare_pymatgen:
     for st_in in sym_st_past:
         st = {}
         st["pymat"] = pymat.parameter_to_pymat_st(
-            st_in["structure"][0].axis,
-            st_in["structure"][0].positions.T,
-            st_in["structure"][0].elements,
+            st_in["structure"][-1].axis,
+            st_in["structure"][-1].positions.T,
+            st_in["structure"][-1].elements,
         )
         st["poscar"] = st_in["poscar"]
         st["duplicate"] = [st_in["poscar"]]
@@ -113,9 +120,9 @@ if compare_pymatgen:
                     st["pymat"],
                     st_ref["pymat"],
                     primitive_cell=False,
-                    ltol=0.01,
+                    ltol=0.1,
                     stol=0.01,
-                    angle_tol=0.5,
+                    angle_tol=1,
                 ):
                     app = False
                     nondup_st_pymat[i]["duplicate"].append(st["poscar"])

@@ -43,7 +43,7 @@ class IrrepUtil:
         if self.distance_cluster is None:
             self.distance_cluster = self.inter_cluster_diffs()
 
-        recommend_order = np.inf
+        recommend_orders = []
         for ax in range(3):
             diffs_ax = self.distance_cluster[ax]
             diffs_pos = diffs_ax[diffs_ax > 0]
@@ -52,7 +52,7 @@ class IrrepUtil:
             orders = np.log10(diffs_pos)
             orders_valid = orders[~np.all(np.isnan(orders))]
             max_orders = np.nanmax(orders_valid)
-            if max_orders < recommend_order:
-                recommend_order = max_orders
+            recommend_orders.append(max_orders)
+        recommend_orders = np.array(recommend_orders)
 
-        return [10 ** (recommend_order - 1), 10 ** (recommend_order - 2)]
+        return [10 ** (recommend_orders - 1), 10 ** (recommend_orders - 2)]

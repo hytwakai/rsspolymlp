@@ -11,6 +11,7 @@ all_test_mode = ["example", "invert", "swap", "symprec"]
 all_test_mode = ["invert"]
 all_test_mode = ["symprec_2"]
 all_test_mode = ["test"]
+all_test_mode = ["poscar_3"]
 final_res = []
 pymatgen_res = []
 
@@ -39,6 +40,20 @@ for test_mode in all_test_mode:
         pos1 = "./poscar_element/test_1"
         pos2 = "./poscar_element/test_2"
         symprec_set = [1e-5, 1e-4, 1e-3, 1e-2]
+    elif test_mode == "poscar":
+        pos1 = "./poscar_element3/POSCAR_45"
+        pos2 = "./poscar_element3/POSCAR_443"
+        symprec_set = [1e-5, 1e-4, 1e-3, 1e-2]
+        symprec_set = [1e-5]
+    elif test_mode == "poscar_2":
+        pos1 = "./poscar_element3/POSCAR_1897"
+        pos2 = "./poscar_element3/POSCAR_130"
+        symprec_set = [1e-5, 1e-4, 1e-3, 1e-2]
+        symprec_set = [1e-5]
+    elif test_mode == "poscar_3":
+        pos1 = "./poscar_element3/POSCAR_1042"
+        pos2 = "./poscar_element3/POSCAR_1023"
+        symprec_set = [1e-5, 1e-4, 1e-3, 1e-2]
     else:
         raise ValueError(f"Unknown test_mode: {test_mode}")
 
@@ -47,18 +62,23 @@ for test_mode in all_test_mode:
     st1 = symutil.refine_cell(standardize_cell=True)
     st2 = symutil2.refine_cell(standardize_cell=True)"""
 
+    print("st1")
     unique_struct1 = generate_unique_struct(
         pos1,
         original_element_order=True,
+        develop_code=True,
+        symprec_set=symprec_set,
     )
+    print("st2")
     unique_struct2 = generate_unique_struct(
-        pos2,
-        original_element_order=True,
+        pos2, original_element_order=True, develop_code=True, symprec_set=symprec_set
     )
     st1 = unique_struct1.original_structure
     st2 = unique_struct2.original_structure
 
-    judge = struct_match(unique_struct1.irrep_struct_set, unique_struct2.irrep_struct_set)
+    judge = struct_match(
+        unique_struct1.irrep_struct_set, unique_struct2.irrep_struct_set
+    )
 
     print(f"----- test_mode: {test_mode} -----")
     print("--- Stucture 1 ---")
@@ -69,7 +89,11 @@ for test_mode in all_test_mode:
     print(" - Elements:")
     print(st1.elements)
     for irrep_st in unique_struct1.irrep_struct_set:
-        print(irrep_st.spg_number)
+        print("spg_number", irrep_st.spg_number)
+        print(np.round(irrep_st.positions[0].reshape(3, -1), 3))
+        print(np.round(irrep_st.positions[1].reshape(3, -1), 3))
+        print(np.round(irrep_st.positions[2].reshape(3, -1), 3))
+    print(unique_struct1.recommend_symprecs)
     print("--- Structure 2 ---")
     print(" - Axis:")
     print(PropUtil(st2.axis.T, st2.positions.T).axis_to_abc)
@@ -78,7 +102,19 @@ for test_mode in all_test_mode:
     print(" - Elements:")
     print(st2.elements)
     for irrep_st in unique_struct2.irrep_struct_set:
-        print(irrep_st.spg_number)
+        print("spg_number", irrep_st.spg_number)
+        print(np.round(irrep_st.positions[0].reshape(3, -1), 3))
+        print(np.round(irrep_st.positions[1].reshape(3, -1), 3))
+        print(np.round(irrep_st.positions[2].reshape(3, -1), 3))
+    print("positions difference")
+    try:
+        print(
+            np.round(unique_struct1.irrep_struct_set[0].positions[2].reshape(3, -1)
+            - unique_struct2.irrep_struct_set[0].positions[2].reshape(3, -1), 3)
+        )
+    except:
+        pass
+    print(unique_struct2.recommend_symprecs)
     print(f" - These strctures are similar ?: {judge}")
     final_res.append(judge)
 

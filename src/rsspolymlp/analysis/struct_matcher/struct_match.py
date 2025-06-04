@@ -122,6 +122,8 @@ def generate_irrep_struct_dev(
 
     irrep_positions = []
     for symprec_irrep in symprec_irreps:
+        if isinstance(symprec_irrep, float):
+            symprec_irrep = [symprec_irrep] * 3
         irrep_pos = IrrepPositionDev(symprec=symprec_irrep)
         _axis = primitive_st.axis.T
         _pos = primitive_st.positions.T

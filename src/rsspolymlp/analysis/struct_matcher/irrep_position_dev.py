@@ -12,13 +12,13 @@ class IrrepPositionDev:
 
     Parameters
     ----------
-    symprec : float, optional
-        Numerical tolerance when comparing fractional coordinates (default: 1e-3).
+    symprec : List[float], optional
+        Numerical tolerance when comparing fractional coordinates (default: 1e-5).
     """
 
-    def __init__(self, symprec: float = 1e-3):
+    def __init__(self, symprec: list[float] = [1e-5, 1e-5, 1e-5]):
         """Init method."""
-        self.symprec = float(symprec)
+        self.symprec = np.array(symprec)
         self.invert_values = None
         self.swap_values = None
 
@@ -77,7 +77,7 @@ class IrrepPositionDev:
             for target_idx in pos_cand["cands_idx"]:
                 _pos = pos_cand["positions"].copy()
                 _cls_id = pos_cand["cluster_id"].copy()
-                trans_pos = (_pos - _pos[target_idx]) % 1.0
+                trans_pos = _pos - _pos[target_idx]
                 trans_cls_id = np.mod(_cls_id - _cls_id[target_idx], id_max).astype(int)
 
                 reduced_perm_positions = self.reduced_permutation(
@@ -160,9 +160,9 @@ class IrrepPositionDev:
 
             sum_vals = np.sum(distance_cluster, axis=1)
             max_val = np.max(sum_vals)
-            cands_idx_sub = np.where(np.isclose(sum_vals, max_val, atol=self.symprec))[
-                0
-            ]
+            cands_idx_sub = np.where(
+                np.isclose(sum_vals, max_val, atol=np.max(self.symprec))
+            )[0]
             cands_idx = np.where(mask)[0][cands_idx_sub]
             red_pos_cands.append(
                 {"positions": pos, "cluster_id": _cluster_id, "cands_idx": cands_idx}
@@ -173,11 +173,16 @@ class IrrepPositionDev:
     def reduced_permutation(
         self, positions: np.ndarray, types: np.ndarray, cluster_id: np.ndarray
     ):
+        pos = positions.copy()
+        nonzero_mask = ~(cluster_id == 0)
+        pos[nonzero_mask] %= 1.0
+
         # Stable lexicographic sort by (ids_x, ids_y, ids_z)
         sort_idx = np.lexsort(
             (cluster_id[:, 2], cluster_id[:, 1], cluster_id[:, 0], types)
         )
-        reduced_perm_positions = positions[sort_idx]
+        reduced_perm_positions = pos[sort_idx]
+
         return reduced_perm_positions
 
     def assign_clusters(self, positions: np.ndarray, types: np.ndarray):
@@ -286,7 +291,7 @@ class IrrepPositionDev:
             centres_sorted = centres[sort_idx]
             gap = np.roll(centres_sorted, -1) - centres_sorted
             gap[-1] += 1.0
-            is_new_cluster = gap > self.symprec
+            is_new_cluster = gap > self.symprec[ax % 3]
             centre_cls_id = np.zeros_like(centres_sorted, dtype=np.int32)
             centre_cls_id[1:] = np.cumsum(is_new_cluster[:-1])
             if not is_new_cluster[-1]:
@@ -324,7 +329,17 @@ class IrrepPositionDev:
             0 if A ≈ B within tolerance
         """
         diff = A - B
-        non_zero = np.where(np.abs(diff) > self.symprec)[0]
+        diff_abs = np.abs(diff)
+        length = diff.shape[0] // 3
+
+        symprec_array = np.concatenate(
+            [
+                np.full(length, self.symprec[0]),
+                np.full(length, self.symprec[1]),
+                np.full(length, self.symprec[2]),
+            ]
+        )
+        non_zero = np.where(diff_abs > symprec_array)[0]
         if not non_zero.size:
             return 0
         return -1 if diff[non_zero[0]] < 0 else 1

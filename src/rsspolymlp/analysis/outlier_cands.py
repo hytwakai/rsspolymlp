@@ -150,7 +150,7 @@ def run_compare_dft():
         energy_dft /= len(structure.elements)
 
         # Subtract pressure term from MLP enthalpy
-        mlp_energy = res["enthalpy"]
+        mlp_energy = res["energy"]
         mlp_energy -= (
             pressure * structure.volume / (EVAngstromToGPa * len(structure.elements))
         )

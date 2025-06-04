@@ -10,6 +10,7 @@ from pypolymlp.core.interface_vasp import Poscar
 from rsspolymlp.analysis.struct_matcher.struct_match import (
     IrrepStructure,
     generate_irrep_struct,
+    generate_irrep_struct_dev,
     generate_primitive_cells,
     get_recommend_symprecs,
     struct_match,
@@ -21,6 +22,7 @@ from rsspolymlp.common.property import PropUtil
 @dataclass
 class UniqueStructure:
     irrep_struct_set: list[IrrepStructure]
+    recommend_symprecs: list[float]
     original_structure: PolymlpStructure
     axis_abc: np.ndarray
     n_atoms: int
@@ -42,6 +44,7 @@ def generate_unique_struct(
     spg_list: Optional[list[str]] = None,
     symprec_set: list[float] = [1e-5, 1e-4, 1e-3, 1e-2],
     original_element_order: bool = False,
+    develop_code: bool = False,
 ) -> UniqueStructure:
     """
     Generate a UniqueStructure object from various structure inputs.
@@ -91,19 +94,31 @@ def generate_unique_struct(
     irrep_struct_set = []
     for i, primitive_st in enumerate(primitive_st_set):
         recommend_symprecs = get_recommend_symprecs(primitive_st, symprec_irrep=1e-5)
-        symprec_list = [1e-5] + recommend_symprecs
-        irrep_struct = generate_irrep_struct(
-            primitive_st,
-            spg_number_set[i],
-            symprec_irreps=symprec_list,
-            original_element_order=original_element_order,
-        )
+        if develop_code:
+            symprec_list = [1e-5]
+            symprec_list.extend(recommend_symprecs)
+            irrep_struct = generate_irrep_struct_dev(
+                primitive_st,
+                spg_number_set[i],
+                symprec_irreps=symprec_list,
+            )
+        else:
+            symprec_list = [1e-5]
+            for symprec in recommend_symprecs:
+                symprec_list.append(min(symprec_list))
+            irrep_struct = generate_irrep_struct(
+                primitive_st,
+                spg_number_set[i],
+                symprec_irreps=symprec_list,
+                original_element_order=original_element_order,
+            )
         irrep_struct_set.append(irrep_struct)
 
     objprop = PropUtil(polymlp_st.axis.T, polymlp_st.positions.T)
 
     return UniqueStructure(
         irrep_struct_set=irrep_struct_set,
+        recommend_symprecs=recommend_symprecs,
         original_structure=polymlp_st,
         axis_abc=objprop.axis_to_abc,
         n_atoms=int(len(polymlp_st.elements)),
