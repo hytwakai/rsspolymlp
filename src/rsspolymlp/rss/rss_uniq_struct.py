@@ -29,7 +29,7 @@ def run():
     analyzer = RSSResultAnalyzer()
     if args.cutoff is not None:
         analyzer.cutoff = args.cutoff
-    analyzer.run_rss_analysis(args)
+    analyzer.run_rss_uniq_struct(args)
 
 
 def log_unique_structures(file_name, unique_structs, unique_struct_iters=None):
@@ -253,7 +253,7 @@ class RSSResultAnalyzer:
             _res["fval"] = self.fval_str[-1]
             _res["gval"] = self.gval_str[-1]
 
-    def run_rss_analysis(self, args):
+    def run_rss_uniq_struct(self, args):
         """Sort structures and write the results to a log file."""
         if args.pressure is not None:
             self.pressure = args.pressure

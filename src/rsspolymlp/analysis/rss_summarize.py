@@ -14,7 +14,7 @@ from rsspolymlp.analysis.unique_struct import (
 )
 from rsspolymlp.common.comp_ratio import CompositionResult, compute_composition
 from rsspolymlp.common.parse_arg import ParseArgument
-from rsspolymlp.rss.rss_analysis import log_unique_structures
+from rsspolymlp.rss.rss_uniq_struct import log_unique_structures
 
 
 def run():

@@ -81,7 +81,7 @@ The command-line interface of `rsspolymlp` is organized into several sections, e
    
    Each generated structure is optimized in parallel using polynomial MLPs. These optimizations are performed independently for each (`p`, `c`, `n`) condition.
 
-3. **Analyzing RSS results (`rss-analysis`)**
+3. **Analyzing RSS results (`rss-uniq-struct`)**
    
    This step processes the optimized structures for each (`p`, `c`, `n`) condition individually. It includes:
 
