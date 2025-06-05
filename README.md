@@ -55,23 +55,46 @@ pip install rsspolymlp
 
 ## Usage
 
-The command-line interface of `rsspolylmp` is organized into three sections, each corresponding to a different phase of the workflow:
-1. Generating initial structures (`rss-init-struct`)
-2. Performing parallel geometry optimization (`rss-parallel`)
-3. Analyzing RSS results (`rss-analysis`)
+The command-line interface of `rsspolymlp` is organized into several sections, each corresponding to a different phase of the workflow:
+
+1. **Generating initial structures (`rss-init-struct`)**
+   
+   Random structures are generated under specified conditions of pressure (`p`), composition (`c`), and number of atoms (`n`).
+
+2. **Performing parallel geometry optimization (`rss-parallel`)**
+   
+   Each generated structure is optimized in parallel using polynomial MLPs. These optimizations are performed independently for each (`p`, `c`, `n`) condition.
+
+3. **Analyzing RSS results (`rss-analysis`)**
+   
+   This step processes the optimized structures for each (`p`, `c`, `n`) condition individually. It includes:
+
+   * Removing duplicate structures and extracting unique optimized structures
+   * Detecting outliers based on energy values
+
+4. **Summarizing RSS results across atom numbers (`rss-summarize`)**
+   
+   This step aggregates the RSS results across different numbers of atoms `n` under the same pressure and composition conditions. It performs the same operations as `rss-analysis`, but across multiple `n` values.
+
+5. **Outlier detection (`rss-outlier`)**
+   
+   Provides utilities for identifying and filtering out anomalous structures based on energy values.
+
+6. **Binary phase diagram plotting (`plot-binary`)**
+   
+   Visualizes the convex hull and stability of binary systems based on the summarized results.
 
 ### Example Commands
 
 ```shell
+# Step 1–3: Execute for each (p, c, n) condition
 rss-init-struct --elements Al Cu --atom_counts 4 4 --num_init_str 2000
 rss-parallel --pot polymlp.yaml --num_opt_str 1000
 rss-analysis
-```
 
-#### Arguments
-- `--elements`: List of element symbols (e.g., `Al Cu`).
-- `--atom_counts`: Number of atoms for each element (must match the order of `--elements`).
-- `--num_init_str`: Number of random initial structures to generate. *(default: 5000)*
-- `--pot`: Path to the polynomial MLP potential file. *(default: polymlp.yaml)*
-- `--num_opt_str`: Maximum number of optimized structures to obtain from RSS. *(default: 1000)*
-- [Additional information is here](docs/rss.md)
+# Steps 4–6: Execute after the above steps and analyze the results aggregated by (p, c) conditions.
+rss-summarize --elements Al Cu --use_joblib --rss_paths ./*
+rss-outlier --result_paths ./Al*.log ./Cu*.log
+plot-binary --elements Al Cu --result_paths Al*.log Cu*.log
+```
+[Additional information is here](docs/rss.md)
