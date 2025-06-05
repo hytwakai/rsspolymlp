@@ -61,7 +61,7 @@ pip install rsspolymlp
 # Step 1–3: Execute for each (p, c, n) condition
 rss-init-struct --elements Al Cu --atom_counts 4 4 --num_init_str 2000
 rss-parallel --pot polymlp.yaml --num_opt_str 1000
-rss-analysis
+rss-uniq-struct
 
 # Steps 4–6: Execute after the above steps and analyze the results aggregated by (p, c) conditions.
 rss-summarize --elements Al Cu --use_joblib --rss_paths ./*
@@ -71,26 +71,32 @@ plot-binary --elements Al Cu --result_paths Al*.log Cu*.log
 
 ### Workflow
 
-The command-line interface of `rsspolymlp` is organized into several sections, each corresponding to a different phase of the workflow:
+<img src="docs/workflow_rsspolymlp.png" alt="single_plot" width="80%" />
+
+The command-line interface of `rsspolymlp` is organized into 6 steps.
+
+Steps 1–3 perform RSS using the polynomial MLP independently for each combination of pressure (`p`), composition (`c`), and number of atoms (`n`).
 
 1. **Generating initial structures (`rss-init-struct`)**
    
-   Random structures are generated under specified conditions of pressure (`p`), composition (`c`), and number of atoms (`n`).
+   Random structures are generated under the specified conditions.
 
 2. **Performing parallel geometry optimization (`rss-parallel`)**
    
-   Each generated structure is optimized in parallel using polynomial MLPs. These optimizations are performed independently for each (`p`, `c`, `n`) condition.
+   Each generated structure is optimized in parallel using polynomial MLPs.
 
-3. **Analyzing RSS results (`rss-uniq-struct`)**
+3. **Elimination of duplicate structures (`rss-uniq-struct`)**
    
-   This step processes the optimized structures for each (`p`, `c`, `n`) condition individually. It includes:
+   This step processes the optimized structures. It includes:
 
-   * Removing duplicate structures and extracting unique optimized structures
-   * Detecting outliers based on energy values
+   * Parsing optimization logs, filtering out failed or unconverged cases, and generating detailed computational summaries.
+   * Removing duplicate structures and extracting unique optimized structures.
+  
+Steps 4–6 analyze the results aggregated over each (`p`, `c`) condition.
 
-4. **Summarizing RSS results across atom numbers (`rss-summarize`)**
+4. **Identifying unique structures across atom numbers (`rss-summarize`)**
    
-   This step aggregates the RSS results across different numbers of atoms `n` under the same pressure and composition conditions. It performs the same operations as `rss-analysis`, but across multiple `n` values.
+   This step removes duplicate structures from the set of unique structures obtained at different atom counts `n` under the same pressure and composition conditions.
 
 5. **Outlier detection (`rss-outlier`)**
    
@@ -101,5 +107,3 @@ The command-line interface of `rsspolymlp` is organized into several sections, e
    Visualizes the convex hull and stability of binary systems based on the summarized results.
 
 [Additional information is here](docs/rss.md)
-
-<img src="docs/workflow_rsspolymlp.png" alt="single_plot" width="80%" />

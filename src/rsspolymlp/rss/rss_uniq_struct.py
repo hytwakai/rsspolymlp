@@ -1,7 +1,7 @@
 """
-Parse and analyze optimization logs, filter out failed or unconverged results,
-identify and retain unique structures based on energy, symmetry, and irreducible
-structure representation, and write detailed computational statistics to the log.
+Parse optimization logs, filter out failed or unconverged cases,
+identify and retain unique structures based on irreducible structure representation,
+and write detailed computational statistics to the log.
 """
 
 import glob
