@@ -55,6 +55,22 @@ pip install rsspolymlp
 
 ## Usage
 
+### Example Commands
+
+```shell
+# Step 1–3: Execute for each (p, c, n) condition
+rss-init-struct --elements Al Cu --atom_counts 4 4 --num_init_str 2000
+rss-parallel --pot polymlp.yaml --num_opt_str 1000
+rss-analysis
+
+# Steps 4–6: Execute after the above steps and analyze the results aggregated by (p, c) conditions.
+rss-summarize --elements Al Cu --use_joblib --rss_paths ./*
+rss-outlier --result_paths ./Al*.log ./Cu*.log
+plot-binary --elements Al Cu --result_paths Al*.log Cu*.log
+```
+
+### Workflow
+
 The command-line interface of `rsspolymlp` is organized into several sections, each corresponding to a different phase of the workflow:
 
 1. **Generating initial structures (`rss-init-struct`)**
@@ -84,17 +100,4 @@ The command-line interface of `rsspolymlp` is organized into several sections, e
    
    Visualizes the convex hull and stability of binary systems based on the summarized results.
 
-### Example Commands
-
-```shell
-# Step 1–3: Execute for each (p, c, n) condition
-rss-init-struct --elements Al Cu --atom_counts 4 4 --num_init_str 2000
-rss-parallel --pot polymlp.yaml --num_opt_str 1000
-rss-analysis
-
-# Steps 4–6: Execute after the above steps and analyze the results aggregated by (p, c) conditions.
-rss-summarize --elements Al Cu --use_joblib --rss_paths ./*
-rss-outlier --result_paths ./Al*.log ./Cu*.log
-plot-binary --elements Al Cu --result_paths Al*.log Cu*.log
-```
 [Additional information is here](docs/rss.md)
