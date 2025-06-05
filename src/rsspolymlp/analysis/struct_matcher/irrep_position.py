@@ -141,7 +141,7 @@ class IrrepPosition:
                 cls_id = cluster_id_sub[:, ax]
 
                 id_bins = np.bincount(cls_id)
-                with np.errstate(divide='ignore', invalid='ignore'):
+                with np.errstate(divide="ignore", invalid="ignore"):
                     centres = np.bincount(cls_id, weights=pos_sub[:, ax]) / id_bins
 
                 sort_idx = np.argsort(centres)
@@ -173,7 +173,7 @@ class IrrepPosition:
 
     def reduced_permutation(
         self, positions: np.ndarray, types: np.ndarray, cluster_id: np.ndarray
-    ):  
+    ):
         pos = positions.copy()
         near_zero_mask = np.isclose(np.abs(pos), 0, atol=1e-8)
         pos[near_zero_mask] = 0
