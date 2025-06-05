@@ -33,9 +33,21 @@ If you use `rsspolymlp` in your study, please cite the following articles.
 - seaborn (if plotting RSS results)
 
 ### How to install
+- Install from conda-forge
+
+| Version | Last Update | Downloads | Platform | License |
+| ---- | ---- | ---- | ---- | ---- |
+| ![badge](https://anaconda.org/conda-forge/rsspolymlp/badges/version.svg) | ![badge](https://anaconda.org/conda-forge/rsspolymlp/badges/latest_release_date.svg) | ![badge](https://anaconda.org/conda-forge/rsspolymlp/badges/downloads.svg)| ![badge](https://anaconda.org/conda-forge/rsspolymlp/badges/platforms.svg) | ![badge](https://anaconda.org/conda-forge/rsspolymlp/badges/license.svg) |
 
 ```shell
-conda create -n rsspolymlp python=3.11
+conda create -n rsspolymlp
+conda activate rsspolymlp
+conda install -c conda-forge rsspolymlp
+```
+
+- Install from PyPI
+```shell
+conda create -n rsspolymlp
 conda activate rsspolymlp
 conda install -c conda-forge pypolymlp symfc spglib joblib
 pip install rsspolymlp
