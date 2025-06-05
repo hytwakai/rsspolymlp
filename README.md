@@ -102,4 +102,4 @@ The command-line interface of `rsspolymlp` is organized into several sections, e
 
 [Additional information is here](docs/rss.md)
 
-<img src="docs/workflow_rsspolymlp.png" alt="single_plot" width="70%" />
+<img src="docs/workflow_rsspolymlp.png" alt="single_plot" width="80%" />
