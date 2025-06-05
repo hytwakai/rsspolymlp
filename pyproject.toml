@@ -41,7 +41,7 @@ rss-parallel = "rsspolymlp.rss.rss_parallel:run"
 rss-analysis = "rsspolymlp.rss.rss_analysis:run"
 rss-summarize = "rsspolymlp.analysis.rss_summarize:run"
 rss-outlier = "rsspolymlp.analysis.outlier_cands:run"
-rss-outlier-compare = "rsspolymlp.analysis.outlier_cands:run_compare_dft"
+rss-outlier-detect = "rsspolymlp.analysis.outlier_cands:run_compare_dft"
 plot-binary = "rsspolymlp.analysis.plot.binary:run"
 
 [tool.setuptools]
