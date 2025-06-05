@@ -173,8 +173,10 @@ class IrrepPosition:
 
     def reduced_permutation(
         self, positions: np.ndarray, types: np.ndarray, cluster_id: np.ndarray
-    ):
+    ):  
         pos = positions.copy()
+        near_zero_mask = np.isclose(np.abs(pos), 0, atol=1e-8)
+        pos[near_zero_mask] = 0
         nonzero_mask = ~(cluster_id == 0)
         pos[nonzero_mask] %= 1.0
 

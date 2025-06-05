@@ -143,12 +143,12 @@ class RSSResultSummarizer:
 
             with open(log_name + ".log", "w") as f:
                 print("---- General informantion ----", file=f)
-                print("Sorting time (sec.):           ", round(time_finish, 2), file=f)
-                print("Pressure (GPa):                ", pressure, file=f)
-                print("Number of optimized strcts:    ", num_opt_struct, file=f)
-                print("Number of nonduplicate structs:", len(unique_str), file=f)
+                print("Sorting time (sec.):       ", round(time_finish, 2), file=f)
+                print("Pressure (GPa):            ", pressure, file=f)
+                print("Number of optimized strcts:", num_opt_struct, file=f)
+                print("Number of unique structs:  ", len(unique_str), file=f)
                 print(
-                    "Input file names:              ",
+                    "Input file names:          ",
                     sorted(integrated_res_paths),
                     file=f,
                 )
