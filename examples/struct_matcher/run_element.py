@@ -12,6 +12,7 @@ all_test_mode = ["invert"]
 all_test_mode = ["symprec_2"]
 all_test_mode = ["test"]
 all_test_mode = ["poscar_3"]
+all_test_mode = ["poscar_else"]
 final_res = []
 pymatgen_res = []
 
@@ -53,6 +54,10 @@ for test_mode in all_test_mode:
     elif test_mode == "poscar_3":
         pos1 = "./poscar_element3/POSCAR_1042"
         pos2 = "./poscar_element3/POSCAR_1023"
+        symprec_set = [1e-5, 1e-4, 1e-3, 1e-2]
+    elif test_mode == "poscar_else":
+        pos1 = "/home/wakai/data/csp_mlp/Bi-Ca/csp_try3_rsspolymlp/0.0GPa/12atom/0_12/opt_struct/POSCAR_46"
+        pos2 = "/home/wakai/data/csp_mlp/Bi-Ca/csp_try3_rsspolymlp/0.0GPa/12atom/0_12/opt_struct/POSCAR_673"
         symprec_set = [1e-5, 1e-4, 1e-3, 1e-2]
     else:
         raise ValueError(f"Unknown test_mode: {test_mode}")
