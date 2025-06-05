@@ -101,3 +101,5 @@ The command-line interface of `rsspolymlp` is organized into several sections, e
    Visualizes the convex hull and stability of binary systems based on the summarized results.
 
 [Additional information is here](docs/rss.md)
+
+<img src="docs/workflow_rsspolymlp.png" alt="single_plot" width="70%" />
