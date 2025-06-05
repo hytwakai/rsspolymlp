@@ -71,7 +71,7 @@ plot-binary --elements Al Cu --result_paths Al*.log Cu*.log
 
 ### Workflow
 
-<img src="docs/workflow_rsspolymlp.png" alt="single_plot" width="80%" />
+<img src="docs/workflow_rsspolymlp.png" alt="single_plot" width="70%" />
 
 The command-line interface of `rsspolymlp` is organized into 6 steps.
 
