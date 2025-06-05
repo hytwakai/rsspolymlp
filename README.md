@@ -35,9 +35,9 @@ If you use `rsspolymlp` in your study, please cite the following articles.
 ### How to install
 - Install from conda-forge
 
-| Version | Last Update | Downloads | Platform | License |
-| ---- | ---- | ---- | ---- | ---- |
-| ![badge](https://anaconda.org/conda-forge/rsspolymlp/badges/version.svg) | ![badge](https://anaconda.org/conda-forge/rsspolymlp/badges/latest_release_date.svg) | ![badge](https://anaconda.org/conda-forge/rsspolymlp/badges/downloads.svg)| ![badge](https://anaconda.org/conda-forge/rsspolymlp/badges/platforms.svg) | ![badge](https://anaconda.org/conda-forge/rsspolymlp/badges/license.svg) |
+| Name | Downloads | Version | Platforms |
+| --- | --- | --- | --- |
+| [![Conda Recipe](https://img.shields.io/badge/recipe-rsspolymlp-green.svg)](https://anaconda.org/conda-forge/rsspolymlp) | [![Conda Downloads](https://img.shields.io/conda/dn/conda-forge/rsspolymlp.svg)](https://anaconda.org/conda-forge/rsspolymlp) | [![Conda Version](https://img.shields.io/conda/vn/conda-forge/rsspolymlp.svg)](https://anaconda.org/conda-forge/rsspolymlp) | [![Conda Platforms](https://img.shields.io/conda/pn/conda-forge/rsspolymlp.svg)](https://anaconda.org/conda-forge/rsspolymlp) |
 
 ```shell
 conda create -n rsspolymlp
