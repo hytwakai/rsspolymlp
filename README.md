@@ -57,7 +57,7 @@ pip install rsspolymlp
 
 ### Example Commands
 
-#### Step 1–3: Execute for each (p, c, n) condition
+#### Step 1–3: Execute for each (p, c, n) condition.
 ```shell
 rss-init-struct --elements Al Cu --atom_counts 4 4 --num_init_str 2000
 rss-parallel --pot polymlp.yaml --num_opt_str 1000
