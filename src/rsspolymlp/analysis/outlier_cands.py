@@ -1,5 +1,6 @@
 import argparse
 import ast
+import json
 import os
 import shutil
 
@@ -64,8 +65,6 @@ def detect_outlier(energies: np.array):
 
 
 def run():
-    from rsspolymlp.analysis.rss_summarize import load_rss_results
-
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--result_paths",
@@ -88,11 +87,11 @@ def run():
     # Copy weak outlier POSCARs
     outliers_all = []
     for res_path in args.result_paths:
-        logname = os.path.basename(res_path).split(".log")[0]
-        rss_results, _ = load_rss_results(
-            res_path, absolute_path=True, get_warning=True
-        )
+        with open(res_path) as f:
+            loaded_dict = json.load(f)
+        rss_results = loaded_dict["rss_results"]
 
+        logname = os.path.basename(res_path).split(".json")[0]
         for res in rss_results:
             if res.get("is_weak_outlier"):
                 dest = (

@@ -57,16 +57,20 @@ pip install rsspolymlp
 
 ### Example Commands
 
+#### Step 1–3: Execute for each (p, c, n) condition
 ```shell
-# Step 1–3: Execute for each (p, c, n) condition
 rss-init-struct --elements Al Cu --atom_counts 4 4 --num_init_str 2000
 rss-parallel --pot polymlp.yaml --num_opt_str 1000
 rss-uniq-struct
+```
 
-# Steps 4–6: Execute after the above steps and analyze the results aggregated by (p, c) conditions.
-rss-summarize --elements Al Cu --use_joblib --rss_paths ./*
-rss-outlier --result_paths ./Al*.log ./Cu*.log
-plot-binary --elements Al Cu --result_paths Al*.log Cu*.log
+#### Steps 4–6: Execute after the above steps and analyze the results aggregated by (p, c) conditions.
+```shell
+rss-summarize --elements Al Cu --use_joblib --rss_paths <rss_directory>/*
+rss-outlier --result_paths <summary_dir>/json/*
+plot-binary --elements Al Cu --result_paths <summary_dir>/json/*
+# <rss_directory>: parent directory of RSS runs at the same pressure
+# <summary_dir>: output directory from rss-summarize, storing RSS results
 ```
 
 ### Workflow
