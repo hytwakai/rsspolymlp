@@ -43,8 +43,8 @@ class IrrepPosition:
             One-dimensional vector [X_a, X_b, X_c] that uniquely identifies
             the structure up to the tolerance `symprec`.
         sorted_elements : ndarray
-            Chemical element symbols sorted in the same order as used
-            in the irreducible representation.
+            Chemical element symbols sorted in alphabetical order,
+            corresponding to the order of fractional atomic coordinates in irrep_position.
         """
 
         _lattice = np.asarray(axis, dtype=float)
@@ -59,8 +59,7 @@ class IrrepPosition:
             _lattice, _positions, spg_number, self.symprec
         )
 
-        _, idx = np.unique(_elements, return_index=True)
-        unique_elements = _elements[np.sort(idx)]
+        unique_elements = np.sort(np.unique(_elements))
         types = np.array([np.where(unique_elements == el)[0][0] for el in _elements])
 
         counts = Counter(elements)

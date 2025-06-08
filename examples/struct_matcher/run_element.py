@@ -1,6 +1,5 @@
 import numpy as np
 
-from pypolymlp.utils.spglib_utils import SymCell
 from rsspolymlp.analysis.struct_matcher.struct_match import struct_match
 from rsspolymlp.analysis.unique_struct import generate_unique_struct
 from rsspolymlp.utils import pymatgen_utils
