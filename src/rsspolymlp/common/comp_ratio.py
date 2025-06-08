@@ -50,7 +50,7 @@ def compute_composition(
         raise ValueError("No valid elements found in the structure.")
 
     gcd = np.gcd.reduce(atom_counts)
-    reduced_comp_ratio = tuple(atom_counts // gcd)
+    reduced_comp_ratio = tuple(int(x) for x in (atom_counts // gcd))
     comp_str = "".join(
         f"{el}{n}" for el, n in zip(sorted_elements, reduced_comp_ratio) if n != 0
     )

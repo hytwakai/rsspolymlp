@@ -5,6 +5,7 @@ and write detailed computational statistics to the log.
 """
 
 import glob
+import json
 import os
 from collections import Counter, defaultdict
 from time import time
@@ -19,9 +20,11 @@ from rsspolymlp.analysis.unique_struct import (
     UniqueStructureAnalyzer,
     generate_unique_structs,
 )
+from rsspolymlp.common.comp_ratio import compute_composition
 from rsspolymlp.common.parse_arg import ParseArgument
 from rsspolymlp.common.property import PropUtil
 from rsspolymlp.rss.load_logfile import LogfileLoader
+from rsspolymlp.utils.convert_dict import polymlp_struct_to_dict
 
 
 def run():
@@ -32,7 +35,9 @@ def run():
     analyzer.run_rss_uniq_struct(args)
 
 
-def log_unique_structures(file_name, unique_structs, unique_struct_iters=None):
+def log_unique_structures(
+    file_name, unique_structs, pressure=None, unique_struct_iters=None
+):
     # Sort structures by energy
     energies = np.array([s.energy for s in unique_structs])
     sort_indices = np.argsort(energies)
@@ -47,6 +52,7 @@ def log_unique_structures(file_name, unique_structs, unique_struct_iters=None):
             energy_min = unique_str[i].energy
             break
 
+    rss_results = []
     with open(file_name, "a") as f:
         print("---- Unique structures ----", file=f)
         for idx, _str in enumerate(unique_str):
@@ -72,6 +78,7 @@ def log_unique_structures(file_name, unique_structs, unique_struct_iters=None):
             if unique_struct_iters is not None:
                 info.append(f"/ iteration {_iters[idx]}")
             print(*info, file=f)
+
             if is_strong_outlier[idx]:
                 print(
                     " - WARNING    : This structure is marked as a strong outlier.",
@@ -82,6 +89,30 @@ def log_unique_structures(file_name, unique_structs, unique_struct_iters=None):
                     " - NOTE       : This structure is marked as a weak outlier.",
                     file=f,
                 )
+
+            _res = {}
+            _res["poscar"] = _str.input_poscar
+            polymlp_st = _str.original_structure
+            polymlp_st_dict = polymlp_struct_to_dict(polymlp_st)
+            _res["structure"] = polymlp_st_dict
+            _res["energy"] = _str.energy
+            _res["pressure"] = pressure
+            _res["spg_list"] = _str.spg_list
+            _res["struct_no"] = idx + 1
+            _res["is_strong_outlier"] = bool(is_strong_outlier[idx])
+            _res["is_weak_outlier"] = bool(is_weak_outlier[idx])
+            rss_results.append(_res)
+
+    comp_res = compute_composition(unique_structs[0].original_structure.elements)
+
+    rss_result_all = {
+        "elements": comp_res.unique_elements.tolist(),
+        "comp_ratio": comp_res.comp_ratio,
+        "pressure": pressure,
+        "rss_results": rss_results,
+    }
+
+    return rss_result_all
 
 
 class RSSResultAnalyzer:
@@ -260,9 +291,9 @@ class RSSResultAnalyzer:
 
         time_start = time()
 
-        with open("finish.log") as f:
+        with open("rss_result/finish.log") as f:
             finished_set = [line.strip() for line in f]
-        with open("success.log") as f:
+        with open("rss_result/success.log") as f:
             sucessed_set = [line.strip() for line in f]
         if not args.num_str == -1:
             sucessed_set = sucessed_set[: args.num_str]
@@ -304,7 +335,7 @@ class RSSResultAnalyzer:
         prop_success = round(success_count / finish_count, 2)
 
         # Write results to log file
-        file_name = "rss_results.log"
+        file_name = "rss_result/rss_results.log"
         with open(file_name, "w") as f:
             print("---- General informantion ----", file=f)
             print("Sorting time (sec.):            ", round(time_finish, 2), file=f)
@@ -350,7 +381,11 @@ class RSSResultAnalyzer:
             print("", file=f)
 
         _iters = np.array([s["iter"] for s in unique_str_prop])
-        log_unique_structures(file_name, unique_str, _iters)
+        rss_result_all = log_unique_structures(
+            file_name, unique_str, self.pressure, _iters
+        )
+        with open("rss_result/rss_results.json", "w") as f:
+            json.dump(rss_result_all, f)
 
         with open(file_name, "a") as f:
             print("", file=f)

@@ -80,7 +80,7 @@ class RandomStructureSearch:
                 if judge is False:
                     return
                 self.log_computation_time()
-                with open("success.log", "a") as f:
+                with open("rss_result/success.log", "a") as f:
                     print(self.poscar_name, file=f)
 
     def minimize(self, unitcell, iteration, c1_set, c2_set):
@@ -232,13 +232,13 @@ class RandomStructureSearch:
         time_fin = time.time() - self.time_initial
         print("Computational time:", time_fin)
         print("Finished")
-        with open("finish.log", "a") as f:
+        with open("rss_result/finish.log", "a") as f:
             print(self.poscar_name, file=f)
 
     def check_opt_str(self):
         if self.not_stop_rss:
             return
-        with open("success.log") as f:
+        with open("rss_result/success.log") as f:
             success_str = sum(1 for _ in f)
         residual_str = self.num_opt_str - success_str
         if residual_str < 0:

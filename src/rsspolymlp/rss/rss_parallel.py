@@ -21,13 +21,14 @@ def run():
 
     os.makedirs("log", exist_ok=True)
     os.makedirs("opt_struct", exist_ok=True)
-    with open("finish.log", "a") as _, open("success.log", "a") as _:
+    os.makedirs("rss_result", exist_ok=True)
+    with open("rss_result/finish.log", "a") as _, open("rss_result/success.log", "a") as _:
         pass
 
     # Check which structures have already been optimized
     poscar_path_all = glob.glob("initial_struct/*")
     poscar_path_all = sorted(poscar_path_all, key=lambda x: int(x.split("_")[-1]))
-    with open("finish.log") as f:
+    with open("rss_result/finish.log") as f:
         finished_set = set(line.strip() for line in f)
     poscar_path_all = [
         p for p in poscar_path_all if os.path.basename(p) not in finished_set
@@ -46,7 +47,7 @@ def run():
         # Log computational times
         core = multiprocessing.cpu_count()
         if len(poscar_path_all) > 0:
-            with open("parallel_time.log", "a") as f:
+            with open("rss_result/parallel_time.log", "a") as f:
                 print("Number of CPU cores:", core, file=f)
                 print("Number of the structures:", len(glob.glob("log/*")), file=f)
                 print("Computational time:", time_pra_fin, file=f)
@@ -56,7 +57,7 @@ def run():
         if args.num_process == -1:
             args.num_process = multiprocessing.cpu_count()
         if len(poscar_path_all) > args.num_process:
-            with open("start.log", "w") as f:
+            with open("rss_result/start.log", "w") as f:
                 pass
             with open("multiprocess.sh", "w") as f:
                 print("#!/bin/bash", file=f)
@@ -74,7 +75,7 @@ def run():
                         run_ += "--not_stop_rss"
                     print(f"    {i}) {run_} ;;", file=f)
                 print("esac", file=f)
-                print("rm start.log", file=f)
+                print("rm rss_result/start.log", file=f)
             subprocess.run(["chmod", "+x", "./multiprocess.sh"], check=True)
 
 
@@ -101,7 +102,7 @@ def run_single_srun():
         lock = acquire_lock()
 
         finished_set = set()
-        for log in ["finish.log", "start.log"]:
+        for log in ["rss_result/finish.log", "rss_result/start.log"]:
             if os.path.exists(log):
                 with open(log) as f:
                     finished_set.update(line.strip() for line in f)
@@ -115,12 +116,12 @@ def run_single_srun():
             break
 
         poscar_path = poscar_list[0]
-        with open("start.log", "a") as f:
+        with open("rss_result/start.log", "a") as f:
             print(os.path.basename(poscar_path), file=f)
 
         release_lock(lock)
 
-        with open("success.log") as f:
+        with open("rss_result/success.log") as f:
             success_str = sum(1 for _ in f)
         residual_str = args.num_opt_str - success_str
         if residual_str <= 0:

@@ -1,12 +1,8 @@
+import json
 import os
 
 import numpy as np
 from scipy.spatial import ConvexHull
-
-from rsspolymlp.analysis.rss_summarize import (
-    extract_composition_ratio,
-    load_rss_results,
-)
 
 
 class ConvexHullAnalyzer:
@@ -39,16 +35,20 @@ class ConvexHullAnalyzer:
         is_not_outliers_set = set(is_not_outliers)
 
         n_changed = 0
+
         for res_path in self.result_paths:
-            logname = os.path.basename(res_path).split(".log")[0]
-            comp_res = extract_composition_ratio(res_path, self.elements)
-            comp_ratio = tuple(
-                np.round(np.array(comp_res.comp_ratio) / sum(comp_res.comp_ratio), 10)
+            with open(res_path) as f:
+                loaded_dict = json.load(f)
+
+            target_element = loaded_dict["elements"]
+            comp_ratio = loaded_dict["comp_ratio"]
+            element_to_ratio = dict(zip(target_element, comp_ratio))
+            comp_ratio_orderd = [element_to_ratio[el] for el in self.elements]
+            comp_ratio_array = tuple(
+                np.round(np.array(comp_ratio_orderd) / sum(comp_ratio_orderd), 10)
             )
 
-            rss_results, _ = load_rss_results(
-                res_path, absolute_path=True, get_warning=True
-            )
+            rss_results = loaded_dict["rss_results"]
             rss_results_valid = [r for r in rss_results if not r["is_strong_outlier"]]
             rss_results_array = {
                 "formation_e": np.array([r["energy"] for r in rss_results_valid]),
@@ -59,6 +59,7 @@ class ConvexHullAnalyzer:
                 "struct_no": np.array([r["struct_no"] for r in rss_results_valid]),
             }
 
+            logname = os.path.basename(res_path).split(".")[0]
             for i in range(len(rss_results_array["is_outliers"])):
                 struct_no = rss_results_array["struct_no"][i]
                 name = f"POSCAR_{logname}_No{struct_no}"
@@ -70,7 +71,7 @@ class ConvexHullAnalyzer:
                 for key in rss_results_array
             }
 
-            self.rss_result_fe[comp_ratio] = rss_results_array
+            self.rss_result_fe[comp_ratio_array] = rss_results_array
 
         comps = np.array(list(self.rss_result_fe.keys()))
         sort_idx = np.lexsort(comps.T)

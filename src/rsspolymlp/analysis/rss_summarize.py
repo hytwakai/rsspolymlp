@@ -1,20 +1,18 @@
 import argparse
 import ast
+import json
 import os
 import re
 from collections import defaultdict
 from time import time
 
-import numpy as np
-
-from pypolymlp.core.interface_vasp import Poscar
 from rsspolymlp.analysis.unique_struct import (
     UniqueStructureAnalyzer,
     generate_unique_structs,
 )
-from rsspolymlp.common.comp_ratio import CompositionResult, compute_composition
 from rsspolymlp.common.parse_arg import ParseArgument
 from rsspolymlp.rss.rss_uniq_struct import log_unique_structures
+from rsspolymlp.utils.convert_dict import polymlp_struct_from_dict
 
 
 def run():
@@ -43,61 +41,8 @@ def run():
         args.use_joblib,
         args.num_process,
         args.backend,
-        args.num_str,
     )
     analyzer_all.run_sorting()
-
-
-def extract_composition_ratio(path_name: str, element_order: list) -> CompositionResult:
-    with open(path_name) as f:
-        for line in f:
-            if "- Elements:" in line:
-                line_strip = line.strip()
-                log = re.search(r"- Elements: (.+)", line_strip)
-                element_list = np.array(ast.literal_eval(log[1]))
-                comp_res = compute_composition(element_list, element_order)
-                break
-
-    return comp_res
-
-
-def load_rss_results(
-    result_path: str, absolute_path=False, get_warning=False
-) -> list[dict]:
-    rss_results = []
-
-    parent_path = os.path.dirname(result_path)
-    with open(result_path) as f:
-        lines = [i.strip() for i in f]
-    pressure = None
-    for line in lines:
-        if "Pressure (GPa):" in line:
-            pressure = float(line.split()[-1])
-            break
-    struct_no = 1
-    for line_idx in range(len(lines)):
-        if "No." in lines[line_idx]:
-            _res = {}
-            if absolute_path:
-                _res["poscar"] = str(lines[line_idx + 1]).split()[0]
-            else:
-                poscar_name = str(lines[line_idx + 1]).split()[0].split("/")[-1]
-                _res["poscar"] = parent_path + "/opt_struct/" + poscar_name
-            _res["structure"] = Poscar(_res["poscar"]).structure
-            _res["energy"] = float(lines[line_idx + 2].split()[-1])
-            _res["pressure"] = pressure
-            spg = re.search(r"- Space group: (.+)", lines[line_idx + 6])
-            _res["spg_list"] = ast.literal_eval(spg[1])
-            _res["volume"] = float(lines[line_idx + 7].split("volume")[-1].split()[0])
-            if get_warning:
-                warning_line = lines[line_idx + 8] if line_idx + 8 < len(lines) else ""
-                _res["is_strong_outlier"] = "WARNING" in warning_line
-                _res["is_weak_outlier"] = "NOTE" in warning_line
-            _res["struct_no"] = struct_no
-            rss_results.append(_res)
-            struct_no += 1
-
-    return rss_results, pressure
 
 
 class RSSResultSummarizer:
@@ -109,25 +54,28 @@ class RSSResultSummarizer:
         use_joblib,
         num_process: int = -1,
         backend: str = "loky",
-        num_str: int = -1,
     ):
         self.elements = elements
         self.rss_paths = rss_paths
         self.use_joblib = use_joblib
         self.num_process = num_process
         self.backend = backend
-        self.num_str = num_str
 
     def run_sorting(self):
-        result_path_comp = defaultdict(list)
-        for path_name in self.rss_paths:
-            rss_result_path = f"{path_name}/rss_results.log"
-            comp_res = extract_composition_ratio(rss_result_path, self.elements)
-            comp_ratio = comp_res.comp_ratio
-            result_path_comp[comp_ratio].append(rss_result_path)
-        result_path_comp = dict(result_path_comp)
+        os.makedirs("json", exist_ok=True)
 
-        for comp_ratio, res_paths in result_path_comp.items():
+        paths_same_comp = defaultdict(list)
+        results_same_comp = defaultdict(dict)
+        for path_name in self.rss_paths:
+            rss_result_path = f"{path_name}/rss_result/rss_results.json"
+            with open(rss_result_path) as f:
+                loaded_dict = json.load(f)
+            comp_ratio = tuple(loaded_dict["comp_ratio"])
+            paths_same_comp[comp_ratio].append(rss_result_path)
+            results_same_comp[comp_ratio][rss_result_path] = loaded_dict
+        paths_same_comp = dict(paths_same_comp)
+
+        for comp_ratio, res_paths in paths_same_comp.items():
             log_name = ""
             for i in range(len(comp_ratio)):
                 if not comp_ratio[i] == 0:
@@ -136,7 +84,9 @@ class RSSResultSummarizer:
             time_start = time()
 
             unique_str, num_opt_struct, integrated_res_paths, pressure = (
-                self._sorting_in_same_comp(comp_ratio, res_paths)
+                self._sorting_in_same_comp(
+                    comp_ratio, res_paths, results_same_comp[comp_ratio]
+                )
             )
 
             time_finish = time() - time_start
@@ -153,10 +103,14 @@ class RSSResultSummarizer:
                     file=f,
                 )
                 print("", file=f)
-            log_unique_structures(log_name + ".log", unique_str)
+
+            rss_result_all = log_unique_structures(log_name + ".log", unique_str, pressure=pressure)
+            with open(f"json/{log_name}.json", "w") as f:
+                json.dump(rss_result_all, f)
+
             print(log_name, "finished", flush=True)
 
-    def _sorting_in_same_comp(self, comp_ratio, result_paths):
+    def _sorting_in_same_comp(self, comp_ratio, result_paths, rss_result_dict):
         log_name = ""
         for i in range(len(comp_ratio)):
             if not comp_ratio[i] == 0:
@@ -177,9 +131,15 @@ class RSSResultSummarizer:
                         pre_result_paths = ast.literal_eval(paths[1])
                         break
 
-            rss_results1, pressure = load_rss_results(
-                log_name + ".log", absolute_path=True
-            )
+            with open(f"./json/{log_name}.json") as f:
+                loaded_dict = json.load(f)
+            rss_results1 = loaded_dict["rss_results"]
+            for i in range(len(rss_results1)):
+                rss_results1[i]["structure"] = polymlp_struct_from_dict(
+                    rss_results1[i]["structure"]
+                )
+            pressure = loaded_dict["pressure"]
+
             unique_structs1 = generate_unique_structs(
                 rss_results1,
                 use_joblib=self.use_joblib,
@@ -193,7 +153,13 @@ class RSSResultSummarizer:
 
         rss_results2 = []
         for res_path in not_processed_path:
-            rss_res, pressure = load_rss_results(res_path)
+            loaded_dict = rss_result_dict[res_path]
+            rss_res = loaded_dict["rss_results"]
+            for i in range(len(rss_res)):
+                rss_res[i]["structure"] = polymlp_struct_from_dict(
+                    rss_res[i]["structure"]
+                )
+            pressure = loaded_dict["pressure"]
             rss_results2.extend(rss_res)
         unique_structs2 = generate_unique_structs(
             rss_results2,
