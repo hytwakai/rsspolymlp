@@ -3,6 +3,7 @@ Script for performing Random Structure Search (RSS) on multiple tasks in paralle
 using polynomial machine learinig potentials (MLPs).
 """
 
+import argparse
 import fcntl
 import glob
 import multiprocessing
@@ -12,18 +13,30 @@ import time
 
 import joblib
 
-from rsspolymlp.rss.rss_mlp import RandomStructureSearch
 from rsspolymlp.common.parse_arg import ParseArgument
+from rsspolymlp.rss.rss_mlp import RandomStructureSearch
 
 
 def run():
-    args = ParseArgument.get_parallelization_args()
+    parser = argparse.ArgumentParser()
+    ParseArgument.add_parallelization_arguments(parser)
+    ParseArgument.add_optimization_arguments(parser)
+    args = parser.parse_args()
 
     os.makedirs("log", exist_ok=True)
     os.makedirs("opt_struct", exist_ok=True)
     os.makedirs("rss_result", exist_ok=True)
-    with open("rss_result/finish.log", "a") as _, open("rss_result/success.log", "a") as _:
+    with (
+        open("rss_result/finish.log", "a") as _,
+        open("rss_result/success.log", "a") as _,
+    ):
         pass
+
+    with open("rss_result/success.log") as f:
+        success_set = [line.strip() for line in f]
+    if len(success_set) >= args.num_opt_str:
+        print("Target number of optimized structures reached. Exiting.")
+        return
 
     # Check which structures have already been optimized
     poscar_path_all = glob.glob("initial_struct/*")
@@ -90,7 +103,9 @@ def run_single_srun():
         fcntl.flock(lock_file, fcntl.LOCK_UN)
         lock_file.close()
 
-    args = ParseArgument.get_optimization_args()
+    parser = argparse.ArgumentParser()
+    ParseArgument.add_optimization_arguments(parser)
+    args = parser.parse_args()
 
     poscar_path_all = glob.glob("initial_struct/*")
     poscar_path_all = sorted(poscar_path_all, key=lambda x: int(x.split("_")[-1]))

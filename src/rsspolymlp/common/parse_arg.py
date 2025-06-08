@@ -1,33 +1,4 @@
-import argparse
-
-
 class ParseArgument:
-    @classmethod
-    def get_initial_structure_args(cls):
-        parser = argparse.ArgumentParser()
-        cls.add_initial_structure_arguments(parser)
-        return parser.parse_args()
-
-    @classmethod
-    def get_optimization_args(cls):
-        parser = argparse.ArgumentParser()
-        cls.add_optimization_arguments(parser)
-        return parser.parse_args()
-
-    @classmethod
-    def get_parallelization_args(cls):
-        parser = argparse.ArgumentParser()
-        cls.add_optimization_arguments(parser)
-        cls.add_parallelization_arguments(parser)
-        return parser.parse_args()
-
-    @classmethod
-    def get_analysis_args(cls):
-        parser = argparse.ArgumentParser()
-        cls.add_analysis_arguments(parser)
-        cls.add_parallelization_arguments(parser)
-        return parser.parse_args()
-
     @staticmethod
     def add_initial_structure_arguments(parser):
         # Settings in generating initial structures

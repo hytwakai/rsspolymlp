@@ -104,7 +104,9 @@ class RSSResultSummarizer:
                 )
                 print("", file=f)
 
-            rss_result_all = log_unique_structures(log_name + ".log", unique_str, pressure=pressure)
+            rss_result_all = log_unique_structures(
+                log_name + ".log", unique_str, pressure=pressure, detect_outliers=True
+            )
             with open(f"json/{log_name}.json", "w") as f:
                 json.dump(rss_result_all, f)
 

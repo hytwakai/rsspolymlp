@@ -1,3 +1,4 @@
+import argparse
 import glob
 import os
 
@@ -8,7 +9,10 @@ from rsspolymlp.common.parse_arg import ParseArgument
 
 
 def run():
-    args = ParseArgument.get_initial_structure_args()
+    parser = argparse.ArgumentParser()
+    ParseArgument.add_initial_structure_arguments(parser)
+    args = parser.parse_args()
+
     os.makedirs("initial_struct", exist_ok=True)
 
     # Generate new structures if necessary

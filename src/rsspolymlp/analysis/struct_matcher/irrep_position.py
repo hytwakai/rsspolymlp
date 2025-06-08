@@ -67,10 +67,12 @@ class IrrepPosition:
         least_elements = [el for el, cnt in counts.items() if cnt == min_count]
         target_element = sorted(least_elements)[0]
         target_type = np.where(unique_elements == target_element)[0][0]
+        types = (types - target_type) % (np.max(types) + 1)
 
-        red_pos_cands = self.reduced_translation(_positions, types, target_type)
+        red_pos_cands = self.reduced_translation(_positions, types)
 
         irrep_position = None
+        irrep_cls_id = None
         id_max = np.max(red_pos_cands[0]["cluster_id"], axis=0) + 1
         for pos_cand in red_pos_cands:
             for target_idx in pos_cand["cands_idx"]:
@@ -79,19 +81,35 @@ class IrrepPosition:
                 trans_pos = _pos - _pos[target_idx]
                 trans_cls_id = np.mod(_cls_id - _cls_id[target_idx], id_max).astype(int)
 
-                reduced_perm_positions = self.reduced_permutation(
+                reduced_perm_positions, sorted_cls_id = self.reduced_permutation(
                     trans_pos, types, trans_cls_id
                 )
-                irrep_position = self._choose_lex_smaller_one(
-                    irrep_position, reduced_perm_positions
-                )
+
+                judge = self._compare_lex_order(irrep_position, reduced_perm_positions)
+                if judge == 0:
+                    irrep_position = (irrep_position + reduced_perm_positions) / 2
+                elif judge == 1:
+                    irrep_position = reduced_perm_positions
+                    irrep_cls_id = sorted_cls_id
 
         for swap_val in self.swap_values:
-            _pos = irrep_position.copy()
             if np.array_equal(swap_val, [0, 1, 2]):
                 continue
+
+            _pos = irrep_position.copy()
+            _cls_id = irrep_cls_id.copy()
             _pos[:, [0, 1, 2]] = _pos[:, swap_val]
-            irrep_position = self._choose_lex_smaller_one(irrep_position, _pos)
+            _cls_id[:, [0, 1, 2]] = _cls_id[:, swap_val]
+            reduced_perm_positions, sorted_cls_id = self.reduced_permutation(
+                _pos, types, _cls_id
+            )
+
+            judge = self._compare_lex_order(irrep_position, reduced_perm_positions)
+            if judge == 0:
+                irrep_position = (irrep_position + reduced_perm_positions) / 2
+            elif judge == 1:
+                irrep_position = reduced_perm_positions
+                irrep_cls_id = sorted_cls_id
 
         irrep_position = irrep_position.T.reshape(-1)
         sort_idx = np.argsort(types)
@@ -103,14 +121,13 @@ class IrrepPosition:
         self,
         positions: np.ndarray,
         types: np.ndarray,
-        target_type: int,
     ):
         _positions = positions.copy()
         cluster_id, snapped_pos = self.assign_clusters(_positions, types)
 
         red_pos_cands = []
 
-        mask = types == target_type
+        mask = types == 0
         for invert_val in self.invert_values:
             pos = np.zeros_like(_positions)
             _cluster_id = np.zeros_like(_positions, dtype=np.int32)
@@ -174,18 +191,18 @@ class IrrepPosition:
         self, positions: np.ndarray, types: np.ndarray, cluster_id: np.ndarray
     ):
         pos = positions.copy()
+        cls_id = cluster_id.copy()
         near_zero_mask = np.isclose(np.abs(pos), 0, atol=1e-8)
         pos[near_zero_mask] = 0
-        nonzero_mask = ~(cluster_id == 0)
+        nonzero_mask = ~(cls_id == 0)
         pos[nonzero_mask] %= 1.0
 
         # Stable lexicographic sort by (ids_x, ids_y, ids_z)
-        sort_idx = np.lexsort(
-            (cluster_id[:, 2], cluster_id[:, 1], cluster_id[:, 0], types)
-        )
+        sort_idx = np.lexsort((cls_id[:, 2], cls_id[:, 1], cls_id[:, 0], types))
         reduced_perm_positions = pos[sort_idx]
+        sorted_cls_id = cls_id[sort_idx]
 
-        return reduced_perm_positions
+        return reduced_perm_positions, sorted_cls_id
 
     def assign_clusters(self, positions: np.ndarray, types: np.ndarray):
         """
@@ -311,16 +328,6 @@ class IrrepPosition:
 
         return cluster_id2
 
-    def _choose_lex_smaller_one(self, A: np.ndarray, B: np.ndarray):
-        if A is None:
-            return B
-        A_flat = A.T.reshape(-1)
-        B_flat = B.T.reshape(-1)
-        result = self._compare_lex_order(A_flat, B_flat)
-        if result == 0:
-            return (A + B) / 2
-        return A if result == -1 else B
-
     def _compare_lex_order(self, A: np.ndarray, B: np.ndarray):
         """
         Compare two 1D vectors A and B lexicographically with tolerance `symprec`.
@@ -330,7 +337,12 @@ class IrrepPosition:
             1 if A > B,
             0 if A ≈ B within tolerance
         """
-        diff = A - B
+        if A is None:
+            return 1
+
+        A_flat = A.T.reshape(-1)
+        B_flat = B.T.reshape(-1)
+        diff = A_flat - B_flat
         diff_abs = np.abs(diff)
         length = diff.shape[0] // 3
 

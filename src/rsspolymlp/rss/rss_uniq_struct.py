@@ -4,6 +4,7 @@ identify and retain unique structures based on irreducible structure representat
 and write detailed computational statistics to the log.
 """
 
+import argparse
 import glob
 import json
 import os
@@ -28,7 +29,11 @@ from rsspolymlp.utils.convert_dict import polymlp_struct_to_dict
 
 
 def run():
-    args = ParseArgument.get_analysis_args()
+    parser = argparse.ArgumentParser()
+    ParseArgument.add_parallelization_arguments(parser)
+    ParseArgument.add_analysis_arguments(parser)
+    args = parser.parse_args()
+
     analyzer = RSSResultAnalyzer()
     if args.cutoff is not None:
         analyzer.cutoff = args.cutoff
@@ -36,7 +41,11 @@ def run():
 
 
 def log_unique_structures(
-    file_name, unique_structs, pressure=None, unique_struct_iters=None
+    file_name,
+    unique_structs,
+    pressure=None,
+    unique_struct_iters=None,
+    detect_outliers=False,
 ):
     # Sort structures by energy
     energies = np.array([s.energy for s in unique_structs])
@@ -45,8 +54,12 @@ def log_unique_structures(
     if unique_struct_iters is not None:
         _iters = [unique_struct_iters[i] for i in sort_indices]
 
-    # Get minimum energy value
-    is_strong_outlier, is_weak_outlier = detect_outlier(energies[sort_indices])
+    if detect_outliers:
+        is_strong_outlier, is_weak_outlier = detect_outlier(energies[sort_indices])
+    else:
+        is_strong_outlier = np.full_like(energies, False, dtype=bool)
+        is_weak_outlier = np.full_like(energies, False, dtype=bool)
+
     for i in range(len(unique_str)):
         if not is_weak_outlier[i]:
             energy_min = unique_str[i].energy

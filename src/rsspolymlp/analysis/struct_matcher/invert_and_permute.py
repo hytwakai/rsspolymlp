@@ -14,13 +14,9 @@ def invert_and_permute_positions(lattice, positions, spg_number, symprec):
     tol = symprec * 10.0
 
     angle_similar = np.isclose(angles[:, None], angles[None, :], atol=tol)
-    near_90 = np.isclose(angles, 90.0, atol=tol)
-    near_90_pair = near_90[:, None] & near_90[None, :]
     length_similar = np.isclose(abc[:, None], abc[None, :], atol=tol)
 
-    same_angle_90_flag = np.any(
-        angle_similar & near_90_pair & ~np.eye(3, dtype=bool), axis=1
-    )
+    near_90_flag = np.isclose(angles, 90.0, atol=tol)
     same_axis_flag = np.any(
         length_similar & angle_similar[:3, :3] & ~np.eye(3, dtype=bool), axis=1
     )
@@ -30,7 +26,7 @@ def invert_and_permute_positions(lattice, positions, spg_number, symprec):
         invert_values = [np.array([1, 1, 1]), np.array([-1, -1, -1])]
     else:
         invert_values = [np.array([1, 1, 1])]
-    invert_values = invert_positions(invert_values, same_angle_90_flag)
+    invert_values = invert_positions(invert_values, near_90_flag)
 
     # Swapping equivalent axes.
     swap_values = [np.array([0, 1, 2])]
@@ -44,20 +40,20 @@ def allow_all_invert(spg_number):
     return spg_number not in chiral_spg
 
 
-def invert_positions(invert_values, same_angle_90_flag):
+def invert_positions(invert_values, near_90_flag):
     _invert_values = invert_values.copy()
     for val in _invert_values:
         _val = val.copy()
-        if np.all(same_angle_90_flag):
+        if np.all(near_90_flag):
             for pattern in [1, 2, 4]:
                 mask = np.array([(pattern >> i) & 1 for i in range(3)], dtype=bool)
                 _val[mask] = -_val[mask]
                 invert_values.append(_val)
-        elif np.any(same_angle_90_flag):
-            idx = np.argmax(~same_angle_90_flag)
+        elif np.sum(near_90_flag) == 2:
+            idx = np.argmax(~near_90_flag)
             _val[idx] = -_val[idx]
             invert_values.append(_val)
-        # else: all False ⇒ only the original array
+        # else: ⇒ only the original array
     return invert_values
 
 
