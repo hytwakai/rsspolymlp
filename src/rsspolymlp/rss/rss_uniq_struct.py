@@ -54,7 +54,7 @@ def log_unique_structures(
     if unique_struct_iters is not None:
         _iters = [unique_struct_iters[i] for i in sort_indices]
 
-    if detect_outliers:
+    if detect_outliers or len(energies) > 100:
         is_strong_outlier, is_weak_outlier = detect_outlier(energies[sort_indices])
     else:
         is_strong_outlier = np.full_like(energies, False, dtype=bool)

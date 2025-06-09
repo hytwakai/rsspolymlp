@@ -70,11 +70,21 @@ class RSSResultSummarizer:
             rss_result_path = f"{path_name}/rss_result/rss_results.json"
             with open(rss_result_path) as f:
                 loaded_dict = json.load(f)
-            comp_ratio = tuple(loaded_dict["comp_ratio"])
-            paths_same_comp[comp_ratio].append(rss_result_path)
-            results_same_comp[comp_ratio][rss_result_path] = loaded_dict
-        paths_same_comp = dict(paths_same_comp)
 
+            rel_path = os.path.relpath(f"{path_name}/opt_struct", start=os.getcwd())
+            for i in range(len(loaded_dict["rss_results"])):
+                poscar_name = loaded_dict["rss_results"][i]["poscar"]
+                loaded_dict["rss_results"][i]["poscar"] = f"{rel_path}/{poscar_name}"
+
+            target_elements = loaded_dict["elements"]
+            comp_ratio = tuple(loaded_dict["comp_ratio"])
+            _dicts = dict(zip(target_elements, comp_ratio))
+            comp_ratio_orderd = tuple(_dicts.get(el, 0) for el in self.elements)
+
+            paths_same_comp[comp_ratio_orderd].append(rss_result_path)
+            results_same_comp[comp_ratio_orderd][rss_result_path] = loaded_dict
+
+        paths_same_comp = dict(paths_same_comp)
         for comp_ratio, res_paths in paths_same_comp.items():
             log_name = ""
             for i in range(len(comp_ratio)):
@@ -107,6 +117,7 @@ class RSSResultSummarizer:
             rss_result_all = log_unique_structures(
                 log_name + ".log", unique_str, pressure=pressure, detect_outliers=True
             )
+
             with open(f"json/{log_name}.json", "w") as f:
                 json.dump(rss_result_all, f)
 

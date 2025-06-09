@@ -178,4 +178,4 @@ poscar_multi
 myresult
 todo.log
 _myutils
-examples
+examples/struct_matcher

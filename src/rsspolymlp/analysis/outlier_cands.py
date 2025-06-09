@@ -3,6 +3,7 @@ import ast
 import json
 import os
 import shutil
+import glob
 
 import numpy as np
 
@@ -22,7 +23,7 @@ def detect_outlier(energies: np.array):
     is_strong_outlier: np.ndarray of bool
         Boolean array marking strong outliers (energy diff > 1.0).
     is_weak_outlier : np.ndarray of bool
-        Boolean array marking potential outliers (energy diff > 0.1).
+        Boolean array marking potential outliers (energy diff > 0.2).
     """
     n = len(energies)
     if n == 1:
@@ -49,7 +50,7 @@ def detect_outlier(energies: np.array):
         diff = abs(group_means[i] - group_means[end])
         if diff > 1.0:
             is_strong_group[i] = True
-        if diff > 0.1:
+        elif diff > 0.2:
             is_weak_group[i] = True
         else:
             break
@@ -128,11 +129,16 @@ def run_compare_dft():
     for res in outliers_all:
         pressure = res["pressure"]
         poscar_name = res["outlier_poscar"]
-        vasprun_path = f"{dft_path}/{poscar_name}/vasprun.xml"
+        vasprun_paths = glob.glob(f"{dft_path}/{poscar_name}/vasprun*.xml")
 
-        try:
-            vaspobj = Vasprun(vasprun_path)
-        except Exception:
+        vasprun_get = False
+        for vasprun in vasprun_paths:
+            try:
+                vaspobj = Vasprun(vasprun)
+                vasprun_get = True
+            except Exception:
+                continue
+        if not vasprun_get:
             diff_all.append(
                 {
                     "diff": None,
@@ -141,6 +147,8 @@ def run_compare_dft():
                     "res": res,
                 }
             )
+            continue
+
         energy_dft = vaspobj.energy
         structure = vaspobj.structure
         for element in structure.elements:

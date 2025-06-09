@@ -65,7 +65,7 @@ def run():
     rss_result_fe = ch_analyzer.rss_result_fe
 
     if args.thresholds is not None:
-        threshold_list = sorted(args.thresholds)
+        threshold_list = args.thresholds
         for threshold in threshold_list:
             near_ch, not_near_ch = ch_analyzer.get_struct_near_ch(threshold)
 

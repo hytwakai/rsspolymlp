@@ -57,7 +57,7 @@ pip install rsspolymlp
 
 ### Example Commands
 
-#### Step 1–3: Execute for each (p, c, n) condition.
+#### Step 1–3: Execute for each combination of pressure (`p`), composition (`c`), and number of atoms (`n`).
 ```shell
 rss-init-struct --elements Al Cu --atom_counts 4 4 --num_init_str 2000
 rss-parallel --pot polymlp.yaml --num_opt_str 1000
@@ -79,7 +79,7 @@ plot-binary --elements Al Cu --result_paths <summary_dir>/json/*
 
 The command-line interface of `rsspolymlp` is organized into 6 steps.
 
-Steps 1–3 perform RSS using the polynomial MLP independently for each combination of pressure (`p`), composition (`c`), and number of atoms (`n`).
+Steps 1–3 perform RSS using the polynomial MLP independently for each (p, c, n) conditions.
 
 1. **Generating initial structures (`rss-init-struct`)**
    

@@ -26,12 +26,15 @@ class ConvexHullAnalyzer:
 
     def calc_formation_e(self):
         is_not_outliers = []
+        outlier_cand_count = 0
         if self.outlier_file is not None:
             with open(self.outlier_file) as f:
                 lines = [i.strip() for i in f]
             for i in range(len(lines)):
-                if "Structure:" in lines[i] and "Not an outlier" in lines[i + 2]:
-                    is_not_outliers.append(str(lines[i].split()[-1]))
+                if "Structure:" in lines[i]:
+                    outlier_cand_count += 1
+                    if "Not an outlier" in lines[i + 2]:
+                        is_not_outliers.append(str(lines[i].split()[-1]))
         is_not_outliers_set = set(is_not_outliers)
 
         n_changed = 0
@@ -40,10 +43,12 @@ class ConvexHullAnalyzer:
             with open(res_path) as f:
                 loaded_dict = json.load(f)
 
-            target_element = loaded_dict["elements"]
+            target_elements = loaded_dict["elements"]
             comp_ratio = loaded_dict["comp_ratio"]
-            element_to_ratio = dict(zip(target_element, comp_ratio))
-            comp_ratio_orderd = [element_to_ratio[el] for el in self.elements]
+            element_to_ratio = dict(zip(target_elements, comp_ratio))
+            comp_ratio_orderd = tuple(
+                element_to_ratio.get(el, 0) for el in self.elements
+            )
             comp_ratio_array = tuple(
                 np.round(np.array(comp_ratio_orderd) / sum(comp_ratio_orderd), 10)
             )
@@ -79,7 +84,9 @@ class ConvexHullAnalyzer:
         self.rss_result_fe = {key: self.rss_result_fe[key] for key in sorted_keys}
 
         if self.outlier_file is not None:
-            print(f"{n_changed} structures were reclassified as not outliers.")
+            print(f"{outlier_cand_count} structures were detected as outlier candidates.")
+            print(f"{outlier_cand_count - n_changed} were confirmed as outliers.")
+            print(f"{n_changed} were reclassified as normal.")
 
         e_ends = []
         keys = np.array(list(self.rss_result_fe))
