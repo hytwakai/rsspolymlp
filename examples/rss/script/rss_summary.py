@@ -12,11 +12,11 @@ for pressure in pressure_set:
 
     rss_paths = f"../../../rss_mlp/Al-Cu/{pressure}GPa/*"
     print("- rss-summarize start")
-    """subprocess.run(
+    subprocess.run(
         f"rss-summarize --elements Al Cu --use_joblib --rss_paths {rss_paths}",
         shell=True,
         check=True,
-    )"""
+    )
     print("- rss-summarize finished")
     print("- rss-outlier")
     subprocess.run(
