@@ -1,10 +1,10 @@
 import argparse
-import ast
 import json
 import os
-import re
 from collections import defaultdict
 from time import time
+
+import yaml
 
 from rsspolymlp.analysis.unique_struct import (
     UniqueStructureAnalyzer,
@@ -92,30 +92,24 @@ class RSSResultSummarizer:
                     log_name += f"{self.elements[i]}{comp_ratio[i]}"
 
             time_start = time()
-
             unique_str, num_opt_struct, integrated_res_paths, pressure = (
                 self._sorting_in_same_comp(
                     comp_ratio, res_paths, results_same_comp[comp_ratio]
                 )
             )
-
             time_finish = time() - time_start
 
-            with open(log_name + ".log", "w") as f:
-                print("---- General informantion ----", file=f)
-                print("Sorting time (sec.):       ", round(time_finish, 2), file=f)
-                print("Pressure (GPa):            ", pressure, file=f)
-                print("Number of optimized strcts:", num_opt_struct, file=f)
-                print("Number of unique structs:  ", len(unique_str), file=f)
-                print(
-                    "Input file names:          ",
-                    sorted(integrated_res_paths),
-                    file=f,
-                )
+            with open(log_name + ".yaml", "w") as f:
+                print("general_information:", file=f)
+                print(f"  sorting_time_sec:      {round(time_finish, 2)}", file=f)
+                print(f"  pressure_GPa:          {pressure}", file=f)
+                print(f"  num_optimized_structs: {num_opt_struct}", file=f)
+                print(f"  num_unique_structs:    {len(unique_str)}", file=f)
+                print(f"  input_file_names:      {sorted(integrated_res_paths)}", file=f)
                 print("", file=f)
 
             rss_result_all = log_unique_structures(
-                log_name + ".log", unique_str, pressure=pressure, detect_outliers=True
+                log_name + ".yaml", unique_str, pressure=pressure, detect_outliers=True
             )
 
             with open(f"json/{log_name}.json", "w") as f:
@@ -133,16 +127,13 @@ class RSSResultSummarizer:
         num_opt_struct = 0
         pressure = None
         pre_result_paths = []
-        if os.path.isfile(log_name + ".log"):
-            with open(log_name + ".log") as f:
-                for line in f:
-                    line_strip = line.strip()
-                    if "Number of optimized strcts:" in line_strip:
-                        num_opt_struct = int(line_strip.split()[-1])
-                    if "Input file names:" in line_strip:
-                        paths = re.search(r"Input file names:\s+(.+)", line_strip)
-                        pre_result_paths = ast.literal_eval(paths[1])
-                        break
+        if os.path.isfile(log_name + ".yaml"):
+            with open(log_name + ".yaml") as f:
+                yaml_data = yaml.safe_load(f)
+                num_opt_struct = yaml_data["general_information"][
+                    "num_optimized_structs"
+                ]
+                pre_result_paths = yaml_data["general_information"]["input_file_names"]
 
             with open(f"./json/{log_name}.json") as f:
                 loaded_dict = json.load(f)

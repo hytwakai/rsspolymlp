@@ -3,6 +3,7 @@ import json
 import os
 
 import numpy as np
+import yaml
 from scipy.spatial import ConvexHull
 
 
@@ -72,12 +73,11 @@ class ConvexHullAnalyzer:
         outlier_cand_count = 0
         if self.outlier_file is not None:
             with open(self.outlier_file) as f:
-                lines = [i.strip() for i in f]
-            for i in range(len(lines)):
-                if "Structure:" in lines[i]:
-                    outlier_cand_count += 1
-                    if "Not an outlier" in lines[i + 2]:
-                        is_not_outliers.append(str(lines[i].split()[-1]))
+                outlier_data = yaml.safe_load(f)
+            for entry in outlier_data["outliers"]:
+                outlier_cand_count += 1
+                if entry.get("assessment") == "Not an outlier":
+                    is_not_outliers.append(str(entry["structure"]))
         is_not_outliers_set = set(is_not_outliers)
 
         n_changed = 0
@@ -179,12 +179,12 @@ class ConvexHullAnalyzer:
         self.comp_ch = _comp_ch[sort_idx]
         self.poscar_ch = label_array[v_convex][mask][sort_idx]
 
-        with open("phase_analysis/global_minima.log", "w") as f:
+        with open("phase_analysis/global_minima.yaml", "w") as f:
+            print("global_minima:", file=f)
             for i in range(len(self.comp_ch)):
-                print(f"Composition: {self.comp_ch[i]}", file=f)
-                print(f"Structure: {self.poscar_ch[i]}", file=f)
-                print(f"Formation energy: {self.fe_ch[i]}", file=f)
-                print("", file=f)
+                print("  - composition:      ", self.comp_ch[i], file=f)
+                print("    structure:        ", self.poscar_ch[i], file=f)
+                print("    formation_energy: ", self.fe_ch[i][0], file=f)
 
         np.save("phase_analysis/data/fe_ch.npy", self.fe_ch)
         np.save("phase_analysis/data/comp_ch.npy", self.comp_ch)
@@ -246,36 +246,37 @@ class ConvexHullAnalyzer:
                 multi_count += len(res["formation_e"])
 
         os.makedirs(f"phase_analysis/threshold_{threshold}meV", exist_ok=True)
-        with open(f"phase_analysis/threshold_{threshold}meV/struct_cands.log", "w") as f:
-            print(
-                f"--- Number of structures within {threshold} meV/atom from the convex hull ---",
-                file=f,
-            )
-            print("Single-element systems:", element_count, file=f)
-            print("Multicomponent systems:", multi_count, file=f)
+        with open(
+            f"phase_analysis/threshold_{threshold}meV/struct_cands.yaml", "w"
+        ) as f:
+            print("summary:", file=f)
+            print(f"  threshold_meV_per_atom: {threshold}", file=f)
+            print(f"  n_structs_single:       {element_count}", file=f)
+            print(f"  n_structs_multi:        {multi_count}", file=f)
             print("", file=f)
-            print("--- Structures close to the convex hull ---", file=f)
+
+            print("near_ch_structures:", file=f)
             for key, res in near_ch.items():
                 if len(res["formation_e"]) == 0:
                     continue
-                print("Composition:", key, file=f)
+                print(f"  - composition: {key}", file=f)
+                print("    structures:", file=f)
                 for i in range(len(res["formation_e"])):
-                    print(" - POSCAR name:", res["poscars"][i], file=f)
+                    print(f"      - poscar:     {res['poscars'][i]}", file=f)
                     print(
-                        "   - ΔF_ch (meV/atom):",
-                        f"{res['fe_above_ch'][i] * 1000:.4f}",
+                        f"        delta_F_ch: {res['fe_above_ch'][i]:.6f}",
                         file=f,
                     )
                     print(
-                        "   - Formation energy (eV/atom):",
-                        f"{res['formation_e'][i]:.15f}",
+                        f"        F_value:    {res['formation_e'][i]:.15f}",
                         file=f,
                     )
-                print("", file=f)
 
         not_near_ch = self._convert_ndarray_to_json(not_near_ch)
         near_ch = self._convert_ndarray_to_json(near_ch)
-        with open(f"phase_analysis/threshold_{threshold}meV/not_near_ch.json", "w") as f:
+        with open(
+            f"phase_analysis/threshold_{threshold}meV/not_near_ch.json", "w"
+        ) as f:
             json.dump(not_near_ch, f)
         with open(f"phase_analysis/threshold_{threshold}meV/near_ch.json", "w") as f:
             json.dump(near_ch, f)

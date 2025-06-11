@@ -1,0 +1,173 @@
+summary:
+  threshold_meV_per_atom: 20.0
+  n_structs_single:       16
+  n_structs_multi:        31
+
+near_ch_structures:
+  - composition: (1.0, 0.0)
+    structures:
+      - poscar:     ../../../rss_mlp/Al-Cu/0.0GPa/2_0/opt_struct/POSCAR_1
+        delta_F_ch: 0.000000
+        F_value:    0.000000000000000
+      - poscar:     ../../../rss_mlp/Al-Cu/0.0GPa/6_0/opt_struct/POSCAR_149
+        delta_F_ch: 0.010202
+        F_value:    0.010202463404023
+      - poscar:     ../../../rss_mlp/Al-Cu/0.0GPa/6_0/opt_struct/POSCAR_222
+        delta_F_ch: 0.010458
+        F_value:    0.010458422276101
+      - poscar:     ../../../rss_mlp/Al-Cu/0.0GPa/5_0/opt_struct/POSCAR_133
+        delta_F_ch: 0.012206
+        F_value:    0.012205742869005
+      - poscar:     ../../../rss_mlp/Al-Cu/0.0GPa/5_0/opt_struct/POSCAR_128
+        delta_F_ch: 0.012560
+        F_value:    0.012559917679784
+      - poscar:     ../../../rss_mlp/Al-Cu/0.0GPa/8_0/opt_struct/POSCAR_54
+        delta_F_ch: 0.015002
+        F_value:    0.015002224364610
+      - poscar:     ../../../rss_mlp/Al-Cu/0.0GPa/8_0/opt_struct/POSCAR_27
+        delta_F_ch: 0.015704
+        F_value:    0.015704248928961
+  - composition: (0.6666666667, 0.3333333333)
+    structures:
+      - poscar:     ../../../rss_mlp/Al-Cu/0.0GPa/2_1/opt_struct/POSCAR_7
+        delta_F_ch: 0.000000
+        F_value:    -0.176260354948650
+  - composition: (0.4285714286, 0.5714285714)
+    structures:
+      - poscar:     ../../../rss_mlp/Al-Cu/0.0GPa/3_4/opt_struct/POSCAR_64
+        delta_F_ch: 0.014715
+        F_value:    -0.185698248797653
+      - poscar:     ../../../rss_mlp/Al-Cu/0.0GPa/3_4/opt_struct/POSCAR_71
+        delta_F_ch: 0.018785
+        F_value:    -0.181628610706759
+  - composition: (0.4, 0.6)
+    structures:
+      - poscar:     ../../../rss_mlp/Al-Cu/0.0GPa/2_3/opt_struct/POSCAR_25
+        delta_F_ch: 0.011234
+        F_value:    -0.192077772367247
+  - composition: (0.375, 0.625)
+    structures:
+      - poscar:     ../../../rss_mlp/Al-Cu/0.0GPa/3_5/opt_struct/POSCAR_189
+        delta_F_ch: 0.011011
+        F_value:    -0.194837071208206
+      - poscar:     ../../../rss_mlp/Al-Cu/0.0GPa/3_5/opt_struct/POSCAR_48
+        delta_F_ch: 0.013285
+        F_value:    -0.192562646445977
+      - poscar:     ../../../rss_mlp/Al-Cu/0.0GPa/3_5/opt_struct/POSCAR_86
+        delta_F_ch: 0.015901
+        F_value:    -0.189946633631176
+  - composition: (0.3333333333, 0.6666666667)
+    structures:
+      - poscar:     ../../../rss_mlp/Al-Cu/0.0GPa/2_4/opt_struct/POSCAR_84
+        delta_F_ch: -0.000000
+        F_value:    -0.210074866465921
+      - poscar:     ../../../rss_mlp/Al-Cu/0.0GPa/2_4/opt_struct/POSCAR_22
+        delta_F_ch: 0.010497
+        F_value:    -0.199577450858020
+      - poscar:     ../../../rss_mlp/Al-Cu/0.0GPa/2_4/opt_struct/POSCAR_25
+        delta_F_ch: 0.011198
+        F_value:    -0.198876883892160
+      - poscar:     ../../../rss_mlp/Al-Cu/0.0GPa/2_4/opt_struct/POSCAR_77
+        delta_F_ch: 0.012219
+        F_value:    -0.197855568594360
+      - poscar:     ../../../rss_mlp/Al-Cu/0.0GPa/2_4/opt_struct/POSCAR_60
+        delta_F_ch: 0.015119
+        F_value:    -0.194955861941444
+  - composition: (0.2857142857, 0.7142857143)
+    structures:
+      - poscar:     ../../../rss_mlp/Al-Cu/0.0GPa/2_5/opt_struct/POSCAR_7
+        delta_F_ch: 0.019823
+        F_value:    -0.182645215057453
+  - composition: (0.25, 0.75)
+    structures:
+      - poscar:     ../../../rss_mlp/Al-Cu/0.0GPa/2_6/opt_struct/POSCAR_4
+        delta_F_ch: -0.000000
+        F_value:    -0.196763873687375
+      - poscar:     ../../../rss_mlp/Al-Cu/0.0GPa/2_6/opt_struct/POSCAR_76
+        delta_F_ch: 0.011669
+        F_value:    -0.185094518349997
+  - composition: (0.2, 0.8)
+    structures:
+      - poscar:     ../../../rss_mlp/Al-Cu/0.0GPa/1_4/opt_struct/POSCAR_3
+        delta_F_ch: 0.006968
+        F_value:    -0.150442964821538
+  - composition: (0.1666666667, 0.8333333333)
+    structures:
+      - poscar:     ../../../rss_mlp/Al-Cu/0.0GPa/1_5/opt_struct/POSCAR_188
+        delta_F_ch: 0.000092
+        F_value:    -0.131084193645929
+      - poscar:     ../../../rss_mlp/Al-Cu/0.0GPa/1_5/opt_struct/POSCAR_105
+        delta_F_ch: 0.000260
+        F_value:    -0.130915522360699
+      - poscar:     ../../../rss_mlp/Al-Cu/0.0GPa/1_5/opt_struct/POSCAR_18
+        delta_F_ch: 0.001162
+        F_value:    -0.130014206901170
+      - poscar:     ../../../rss_mlp/Al-Cu/0.0GPa/1_5/opt_struct/POSCAR_20
+        delta_F_ch: 0.006164
+        F_value:    -0.125012160476753
+      - poscar:     ../../../rss_mlp/Al-Cu/0.0GPa/1_5/opt_struct/POSCAR_59
+        delta_F_ch: 0.009826
+        F_value:    -0.121349559185358
+  - composition: (0.1428571429, 0.8571428571)
+    structures:
+      - poscar:     ../../../rss_mlp/Al-Cu/0.0GPa/1_6/opt_struct/POSCAR_8
+        delta_F_ch: 0.007121
+        F_value:    -0.105315600125956
+      - poscar:     ../../../rss_mlp/Al-Cu/0.0GPa/1_6/opt_struct/POSCAR_9
+        delta_F_ch: 0.010593
+        F_value:    -0.101843748383424
+  - composition: (0.125, 0.875)
+    structures:
+      - poscar:     ../../../rss_mlp/Al-Cu/0.0GPa/1_7/opt_struct/POSCAR_28
+        delta_F_ch: 0.005369
+        F_value:    -0.093012670101674
+      - poscar:     ../../../rss_mlp/Al-Cu/0.0GPa/1_7/opt_struct/POSCAR_133
+        delta_F_ch: 0.005839
+        F_value:    -0.092542771920364
+      - poscar:     ../../../rss_mlp/Al-Cu/0.0GPa/1_7/opt_struct/POSCAR_92
+        delta_F_ch: 0.006642
+        F_value:    -0.091739983029970
+      - poscar:     ../../../rss_mlp/Al-Cu/0.0GPa/1_7/opt_struct/POSCAR_15
+        delta_F_ch: 0.007144
+        F_value:    -0.091237499357443
+      - poscar:     ../../../rss_mlp/Al-Cu/0.0GPa/1_7/opt_struct/POSCAR_17
+        delta_F_ch: 0.008336
+        F_value:    -0.090045791691627
+      - poscar:     ../../../rss_mlp/Al-Cu/0.0GPa/1_7/opt_struct/POSCAR_137
+        delta_F_ch: 0.008536
+        F_value:    -0.089845618456836
+      - poscar:     ../../../rss_mlp/Al-Cu/0.0GPa/1_7/opt_struct/POSCAR_31
+        delta_F_ch: 0.009736
+        F_value:    -0.088646279486815
+      - poscar:     ../../../rss_mlp/Al-Cu/0.0GPa/1_7/opt_struct/POSCAR_178
+        delta_F_ch: 0.009790
+        F_value:    -0.088592206690562
+  - composition: (0.0, 1.0)
+    structures:
+      - poscar:     ../../../rss_mlp/Al-Cu/0.0GPa/0_2/opt_struct/POSCAR_2
+        delta_F_ch: 0.000000
+        F_value:    0.000000000000000
+      - poscar:     ../../../rss_mlp/Al-Cu/0.0GPa/0_7/opt_struct/POSCAR_10
+        delta_F_ch: 0.002357
+        F_value:    0.002357039596192
+      - poscar:     ../../../rss_mlp/Al-Cu/0.0GPa/0_5/opt_struct/POSCAR_182
+        delta_F_ch: 0.003080
+        F_value:    0.003080386299051
+      - poscar:     ../../../rss_mlp/Al-Cu/0.0GPa/0_5/opt_struct/POSCAR_107
+        delta_F_ch: 0.003303
+        F_value:    0.003303087011608
+      - poscar:     ../../../rss_mlp/Al-Cu/0.0GPa/0_4/opt_struct/POSCAR_65
+        delta_F_ch: 0.003916
+        F_value:    0.003916159120282
+      - poscar:     ../../../rss_mlp/Al-Cu/0.0GPa/0_8/opt_struct/POSCAR_88
+        delta_F_ch: 0.004140
+        F_value:    0.004140206979260
+      - poscar:     ../../../rss_mlp/Al-Cu/0.0GPa/0_6/opt_struct/POSCAR_28
+        delta_F_ch: 0.005562
+        F_value:    0.005562378822604
+      - poscar:     ../../../rss_mlp/Al-Cu/0.0GPa/0_5/opt_struct/POSCAR_104
+        delta_F_ch: 0.006753
+        F_value:    0.006752777194813
+      - poscar:     ../../../rss_mlp/Al-Cu/0.0GPa/0_2/opt_struct/POSCAR_9
+        delta_F_ch: 0.008509
+        F_value:    0.008508546536631

@@ -1,0 +1,71 @@
+outliers:
+  - structure: POSCAR_Al1Cu4_No1
+    energy_diff_meV_per_atom: 0.144
+    assessment: Not an outlier
+    details:
+      diff: 0.00014391848795147766
+      dft_value: -3.6249533419999977
+      mlp_value: -3.6248094235120463
+  - structure: POSCAR_Al1Cu4_No2
+    energy_diff_meV_per_atom: 1.112
+    assessment: Not an outlier
+    details:
+      diff: 0.0011121129744289249
+      dft_value: -3.5829978969999976
+      mlp_value: -3.5818857840255687
+  - structure: POSCAR_Al1Cu4_No3
+    energy_diff_meV_per_atom: -7.353
+    assessment: Not an outlier
+    details:
+      diff: -0.007352847931690665
+      dft_value: -3.5546553649999977
+      mlp_value: -3.5620082129316883
+  - structure: POSCAR_Al1Cu4_No4
+    energy_diff_meV_per_atom: -1.299
+    assessment: Not an outlier
+    details:
+      diff: -0.0012986895000937082
+      dft_value: -3.5101304529999977
+      mlp_value: -3.5114291425000914
+  - structure: POSCAR_Al1Cu4_No5
+    energy_diff_meV_per_atom: -3.038
+    assessment: Not an outlier
+    details:
+      diff: -0.0030376446539839286
+      dft_value: -3.5029066153333313
+      mlp_value: -3.505944259987315
+  - structure: POSCAR_Al1Cu4_No6
+    energy_diff_meV_per_atom: -2.898
+    assessment: Not an outlier
+    details:
+      diff: -0.0028980576502459776
+      dft_value: -3.5027178299999977
+      mlp_value: -3.5056158876502437
+  - structure: POSCAR_Al1Cu4_No7
+    energy_diff_meV_per_atom: -4.609
+    assessment: Not an outlier
+    details:
+      diff: -0.004609496458541251
+      dft_value: -3.4993175399999985
+      mlp_value: -3.5039270364585398
+  - structure: POSCAR_Al1Cu4_No8
+    energy_diff_meV_per_atom: 4.566
+    assessment: Not an outlier
+    details:
+      diff: 0.004565794484213459
+      dft_value: -3.4352285459999985
+      mlp_value: -3.430662751515785
+  - structure: POSCAR_Al1Cu4_No9
+    energy_diff_meV_per_atom: -6.501
+    assessment: Not an outlier
+    details:
+      diff: -0.006500771873080513
+      dft_value: -3.3360748309999977
+      mlp_value: -3.342575602873078
+  - structure: POSCAR_Cu1_No6
+    energy_diff_meV_per_atom: -26176.427
+    assessment: Marked as outlier
+    details:
+      diff: -26.176426854343127
+      dft_value: 22.267997110000003
+      mlp_value: -3.908429744343123

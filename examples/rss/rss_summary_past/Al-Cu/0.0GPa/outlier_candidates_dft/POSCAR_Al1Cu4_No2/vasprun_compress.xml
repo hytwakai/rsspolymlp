@@ -1,0 +1,79 @@
+<?xml version="1.0" ?><modeling><calculation><energy>
+   <i name="e_fr_energy">    -38.39735508 </i>
+   <i name="e_wo_entrp">    -38.39759503 </i>
+   <i name="e_0_energy">      0.00071985 </i>
+  </energy>
+  <varray name="forces">
+   <v>       0.00000000      -0.00000000      -0.00000000 </v>
+   <v>       0.00000000      -0.00000000      -0.00000000 </v>
+   <v>      -0.00000000       0.00000000       0.09055724 </v>
+   <v>       0.00000000      -0.00000000       0.02464637 </v>
+   <v>       0.00000000       0.00000000      -0.09055724 </v>
+   <v>      -0.00000000      -0.00000000      -0.02464637 </v>
+   <v>       0.00000000      -0.00000000       0.09055724 </v>
+   <v>       0.00000000      -0.00000000       0.02464637 </v>
+   <v>       0.00000000       0.00000000      -0.09055724 </v>
+   <v>      -0.00000000      -0.00000000      -0.02464637 </v>
+  </varray>
+  <varray name="stress">
+   <v>      10.32825823       0.00000000       0.00000000 </v>
+   <v>       0.00000000       3.78367559       0.00000000 </v>
+   <v>       0.00000000       0.00000000       8.04254133 </v>
+  </varray>
+  <structure name="finalpos">
+  <crystal>
+   <varray name="basis">
+    <v>       2.66237669       0.00000000       0.00000000 </v>
+    <v>       0.00000000       3.57035082       0.00000000 </v>
+    <v>       0.00000000       0.00000000      13.05829169 </v>
+   </varray>
+   <i name="volume">    124.12714295 </i>
+   <varray name="rec_basis">
+    <v>       0.37560425       0.00000000       0.00000000 </v>
+    <v>       0.00000000       0.28008452       0.00000000 </v>
+    <v>       0.00000000       0.00000000       0.07657970 </v>
+   </varray>
+  </crystal>
+  <varray name="positions">
+   <v>       0.50000000       0.00000000       0.00000000 </v>
+   <v>       0.00000000       0.50000000       0.50000000 </v>
+   <v>       0.50000000       0.00000000       0.20055895 </v>
+   <v>       0.00000000       0.50000000       0.10109771 </v>
+   <v>       0.00000000       0.50000000       0.29944105 </v>
+   <v>       0.50000000       0.00000000       0.39890229 </v>
+   <v>       0.00000000       0.50000000       0.70055895 </v>
+   <v>       0.50000000       0.00000000       0.60109771 </v>
+   <v>       0.50000000       0.00000000       0.79944105 </v>
+   <v>       0.00000000       0.50000000       0.89890229 </v>
+  </varray>
+ </structure>
+<array name="atomtypes">
+   <dimension dim="1">type</dimension>
+   <field type="int">atomspertype</field>
+   <field type="string">element</field>
+   <field>mass</field>
+   <field>valence</field>
+   <field type="string">pseudopotential</field>
+   <set>
+    <rc><c>   2</c><c>Al</c><c>     26.98100000</c><c>      3.00000000</c><c>  PAW_PBE Al 04Jan2001                  </c></rc>
+    <rc><c>   8</c><c>Cu</c><c>     63.54600000</c><c>     11.00000000</c><c>  PAW_PBE Cu 22Jun2005                  </c></rc>
+   </set>
+  </array>
+ <array name="atoms">
+   <dimension dim="1">ion</dimension>
+   <field type="string">element</field>
+   <field type="int">atomtype</field>
+   <set>
+    <rc><c>Al</c><c>   1</c></rc>
+    <rc><c>Al</c><c>   1</c></rc>
+    <rc><c>Cu</c><c>   2</c></rc>
+    <rc><c>Cu</c><c>   2</c></rc>
+    <rc><c>Cu</c><c>   2</c></rc>
+    <rc><c>Cu</c><c>   2</c></rc>
+    <rc><c>Cu</c><c>   2</c></rc>
+    <rc><c>Cu</c><c>   2</c></rc>
+    <rc><c>Cu</c><c>   2</c></rc>
+    <rc><c>Cu</c><c>   2</c></rc>
+   </set>
+  </array>
+  </calculation></modeling>

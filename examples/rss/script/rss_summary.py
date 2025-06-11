@@ -38,7 +38,7 @@ for pressure in pressure_set:
         (
             "rss-phase-analysis --elements Al Cu "
             "--result_paths ./json/* "
-            "--outlier_file outlier/outlier_detection.log "
+            "--outlier_file outlier/outlier_detection.yaml "
             "--thresholds 10 20 30 40 50"
         ),
         shell=True,

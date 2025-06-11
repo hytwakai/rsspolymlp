@@ -67,41 +67,34 @@ def log_unique_structures(
 
     rss_results = []
     with open(file_name, "a") as f:
-        print("---- Unique structures ----", file=f)
+        print("unique_structures:", file=f)
         for idx, _str in enumerate(unique_str):
             e_diff = round((_str.energy - energy_min) * 1000, 2)
-            print(f"No. {idx+1}", file=f)
+            print(f"  - struct_No: {idx+1}", file=f)
+            print(f"    poscar_name: {_str.input_poscar}", file=f)
+            print(f"    energy_diff_meV_per_atom: {e_diff}", file=f)
+            print(f"    duplicates: {_str.dup_count}", file=f)
+            print(f"    enthalpy: {_str.energy}", file=f)
+            print(f"    axis: {_str.axis_abc}", file=f)
             print(
-                f"{_str.input_poscar} ({e_diff} meV/atom, {_str.dup_count} duplicates)",
-                file=f,
+                f"    positions: {_str.original_structure.positions.T.tolist()}", file=f
             )
-            print(" - Enthalpy:   ", _str.energy, file=f)
-            print(" - Axis:       ", _str.axis_abc, file=f)
-            print(
-                " - Postions:   ", _str.original_structure.positions.T.tolist(), file=f
-            )
-            print(" - Elements:   ", _str.original_structure.elements, file=f)
-            print(" - Space group:", _str.spg_list, file=f)
+            print(f"    elements: {_str.original_structure.elements}", file=f)
+            print(f"    space_group: {_str.spg_list}", file=f)
+
             info = [
-                " - Other Info.:",
                 f"{_str.n_atoms} atom",
-                f"/ distance {round(_str.least_distance, 3)} (Ang.)",
-                f"/ volume {round(_str.volume, 2)} (A^3/atom)",
+                f"distance {round(_str.least_distance, 3)} (Ang.)",
+                f"volume {round(_str.volume, 2)} (A^3/atom)",
             ]
             if unique_struct_iters is not None:
-                info.append(f"/ iteration {_iters[idx]}")
-            print(*info, file=f)
+                info.append(f"iteration {_iters[idx]}")
+            print(f"    other_info: {' / '.join(info)}", file=f)
 
             if is_strong_outlier[idx]:
-                print(
-                    " - WARNING    : This structure is marked as a strong outlier.",
-                    file=f,
-                )
+                print("    outlier_flag: strong", file=f)
             elif is_weak_outlier[idx]:
-                print(
-                    " - NOTE       : This structure is marked as a weak outlier.",
-                    file=f,
-                )
+                print("    outlier_flag: weak", file=f)
 
             _res = {}
             _res["poscar"] = _str.input_poscar
@@ -304,9 +297,9 @@ class RSSResultAnalyzer:
 
         time_start = time()
 
-        with open("rss_result/finish.log") as f:
+        with open("rss_result/finish.dat") as f:
             finished_set = [line.strip() for line in f]
-        with open("rss_result/success.log") as f:
+        with open("rss_result/success.dat") as f:
             sucessed_set = [line.strip() for line in f]
         if not args.num_str == -1:
             sucessed_set = sucessed_set[: args.num_str]
@@ -348,47 +341,41 @@ class RSSResultAnalyzer:
         prop_success = round(success_count / finish_count, 2)
 
         # Write results to log file
-        file_name = "rss_result/rss_results.log"
+        file_name = "rss_result/rss_results.yaml"
         with open(file_name, "w") as f:
-            print("---- General informantion ----", file=f)
-            print("Sorting time (sec.):            ", round(time_finish, 2), file=f)
-            print(
-                "Selected potential:             ",
-                self.potential,
-                file=f,
-            )
-            print("Pressure (GPa):                 ", self.pressure, file=f)
-            print("Max number of structures in RSS:", max_init_str, file=f)
-            print("Number of initial structures:   ", finish_count, file=f)
-            print("Number of optimized structures: ", success_count, file=f)
-            print("Stopping criterion:             ", stop_mes, file=f)
-            print("Optimized str. / Initial str.:  ", prop_success, file=f)
-            print(
-                "Total computational time (sec.):",
-                int(self.time_all),
-                file=f,
-            )
+            print("general_information:", file=f)
+            print(f"  sorting_time_sec:         {round(time_finish, 2)}", file=f)
+            print(f"  selected_potential:       {self.potential}", file=f)
+            print(f"  pressure_GPa:             {self.pressure}", file=f)
+            print(f"  max_rss_structures:       {max_init_str}", file=f)
+            print(f"  num_initial_structures:   {finish_count}", file=f)
+            print(f"  num_optimized_structures: {success_count}", file=f)
+            print(f"  stopping_criterion:       {stop_mes}", file=f)
+            print(f"  optimized_per_initial:    {prop_success}", file=f)
+            print(f"  total_rss_time_sec:       {int(self.time_all)}", file=f)
             print("", file=f)
-            print("---- Total evaluation counts ----", file=f)
-            print("Iteration:           ", self.iter_str[-1], file=f)
-            print("Function evaluations:", self.fval_str[-1], file=f)
-            print("Gradient evaluations:", self.gval_str[-1], file=f)
+
+            print("evaluation_counts:", file=f)
+            print(f"  iteration:            {self.iter_str[-1]}", file=f)
+            print(f"  function_evaluations: {self.fval_str[-1]}", file=f)
+            print(f"  gradient_evaluations: {self.gval_str[-1]}", file=f)
             print("", file=f)
-            print("---- Error counts ----", file=f)
-            print("Total error counts:", error_count, file=f)
-            print(" - Low energy:        ", self.errors["energy_low"], file=f)
-            print(" - Zero energy:       ", self.errors["energy_zero"], file=f)
-            print(" - Anomalous struct.: ", self.errors["anom_struct"], file=f)
-            print(" - Force convergence: ", self.errors["f_conv"], file=f)
-            print(" - Stress convergence:", self.errors["s_conv"], file=f)
-            print(" - Max iteration:     ", self.errors["iteration"], file=f)
-            print(" - Other reason:      ", self.errors["else_err"], file=f)
+
+            print("error_counts:", file=f)
+            print(f"  total:            {error_count}", file=f)
+            print(f"  low_energy:       {self.errors['energy_low']}", file=f)
+            print(f"  zero_energy:      {self.errors['energy_zero']}", file=f)
+            print(f"  anomalous_struct: {self.errors['anom_struct']}", file=f)
+            print(f"  force_conv:       {self.errors['f_conv']}", file=f)
+            print(f"  stress_conv:      {self.errors['s_conv']}", file=f)
+            print(f"  max_iteration:    {self.errors['iteration']}", file=f)
+            print(f"  other_reason:     {self.errors['else_err']}", file=f)
             print("", file=f)
-            print("---- Number of invalid layer structures ----", file=f)
-            print("Total counts:", self.errors["invalid_layer_struct"], file=f)
+
+            print("invalid_layer_structures:", file=f)
+            print(f"  invalid_struct: {self.errors['invalid_layer_struct']}", file=f)
             print(
-                "Number of valid structures:",
-                success_count - self.errors["invalid_layer_struct"],
+                f"  valid_struct:   {success_count - self.errors['invalid_layer_struct']}",
                 file=f,
             )
             print("", file=f)
@@ -402,22 +389,26 @@ class RSSResultAnalyzer:
 
         with open(file_name, "a") as f:
             print("", file=f)
-            print("---- Evaluation count per structure ----", file=f)
-            print("Iteration (list):           ", self.iter_str, file=f)
-            print("Function evaluations (list):", self.fval_str, file=f)
-            print("Gradient evaluations (list):", self.gval_str, file=f)
+            print("evaluation_count_per_structure:", file=f)
+            print(f"  iteration_list:            {self.iter_str}", file=f)
+            print(f"  function_evaluations_list: {self.fval_str}", file=f)
+            print(f"  gradient_evaluations_list: {self.gval_str}", file=f)
             print("", file=f)
-            print("---- POSCAR name (failed) ----", file=f)
-            print("Low energy:        ", self.error_poscar["energy_low"], file=f)
-            print("Zero energy:       ", self.error_poscar["energy_zero"], file=f)
-            print("Anomalous struct.: ", self.error_poscar["anom_struct"], file=f)
-            print("Force convergence: ", self.error_poscar["not_converged_f"], file=f)
-            print("Stress convergence:", self.error_poscar["not_converged_s"], file=f)
-            print("Max iteration:     ", self.error_poscar["iteration"], file=f)
-            print("Other reason:      ", self.error_poscar["else_err"], file=f)
-            print("---- POSCAR name (invalid layer structure) ----", file=f)
+
+            print("poscar_names_failed:", file=f)
+            print(f"  low_energy:       {self.error_poscar['energy_low']}", file=f)
+            print(f"  zero_energy:      {self.error_poscar['energy_zero']}", file=f)
+            print(f"  anomalous_struct: {self.error_poscar['anom_struct']}", file=f)
+            print(f"  force_conv:       {self.error_poscar['not_converged_f']}", file=f)
+            print(f"  stress_conv:      {self.error_poscar['not_converged_s']}", file=f)
+            print(f"  max_iteration:    {self.error_poscar['iteration']}", file=f)
+            print(f"  other_reason:     {self.error_poscar['else_err']}", file=f)
+            print("", file=f)
+
+            print("poscar_invalid_layer_structures:", file=f)
             print(
-                "Layer structure:   ", self.error_poscar["invalid_layer_struct"], file=f
+                f"  layer_structure: {self.error_poscar['invalid_layer_struct']}",
+                file=f,
             )
 
 

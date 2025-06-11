@@ -1,9 +1,9 @@
 import argparse
 import ast
+import glob
 import json
 import os
 import shutil
-import glob
 
 import numpy as np
 
@@ -103,7 +103,7 @@ def run():
                 _res.pop("structure", None)
                 _res["outlier_poscar"] = f"POSCAR_{logname}_No{res['struct_no']}"
                 outliers_all.append(_res)
-    with open("outlier/outlier_candidates.log", "w") as f:
+    with open("outlier/outlier_candidates.dat", "w") as f:
         for res in outliers_all:
             print(res, file=f)
 
@@ -121,7 +121,7 @@ def run_compare_dft():
 
     # Load outlier candidates
     outliers_all = []
-    with open("outlier/outlier_candidates.log") as f:
+    with open("outlier/outlier_candidates.dat") as f:
         for line in f:
             outliers_all.append(ast.literal_eval(line.strip()))
 
@@ -172,7 +172,7 @@ def run_compare_dft():
         )
 
     # Write results
-    with open("outlier/outlier_detection.log", "w") as f:
+    with open("outlier/outlier_detection.yaml", "w") as f:
         for diff in diff_all:
             poscar = diff["res"]["outlier_poscar"]
             delta = diff["diff"]
@@ -190,6 +190,27 @@ def run_compare_dft():
                 print(f" - Energy difference (MLP - DFT): {delta}", file=f)
                 print(" - Assessment: Marked as outlier", file=f)
                 print(f" - Details: {diff}\n", file=f)
+
+    with open("outlier/outlier_detection.yaml", "w") as f:
+        print("outliers:", file=f)
+        for diff in diff_all:
+            poscar = diff["res"]["outlier_poscar"]
+            delta = diff["diff"]
+
+            print(f"  - structure: {poscar}", file=f)
+            if delta is not None:
+                print(f"    energy_diff_meV_per_atom: {delta*1000:.3f}", file=f)
+                assessment = "Marked as outlier" if delta < -0.1 else "Not an outlier"
+                print(f"    assessment: {assessment}", file=f)
+            else:
+                print("    energy_diff_meV_per_atom: null", file=f)
+                print("    assessment: Marked as outlier", file=f)
+
+            print("    details:", file=f)
+            for key, val in diff.items():
+                if key == "res":
+                    continue
+                print(f"      {key}: {val}", file=f)
 
 
 if __name__ == "__main__":

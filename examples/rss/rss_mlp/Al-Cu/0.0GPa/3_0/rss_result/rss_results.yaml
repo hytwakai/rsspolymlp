@@ -1,0 +1,288 @@
+general_information:
+  sorting_time_sec:         8.7
+  selected_potential:       ['../../../../potential/AlCu_polymlp.lammps']
+  pressure_GPa:             0.0
+  max_rss_structures:       300
+  num_initial_structures:   237
+  num_optimized_structures: 201
+  stopping_criterion:       Target number of optimized structures reached.
+  optimized_per_initial:    0.85
+  total_rss_time_sec:       755
+
+evaluation_counts:
+  iteration:            105260
+  function_evaluations: 192169
+  gradient_evaluations: 192101
+
+error_counts:
+  total:            36
+  low_energy:       36
+  zero_energy:      0
+  anomalous_struct: 0
+  force_conv:       0
+  stress_conv:      0
+  max_iteration:    0
+  other_reason:     0
+
+invalid_layer_structures:
+  invalid_struct: 25
+  valid_struct:   176
+
+unique_structures:
+  - struct_No: 1
+    poscar_name: POSCAR_5
+    energy_diff_meV_per_atom: 0.0
+    duplicates: 123
+    enthalpy: -3.4278065007891083
+    axis: [4.037517628805762, 4.037517628805762, 4.037517628805762, 90.0, 90.0, 90.0]
+    positions: [[0.0, 0.0, 0.0], [0.0, 0.5, 0.5], [0.5, 0.0, 0.5], [0.5, 0.5, 0.0]]
+    elements: ['Al', 'Al', 'Al', 'Al']
+    space_group: ['Fm-3m (225)', 'Fm-3m (225)', 'Fm-3m (225)', 'Fm-3m (225)']
+    other_info: 4 atom / distance 2.855 (Ang.) / volume 16.45 (A^3/atom) / iteration 758
+  - struct_No: 2
+    poscar_name: POSCAR_1
+    energy_diff_meV_per_atom: 20.57
+    duplicates: 6
+    enthalpy: -3.4072320869943873
+    axis: [2.844875761546082, 2.844875761546082, 21.30687480065413, 90.0, 90.0, 120.00000000000001]
+    positions: [[0.333333333333333, 0.666666666666667, 0.166666666666667], [0.0, 0.0, 0.277362365227194], [0.666666666666667, 0.333333333333333, 0.055970968106139], [-0.0, -0.0, 0.5], [0.666666666666667, 0.333333333333333, 0.610695698560528], [0.333333333333333, 0.666666666666667, 0.389304301439472], [0.666666666666667, 0.333333333333333, 0.833333333333333], [0.333333333333333, 0.666666666666667, 0.944029031893861], [0.0, 0.0, 0.722637634772806]]
+    elements: ['Al', 'Al', 'Al', 'Al', 'Al', 'Al', 'Al', 'Al', 'Al']
+    space_group: ['R-3m (166)', 'R-3m (166)', 'R-3m (166)', 'R-3m (166)']
+    other_info: 9 atom / distance 2.874 (Ang.) / volume 16.59 (A^3/atom) / iteration 447
+  - struct_No: 3
+    poscar_name: POSCAR_44
+    energy_diff_meV_per_atom: 72.65
+    duplicates: 8
+    enthalpy: -3.355152172336694
+    axis: [2.824092073140934, 4.833933175393788, 7.644905508377881, 90.0, 90.0, 90.0]
+    positions: [[0.0, 0.5, 0.684740158105648], [0.5, 0.5, 0.0], [0.0, 0.5, 0.315259841894352], [0.5, 0.0, 0.184740158105648], [0.0, 0.0, 0.5], [0.5, 0.0, 0.815259841894352]]
+    elements: ['Al', 'Al', 'Al', 'Al', 'Al', 'Al']
+    space_group: ['Immm (71)', 'Immm (71)', 'Immm (71)', 'Immm (71)']
+    other_info: 6 atom / distance 2.793 (Ang.) / volume 17.39 (A^3/atom) / iteration 18107
+  - struct_No: 4
+    poscar_name: POSCAR_175
+    energy_diff_meV_per_atom: 178.0
+    duplicates: 1
+    enthalpy: -3.249803125609286
+    axis: [6.171033035084615, 6.171033035084615, 6.171033035084615, 90.0, 90.0, 90.0]
+    positions: [[0.25, 0.25, 0.75], [0.0, 0.0, 0.0], [0.25, 0.75, 0.75], [0.25, 0.75, 0.25], [0.0, 0.5, 0.5], [0.25, 0.25, 0.25], [0.75, 0.25, 0.25], [0.5, 0.0, 0.5], [0.75, 0.75, 0.25], [0.75, 0.75, 0.75], [0.5, 0.5, 0.0], [0.75, 0.25, 0.75]]
+    elements: ['Al', 'Al', 'Al', 'Al', 'Al', 'Al', 'Al', 'Al', 'Al', 'Al', 'Al', 'Al']
+    space_group: ['Fm-3m (225)', 'Fm-3m (225)', 'Fm-3m (225)', 'Fm-3m (225)']
+    other_info: 12 atom / distance 2.672 (Ang.) / volume 19.58 (A^3/atom) / iteration 80087
+  - struct_No: 5
+    poscar_name: POSCAR_154
+    energy_diff_meV_per_atom: 258.76
+    duplicates: 1
+    enthalpy: -3.1690465006633013
+    axis: [2.812039274626024, 2.8120392820516407, 12.755234961652773, 87.92344087746504, 86.10682733338805, 60.000001217475415]
+    positions: [[0.0, 0.0, 0.5], [0.389866486570577, 0.33593028097785, 0.312219094278834], [0.610133513429423, 0.66406971902215, 0.687780905721166]]
+    elements: ['Al', 'Al', 'Al']
+    space_group: ['P-1 (2)', 'P-1 (2)', 'P-1 (2)', 'P-1 (2)']
+    other_info: 3 atom / distance 2.889 (Ang.) / volume 29.05 (A^3/atom) / iteration 71190
+  - struct_No: 6
+    poscar_name: POSCAR_129
+    energy_diff_meV_per_atom: 258.76
+    duplicates: 1
+    enthalpy: -3.1690465006560884
+    axis: [2.812039460703208, 2.812039462148499, 12.621761291095362, 89.76924662125568, 89.88787357698446, 60.00000141987562]
+    positions: [[0.0, 0.0, 0.0], [0.666731003487662, 0.663212221126573, 0.189329596136752], [0.333268996512338, 0.336787778873427, 0.810670403863248]]
+    elements: ['Al', 'Al', 'Al']
+    space_group: ['P-1 (2)', 'P-1 (2)', 'P-1 (2)', 'P-1 (2)']
+    other_info: 3 atom / distance 2.889 (Ang.) / volume 28.81 (A^3/atom) / iteration 57928
+  - struct_No: 7
+    poscar_name: POSCAR_137
+    energy_diff_meV_per_atom: 266.22
+    duplicates: 1
+    enthalpy: -3.161582453633058
+    axis: [2.814882793316493, 2.814882802048587, 12.752085343572217, 88.9200716849365, 85.7752554123121, 60.00000182338926]
+    positions: [[0.004880441525838, 0.778733367388259, 0.834353041318354], [0.265359887650669, 0.13246417514619, 0.022090736983492], [0.859172869894136, 0.819528307700275, 0.209828433234867]]
+    elements: ['Al', 'Al', 'Al']
+    space_group: ['P1 (1)', 'P1 (1)', 'P1 (1)', 'P1 (1)']
+    other_info: 3 atom / distance 2.888 (Ang.) / volume 29.08 (A^3/atom) / iteration 59023
+  - struct_No: 8
+    poscar_name: POSCAR_60
+    energy_diff_meV_per_atom: 266.22
+    duplicates: 1
+    enthalpy: -3.161582453633051
+    axis: [2.814882797652828, 2.814882805945011, 12.735134820742019, 90.23118857589175, 94.90125403093182, 119.99999971379542]
+    positions: [[0.871932224873506, 0.727770271843853, 0.925459012649014], [0.439205851963375, 0.007967596462658, 0.737058237311334], [0.673146148837488, 0.621498234496375, 0.548657461743545]]
+    elements: ['Al', 'Al', 'Al']
+    space_group: ['P1 (1)', 'P1 (1)', 'P1 (1)', 'P1 (1)']
+    other_info: 3 atom / distance 2.888 (Ang.) / volume 28.98 (A^3/atom) / iteration 29495
+  - struct_No: 9
+    poscar_name: POSCAR_209
+    energy_diff_meV_per_atom: 377.57
+    duplicates: 1
+    enthalpy: -3.0502355106449492
+    axis: [2.798082564900134, 2.7980827044178285, 12.256673000529569, 90.70848767615514, 91.36770130307602, 90.0000031806104]
+    positions: [[0.981829800886147, 0.990586938728148, 0.82621186589856], [0.5, 0.5, 0.0], [0.018170199113853, 0.009413061271852, 0.17378813410144]]
+    elements: ['Al', 'Al', 'Al']
+    space_group: ['P-1 (2)', 'P-1 (2)', 'P-1 (2)', 'P-1 (2)']
+    other_info: 3 atom / distance 2.907 (Ang.) / volume 31.98 (A^3/atom) / iteration 93889
+  - struct_No: 10
+    poscar_name: POSCAR_234
+    energy_diff_meV_per_atom: 377.57
+    duplicates: 1
+    enthalpy: -3.050235510644946
+    axis: [2.798082539219702, 2.798082720988323, 12.25213886456044, 92.0444655935104, 91.55661327074917, 90.00000208655]
+    positions: [[0.520692667329668, 0.527175502412222, 0.673964599727757], [0.0, 0.0, 0.5], [0.479307332670332, 0.472824497587778, 0.326035400272243]]
+    elements: ['Al', 'Al', 'Al']
+    space_group: ['P-1 (2)', 'P-1 (2)', 'P-1 (2)', 'P-1 (2)']
+    other_info: 3 atom / distance 2.907 (Ang.) / volume 31.94 (A^3/atom) / iteration 104375
+  - struct_No: 11
+    poscar_name: POSCAR_55
+    energy_diff_meV_per_atom: 377.57
+    duplicates: 1
+    enthalpy: -3.0502355106449257
+    axis: [2.798082572831855, 2.7980826910463352, 12.256329226625935, 88.93585155582468, 88.93265829002377, 89.9999990494571]
+    positions: [[0.014180074313761, 0.514137787309295, 0.826209662018221], [0.5, 0.0, 0.0], [0.985819925686239, 0.485862212690705, 0.173790337981779]]
+    elements: ['Al', 'Al', 'Al']
+    space_group: ['P-1 (2)', 'P-1 (2)', 'C2/m (12)', 'C2/m (12)']
+    other_info: 3 atom / distance 2.907 (Ang.) / volume 31.97 (A^3/atom) / iteration 25149
+  - struct_No: 12
+    poscar_name: POSCAR_46
+    energy_diff_meV_per_atom: 377.57
+    duplicates: 1
+    enthalpy: -3.0502355106449044
+    axis: [2.798082468196541, 2.7980828920977774, 12.250730659011747, 88.81623478317246, 87.23365062140326, 89.99999551535693]
+    positions: [[0.963221804757015, 0.984257033174218, 0.674049614374875], [0.5, 0.5, 0.5], [0.036778195242985, 0.015742966825782, 0.325950385625125]]
+    elements: ['Al', 'Al', 'Al']
+    space_group: ['P-1 (2)', 'P-1 (2)', 'P-1 (2)', 'P-1 (2)']
+    other_info: 3 atom / distance 2.907 (Ang.) / volume 31.93 (A^3/atom) / iteration 20701
+  - struct_No: 13
+    poscar_name: POSCAR_61
+    energy_diff_meV_per_atom: 377.57
+    duplicates: 1
+    enthalpy: -3.0502355106364685
+    axis: [2.798082821347058, 2.798082961237761, 12.255065345848612, 88.41941063501434, 89.00366306975037, 89.99999487441393]
+    positions: [[0.513239405159716, 0.021001434449915, 0.826159495229644], [0.486760594840284, 0.978998565550085, 0.173840504770356], [0.0, 0.5, 0.0]]
+    elements: ['Al', 'Al', 'Al']
+    space_group: ['P-1 (2)', 'P-1 (2)', 'P-1 (2)', 'P-1 (2)']
+    other_info: 3 atom / distance 2.907 (Ang.) / volume 31.97 (A^3/atom) / iteration 31249
+  - struct_No: 14
+    poscar_name: POSCAR_153
+    energy_diff_meV_per_atom: 377.57
+    duplicates: 1
+    enthalpy: -3.0502355106361367
+    axis: [2.798082652489088, 2.798082891323665, 12.2346509712333, 93.53211644881347, 93.39848701695816, 90.00000839924597]
+    positions: [[0.545276962173293, 0.047055028362233, 0.174677579050161], [0.454723037826707, 0.952944971637767, 0.825322420949839], [0.0, 0.5, 0.0]]
+    elements: ['Al', 'Al', 'Al']
+    space_group: ['P-1 (2)', 'P-1 (2)', 'P-1 (2)', 'P-1 (2)']
+    other_info: 3 atom / distance 2.907 (Ang.) / volume 31.81 (A^3/atom) / iteration 70432
+  - struct_No: 15
+    poscar_name: POSCAR_166
+    energy_diff_meV_per_atom: 377.57
+    duplicates: 1
+    enthalpy: -3.0502355106356283
+    axis: [2.798082807882262, 2.798082830483453, 12.25803982936545, 89.35005785954232, 89.72863462179828, 89.99996516504049]
+    positions: [[0.0, 0.5, 0.5], [0.496395537469722, 0.991367153789894, 0.673719039755631], [0.503604462530278, 0.008632846210106, 0.326280960244369]]
+    elements: ['Al', 'Al', 'Al']
+    space_group: ['P-1 (2)', 'P-1 (2)', 'P-1 (2)', 'P-1 (2)']
+    other_info: 3 atom / distance 2.907 (Ang.) / volume 31.99 (A^3/atom) / iteration 76401
+  - struct_No: 16
+    poscar_name: POSCAR_42
+    energy_diff_meV_per_atom: 467.88
+    duplicates: 19
+    enthalpy: -2.959924145272648
+    axis: [2.721217172350287, 4.013997150783237, 9.119348881797736, 90.0, 90.00009163186786, 90.0]
+    positions: [[0.5, 0.0, 0.0], [8.5225691e-07, 0.5, 0.16323970485853], [0.99999914774309, 0.5, 0.83676029514147]]
+    elements: ['Al', 'Al', 'Al']
+    space_group: ['P2/m (10)', 'Pmmm (47)', 'Pmmm (47)', 'Pmmm (47)']
+    other_info: 3 atom / distance 2.845 (Ang.) / volume 33.2 (A^3/atom) / iteration 930
+  - struct_No: 17
+    poscar_name: POSCAR_3
+    energy_diff_meV_per_atom: 472.13
+    duplicates: 1
+    enthalpy: -2.955675702347843
+    axis: [2.711252449507353, 3.922926019635896, 11.024342115711024, 95.83209248342708, 92.69885434188278, 90.00007873545846]
+    positions: [[0.973220192090149, 0.460058678468858, 0.860129036286367], [0.026779807909851, 0.539941321531142, 0.139870963713633], [0.5, 0.0, 0.0]]
+    elements: ['Al', 'Al', 'Al']
+    space_group: ['P-1 (2)', 'P-1 (2)', 'P-1 (2)', 'P-1 (2)']
+    other_info: 3 atom / distance 2.834 (Ang.) / volume 38.84 (A^3/atom) / iteration 4229
+  - struct_No: 18
+    poscar_name: POSCAR_147
+    energy_diff_meV_per_atom: 472.13
+    duplicates: 1
+    enthalpy: -2.9556756981151224
+    axis: [2.711252031807455, 3.9229302764048772, 11.092703850098497, 97.93893856545986, 94.03925188496395, 90.00003584975235]
+    positions: [[0.040296863929651, 0.054608617910683, 0.139825023141405], [0.959703136070349, 0.945391382089317, 0.860174976858595], [0.5, 0.5, 0.0]]
+    elements: ['Al', 'Al', 'Al']
+    space_group: ['P-1 (2)', 'P-1 (2)', 'P-1 (2)', 'P-1 (2)']
+    other_info: 3 atom / distance 2.834 (Ang.) / volume 38.85 (A^3/atom) / iteration 64167
+  - struct_No: 19
+    poscar_name: POSCAR_203
+    energy_diff_meV_per_atom: 472.13
+    duplicates: 1
+    enthalpy: -2.955675698106461
+    axis: [2.711252128312131, 3.922929003426715, 10.988268342064783, 80.69364437780217, 84.41708747643018, 89.99998497928462]
+    positions: [[0.055987944815266, 0.064320433544818, 0.858001239146787], [0.944012055184734, 0.935679566455182, 0.141998760853213], [0.5, 0.5, 0.0]]
+    elements: ['Al', 'Al', 'Al']
+    space_group: ['P-1 (2)', 'P-1 (2)', 'P-1 (2)', 'P-1 (2)']
+    other_info: 3 atom / distance 2.834 (Ang.) / volume 38.26 (A^3/atom) / iteration 90252
+  - struct_No: 20
+    poscar_name: POSCAR_133
+    energy_diff_meV_per_atom: 472.13
+    duplicates: 1
+    enthalpy: -2.9556756973409932
+    axis: [2.711252306155309, 3.922927894520794, 10.991707997431526, 80.8715995538237, 84.99357208510928, 89.99999997592043]
+    positions: [[0.5, 0.0, 0.0], [0.949850939805229, 0.436991262817314, 0.141746423579482], [0.050149060194771, 0.563008737182686, 0.858253576420518]]
+    elements: ['Al', 'Al', 'Al']
+    space_group: ['P-1 (2)', 'P-1 (2)', 'P-1 (2)', 'P-1 (2)']
+    other_info: 3 atom / distance 2.834 (Ang.) / volume 38.33 (A^3/atom) / iteration 63227
+  - struct_No: 21
+    poscar_name: POSCAR_188
+    energy_diff_meV_per_atom: 472.13
+    duplicates: 1
+    enthalpy: -2.955675697090356
+    axis: [2.711251779760445, 3.92293370435075, 10.999741856139643, 80.27179367740376, 89.29641748780847, 89.99983179373056]
+    positions: [[0.5, 0.0, 0.5], [0.007041284304755, 0.566968889213761, 0.358655310520609], [0.992958715695245, 0.433031110786239, 0.641344689479391]]
+    elements: ['Al', 'Al', 'Al']
+    space_group: ['P-1 (2)', 'P-1 (2)', 'P-1 (2)', 'P-1 (2)']
+    other_info: 3 atom / distance 2.834 (Ang.) / volume 38.43 (A^3/atom) / iteration 87127
+  - struct_No: 22
+    poscar_name: POSCAR_148
+    energy_diff_meV_per_atom: 472.13
+    duplicates: 1
+    enthalpy: -2.9556756946757736
+    axis: [2.711254326979698, 3.9229252848730742, 10.993676128665257, 82.12392102186968, 83.9299757280855, 89.99986622042033]
+    positions: [[0.560677517363354, 0.554343972353492, 0.858485485364196], [0.439322482636646, 0.445656027646508, 0.141514514635804], [0.0, 0.0, 0.0]]
+    elements: ['Al', 'Al', 'Al']
+    space_group: ['P-1 (2)', 'P-1 (2)', 'P-1 (2)', 'P-1 (2)']
+    other_info: 3 atom / distance 2.834 (Ang.) / volume 38.39 (A^3/atom) / iteration 69258
+  - struct_No: 23
+    poscar_name: POSCAR_79
+    energy_diff_meV_per_atom: 831.52
+    duplicates: 1
+    enthalpy: -2.596283958646826
+    axis: [4.41346177112302, 4.4134617872191635, 9.236512664216637, 99.27846119585685, 91.18862539917527, 119.99998557575059]
+    positions: [[0.686844140754015, 0.8674942219373, 0.07133984540692], [0.0, 0.5, 0.0], [0.313155859245985, 0.1325057780627, 0.92866015459308]]
+    elements: ['Al', 'Al', 'Al']
+    space_group: ['P-1 (2)', 'P-1 (2)', 'P-1 (2)', 'P-1 (2)']
+    other_info: 3 atom / distance 2.629 (Ang.) / volume 50.9 (A^3/atom) / iteration 36620
+  - struct_No: 24
+    poscar_name: POSCAR_165
+    energy_diff_meV_per_atom: 1215.1
+    duplicates: 1
+    enthalpy: -2.2127029913591154
+    axis: [2.561134024691289, 10.487349846410755, 10.782966247326442, 96.84292822016116, 90.10413527483483, 96.19191236470694]
+    positions: [[0.917073232064947, 0.832770700565048, 0.947238458421135], [0.310034294261576, 0.591321892367503, 0.89519461342434], [0.804759111941066, 0.583427250002537, 0.661389805729977]]
+    elements: ['Al', 'Al', 'Al']
+    space_group: ['P1 (1)', 'P1 (1)', 'P1 (1)', 'P1 (1)']
+    other_info: 3 atom / distance 2.82 (Ang.) / volume 95.28 (A^3/atom) / iteration 75331
+
+evaluation_count_per_structure:
+  iteration_list:            [447, 758, 4229, 10140, 18107, 20701, 25149, 29495, 31249, 36620, 57928, 59023, 63227, 64167, 69258, 70432, 71190, 75331, 76401, 80087, 87127, 90252, 93889, 104375, 105260]
+  function_evaluations_list: [848, 1429, 7765, 18646, 32923, 37614, 45665, 53479, 56681, 66834, 105638, 107693, 115299, 116995, 126237, 128394, 129804, 137210, 139254, 146057, 158978, 164733, 171229, 190552, 192169]
+  gradient_evaluations_list: [836, 1417, 7753, 18634, 32907, 37598, 45649, 53458, 56655, 66798, 105601, 107656, 115262, 116958, 126198, 128355, 129765, 137171, 139215, 146018, 158929, 164684, 171180, 190484, 192101]
+
+poscar_names_failed:
+  low_energy:       ['POSCAR_2', 'POSCAR_9', 'POSCAR_10', 'POSCAR_12', 'POSCAR_14', 'POSCAR_25', 'POSCAR_36', 'POSCAR_48', 'POSCAR_49', 'POSCAR_64', 'POSCAR_82', 'POSCAR_87', 'POSCAR_88', 'POSCAR_92', 'POSCAR_99', 'POSCAR_106', 'POSCAR_117', 'POSCAR_121', 'POSCAR_132', 'POSCAR_135', 'POSCAR_158', 'POSCAR_160', 'POSCAR_162', 'POSCAR_163', 'POSCAR_172', 'POSCAR_180', 'POSCAR_181', 'POSCAR_184', 'POSCAR_189', 'POSCAR_191', 'POSCAR_198', 'POSCAR_196', 'POSCAR_201', 'POSCAR_225', 'POSCAR_229', 'POSCAR_238']
+  zero_energy:      []
+  anomalous_struct: []
+  force_conv:       []
+  stress_conv:      []
+  max_iteration:    []
+  other_reason:     []
+
+poscar_invalid_layer_structures:
+  layer_structure: ['POSCAR_16', 'POSCAR_31', 'POSCAR_39', 'POSCAR_47', 'POSCAR_50', 'POSCAR_68', 'POSCAR_102', 'POSCAR_108', 'POSCAR_110', 'POSCAR_125', 'POSCAR_130', 'POSCAR_139', 'POSCAR_140', 'POSCAR_141', 'POSCAR_142', 'POSCAR_144', 'POSCAR_155', 'POSCAR_187', 'POSCAR_194', 'POSCAR_197', 'POSCAR_205', 'POSCAR_223', 'POSCAR_224', 'POSCAR_228', 'POSCAR_237']

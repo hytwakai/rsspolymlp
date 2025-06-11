@@ -1,0 +1,68 @@
+general_information:
+  sorting_time_sec:         7.05
+  selected_potential:       ['../../../../potential/AlCu_polymlp.lammps']
+  pressure_GPa:             0.0
+  max_rss_structures:       300
+  num_initial_structures:   256
+  num_optimized_structures: 201
+  stopping_criterion:       Target number of optimized structures reached.
+  optimized_per_initial:    0.79
+  total_rss_time_sec:       404
+
+evaluation_counts:
+  iteration:            46393
+  function_evaluations: 88497
+  gradient_evaluations: 88419
+
+error_counts:
+  total:            55
+  low_energy:       53
+  zero_energy:      2
+  anomalous_struct: 0
+  force_conv:       0
+  stress_conv:      0
+  max_iteration:    0
+  other_reason:     0
+
+invalid_layer_structures:
+  invalid_struct: 0
+  valid_struct:   201
+
+unique_structures:
+  - struct_No: 1
+    poscar_name: POSCAR_3
+    energy_diff_meV_per_atom: 0.0
+    duplicates: 94
+    enthalpy: -3.4278065007891083
+    axis: [4.037517759857575, 4.037517759857575, 4.037517759857575, 90.0, 90.0, 90.0]
+    positions: [[0.0, 0.0, 0.0], [0.0, 0.5, 0.5], [0.5, 0.0, 0.5], [0.5, 0.5, 0.0]]
+    elements: ['Al', 'Al', 'Al', 'Al']
+    space_group: ['Fm-3m (225)', 'Fm-3m (225)', 'Fm-3m (225)', 'Fm-3m (225)']
+    other_info: 4 atom / distance 2.855 (Ang.) / volume 16.45 (A^3/atom) / iteration 639
+  - struct_No: 2
+    poscar_name: POSCAR_2
+    energy_diff_meV_per_atom: 682.71
+    duplicates: 107
+    enthalpy: -2.7450977177999487
+    axis: [2.764561709127431, 2.7645617091274306, 16.063879459317306, 90.0, 90.0, 119.99999999999999]
+    positions: [[0.0, 0.0, 0.0], [0.666666666666667, 0.333333333333333, 0.333333333333333], [0.333333333333333, 0.666666666666667, 0.666666666666667]]
+    elements: ['Al', 'Al', 'Al']
+    space_group: ['R-3m (166)', 'R-3m (166)', 'R-3m (166)', 'R-3m (166)']
+    other_info: 3 atom / distance 5.587 (Ang.) / volume 35.44 (A^3/atom) / iteration 218
+
+evaluation_count_per_structure:
+  iteration_list:            [218, 639, 46393]
+  function_evaluations_list: [385, 1169, 88497]
+  gradient_evaluations_list: [385, 1169, 88419]
+
+poscar_names_failed:
+  low_energy:       ['POSCAR_14', 'POSCAR_17', 'POSCAR_26', 'POSCAR_29', 'POSCAR_31', 'POSCAR_36', 'POSCAR_40', 'POSCAR_47', 'POSCAR_54', 'POSCAR_59', 'POSCAR_60', 'POSCAR_70', 'POSCAR_74', 'POSCAR_75', 'POSCAR_81', 'POSCAR_82', 'POSCAR_90', 'POSCAR_95', 'POSCAR_99', 'POSCAR_105', 'POSCAR_106', 'POSCAR_114', 'POSCAR_115', 'POSCAR_118', 'POSCAR_126', 'POSCAR_130', 'POSCAR_132', 'POSCAR_138', 'POSCAR_141', 'POSCAR_142', 'POSCAR_148', 'POSCAR_152', 'POSCAR_153', 'POSCAR_160', 'POSCAR_169', 'POSCAR_176', 'POSCAR_178', 'POSCAR_182', 'POSCAR_197', 'POSCAR_198', 'POSCAR_202', 'POSCAR_216', 'POSCAR_218', 'POSCAR_219', 'POSCAR_220', 'POSCAR_223', 'POSCAR_224', 'POSCAR_229', 'POSCAR_231', 'POSCAR_242', 'POSCAR_244', 'POSCAR_250', 'POSCAR_251']
+  zero_energy:      ['POSCAR_164', 'POSCAR_211']
+  anomalous_struct: []
+  force_conv:       []
+  stress_conv:      []
+  max_iteration:    []
+  other_reason:     []
+
+poscar_invalid_layer_structures:
+  layer_structure: []
