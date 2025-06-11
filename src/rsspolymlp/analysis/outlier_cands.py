@@ -68,14 +68,33 @@ def detect_outlier(energies: np.array):
 def run():
     parser = argparse.ArgumentParser()
     parser.add_argument(
+        "--compare_dft",
+        action="store_true",
+        help="If set, runs detect_true_outlier() to compare with DFT;"
+        " otherwise, runs outlier_candidates().",
+    )
+    parser.add_argument(
         "--result_paths",
         nargs="*",
         type=str,
-        required=True,
+        default=None,
         help="Path(s) to RSS result log file(s).",
+    )
+    parser.add_argument(
+        "--dft_path",
+        type=str,
+        default=None,
+        help="Path to the directory containing DFT results for outlier structures.",
     )
     args = parser.parse_args()
 
+    if not args.compare_dft:
+        outlier_candidates(args.result_paths)
+    else:
+        detect_actual_outlier(args.dft_path)
+
+
+def outlier_candidates(result_paths):
     # Prepare output directory: remove existing files if already exists
     os.makedirs("outlier/outlier_candidates", exist_ok=True)
     out_dir = "outlier/outlier_candidates"
@@ -87,7 +106,7 @@ def run():
 
     # Copy weak outlier POSCARs
     outliers_all = []
-    for res_path in args.result_paths:
+    for res_path in result_paths:
         with open(res_path) as f:
             loaded_dict = json.load(f)
         rss_results = loaded_dict["rss_results"]
@@ -103,22 +122,14 @@ def run():
                 _res.pop("structure", None)
                 _res["outlier_poscar"] = f"POSCAR_{logname}_No{res['struct_no']}"
                 outliers_all.append(_res)
+
     with open("outlier/outlier_candidates.dat", "w") as f:
         for res in outliers_all:
             print(res, file=f)
+    print(f"Detected {len(outliers_all)} potential outliers")
 
 
-def run_compare_dft():
-    parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "--dft_path",
-        type=str,
-        required=True,
-        help="Path to the directory containing DFT results for outlier structures.",
-    )
-    args = parser.parse_args()
-    dft_path = args.dft_path
-
+def detect_actual_outlier(dft_path):
     # Load outlier candidates
     outliers_all = []
     with open("outlier/outlier_candidates.dat") as f:
@@ -141,9 +152,9 @@ def run_compare_dft():
         if not vasprun_get:
             diff_all.append(
                 {
-                    "diff": None,
-                    "dft_value": None,
-                    "mlp_value": None,
+                    "diff": "null",
+                    "dft_value": "null",
+                    "mlp_value": "null",
                     "res": res,
                 }
             )
@@ -172,25 +183,7 @@ def run_compare_dft():
         )
 
     # Write results
-    with open("outlier/outlier_detection.yaml", "w") as f:
-        for diff in diff_all:
-            poscar = diff["res"]["outlier_poscar"]
-            delta = diff["diff"]
-
-            if delta is not None:
-                print(f"Structure: {poscar}", file=f)
-                print(f" - Energy difference (MLP - DFT): {delta:.3f} eV/atom", file=f)
-                if delta < -0.1:
-                    print(" - Assessment: Marked as outlier", file=f)
-                else:
-                    print(" - Assessment: Not an outlier", file=f)
-                print(f" - Details: {diff}\n", file=f)
-            else:
-                print(f"Structure: {poscar}", file=f)
-                print(f" - Energy difference (MLP - DFT): {delta}", file=f)
-                print(" - Assessment: Marked as outlier", file=f)
-                print(f" - Details: {diff}\n", file=f)
-
+    n_true_outlier = 0
     with open("outlier/outlier_detection.yaml", "w") as f:
         print("outliers:", file=f)
         for diff in diff_all:
@@ -200,11 +193,16 @@ def run_compare_dft():
             print(f"  - structure: {poscar}", file=f)
             if delta is not None:
                 print(f"    energy_diff_meV_per_atom: {delta*1000:.3f}", file=f)
-                assessment = "Marked as outlier" if delta < -0.1 else "Not an outlier"
+                if delta < -0.1:
+                    assessment = "Marked as outlier"
+                    n_true_outlier += 1
+                else:
+                    assessment = "Not an outlier"
                 print(f"    assessment: {assessment}", file=f)
             else:
                 print("    energy_diff_meV_per_atom: null", file=f)
                 print("    assessment: Marked as outlier", file=f)
+                n_true_outlier += 1
 
             print("    details:", file=f)
             for key, val in diff.items():
@@ -212,6 +210,4 @@ def run_compare_dft():
                     continue
                 print(f"      {key}: {val}", file=f)
 
-
-if __name__ == "__main__":
-    run()
+    print(f"Detected {n_true_outlier} actual outliers")

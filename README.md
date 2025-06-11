@@ -60,7 +60,7 @@ pip install rsspolymlp
 #### Step 1–3: Execute for each combination of pressure (`p`), composition (`c`), and number of atoms (`n`).
 ```shell
 rss-init-struct --elements Al Cu --atom_counts 4 4 --num_init_str 2000
-rss-parallel --pot polymlp.yaml --num_opt_str 1000
+rss-parallel --pot polymlp.yaml --pressure 0.0 --num_opt_str 1000
 rss-uniq-struct
 ```
 
@@ -68,14 +68,14 @@ rss-uniq-struct
 ```shell
 rss-summarize --elements Al Cu --use_joblib --rss_paths <rss_directory>/*
 rss-outlier --result_paths <summary_dir>/json/*
-plot-binary --elements Al Cu --result_paths <summary_dir>/json/*
+rss-phase-analysis --elements Al Cu --result_paths <summary_dir>/json/* --thresholds 10 30 50
 # <rss_directory>: parent directory of RSS runs at the same pressure
 # <summary_dir>: output directory from rss-summarize, storing RSS results
 ```
 
 ### Workflow
 
-<img src="docs/workflow.png" alt="single_plot" width="75%" />
+<img src="docs/workflow.png" alt="single_plot" width="70%" />
 
 The command-line interface of `rsspolymlp` is organized into 6 steps.
 

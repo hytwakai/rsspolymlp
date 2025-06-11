@@ -70,12 +70,10 @@ class ConvexHullAnalyzer:
 
     def calc_formation_e(self):
         is_not_outliers = []
-        outlier_cand_count = 0
         if self.outlier_file is not None:
             with open(self.outlier_file) as f:
                 outlier_data = yaml.safe_load(f)
             for entry in outlier_data["outliers"]:
-                outlier_cand_count += 1
                 if entry.get("assessment") == "Not an outlier":
                     is_not_outliers.append(str(entry["structure"]))
         is_not_outliers_set = set(is_not_outliers)
@@ -127,13 +125,6 @@ class ConvexHullAnalyzer:
         sort_idx = np.lexsort(comps.T)
         sorted_keys = [list(self.rss_result_fe.keys())[i] for i in sort_idx]
         self.rss_result_fe = {key: self.rss_result_fe[key] for key in sorted_keys}
-
-        if self.outlier_file is not None:
-            print(
-                f"{outlier_cand_count} structures were detected as outlier candidates."
-            )
-            print(f"{outlier_cand_count - n_changed} were confirmed as outliers.")
-            print(f"{n_changed} were reclassified as normal.")
 
         e_ends = []
         keys = np.array(list(self.rss_result_fe))

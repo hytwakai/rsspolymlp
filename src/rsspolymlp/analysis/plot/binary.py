@@ -125,7 +125,3 @@ def convert_json_to_ndarray(data):
         for k, v in data.items()
     }
     return converted
-
-
-if __name__ == "__main__":
-    run()

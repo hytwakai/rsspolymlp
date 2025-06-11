@@ -1,4 +1,3 @@
-import glob
 import os
 import subprocess
 
@@ -24,12 +23,8 @@ for pressure in pressure_set:
         shell=True,
         check=True,
     )
-    print(
-        f"Detect potential {len(glob.glob('./outlier/outlier_candidates/*'))} outliers"
-    )
-    print("- rss-outlier-detect")
     subprocess.run(
-        "rss-outlier-detect --dft_path ./outlier_candidates_dft",
+        "rss-outlier --compare_dft --dft_path ./outlier_candidates_dft",
         shell=True,
         check=True,
     )
