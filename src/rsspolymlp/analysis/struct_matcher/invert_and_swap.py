@@ -4,7 +4,7 @@ from rsspolymlp.analysis.struct_matcher.chiral_spg import get_chiral_spg
 from rsspolymlp.common.property import PropUtil
 
 
-def invert_and_permute_positions(lattice, positions, spg_number, symprec):
+def invert_and_swap_positions(lattice, positions, spg_number, symprec):
     """Return all position arrays reachable by inverting/swapping
     crystallographically equivalent lattice axes."""
     # Axis lengths (a, b, c) and angles (α, β, γ)

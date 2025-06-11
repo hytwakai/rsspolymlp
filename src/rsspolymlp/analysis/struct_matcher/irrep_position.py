@@ -2,8 +2,8 @@ from collections import Counter
 
 import numpy as np
 
-from rsspolymlp.analysis.struct_matcher.invert_and_permute import (
-    invert_and_permute_positions,
+from rsspolymlp.analysis.struct_matcher.invert_and_swap import (
+    invert_and_swap_positions,
 )
 
 
@@ -55,7 +55,7 @@ class IrrepPosition:
         if _positions.shape[0] == 1:
             return np.array([0, 0, 0]), _elements
 
-        self.invert_values, self.swap_values = invert_and_permute_positions(
+        self.invert_values, self.swap_values = invert_and_swap_positions(
             _lattice, _positions, spg_number, self.symprec
         )
 
