@@ -1,8 +1,51 @@
+import argparse
 import json
 import os
 
 import numpy as np
 from scipy.spatial import ConvexHull
+
+
+def run():
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--elements",
+        nargs="*",
+        type=str,
+        required=True,
+        help="phase_analysisemical elements, e.g., La Bi",
+    )
+    parser.add_argument(
+        "--result_paths",
+        nargs="+",
+        type=str,
+        required=True,
+        help="Paths to RSS result log files",
+    )
+    parser.add_argument(
+        "--outlier_file",
+        type=str,
+        default=None,
+        help="Path to file listing outlier structure names to be excluded",
+    )
+    parser.add_argument(
+        "--thresholds",
+        nargs="*",
+        type=float,
+        default=None,
+        help="Threshold values for energy above the convex hull in meV/atom ",
+    )
+    args = parser.parse_args()
+
+    ch_analyzer = ConvexHullAnalyzer(
+        args.elements, args.result_paths, args.outlier_file
+    )
+    ch_analyzer.run_calc()
+
+    if args.thresholds is not None:
+        threshold_list = args.thresholds
+        for threshold in threshold_list:
+            ch_analyzer.get_struct_near_ch(threshold)
 
 
 class ConvexHullAnalyzer:
@@ -17,7 +60,7 @@ class ConvexHullAnalyzer:
         self.fe_ch = None
         self.comp_ch = None
         self.poscar_ch = None
-        os.makedirs("ch", exist_ok=True)
+        os.makedirs("phase_analysis/data", exist_ok=True)
 
     def run_calc(self):
         self.calc_formation_e()
@@ -50,7 +93,9 @@ class ConvexHullAnalyzer:
                 element_to_ratio.get(el, 0) for el in self.elements
             )
             comp_ratio_array = tuple(
-                np.round(np.array(comp_ratio_orderd) / sum(comp_ratio_orderd), 10)
+                np.round(
+                    np.array(comp_ratio_orderd) / sum(comp_ratio_orderd), 10
+                ).tolist()
             )
 
             rss_results = loaded_dict["rss_results"]
@@ -84,7 +129,9 @@ class ConvexHullAnalyzer:
         self.rss_result_fe = {key: self.rss_result_fe[key] for key in sorted_keys}
 
         if self.outlier_file is not None:
-            print(f"{outlier_cand_count} structures were detected as outlier candidates.")
+            print(
+                f"{outlier_cand_count} structures were detected as outlier candidates."
+            )
             print(f"{outlier_cand_count - n_changed} were confirmed as outliers.")
             print(f"{n_changed} were reclassified as normal.")
 
@@ -100,6 +147,10 @@ class ConvexHullAnalyzer:
 
         for key in self.rss_result_fe:
             self.rss_result_fe[key]["formation_e"] -= np.dot(e_ends, np.array(key))
+
+        rss_result_fe_serial = self._convert_ndarray_to_json(self.rss_result_fe)
+        with open("phase_analysis/data/rss_result_fe.json", "w") as f:
+            json.dump(rss_result_fe_serial, f)
 
     def calc_convex_hull(self):
         rss_result_fe = self.rss_result_fe
@@ -128,12 +179,15 @@ class ConvexHullAnalyzer:
         self.comp_ch = _comp_ch[sort_idx]
         self.poscar_ch = label_array[v_convex][mask][sort_idx]
 
-        with open("ch/convex_hull.log", "w") as f:
+        with open("phase_analysis/global_minima.log", "w") as f:
             for i in range(len(self.comp_ch)):
                 print(f"Composition: {self.comp_ch[i]}", file=f)
                 print(f"Structure: {self.poscar_ch[i]}", file=f)
                 print(f"Formation energy: {self.fe_ch[i]}", file=f)
                 print("", file=f)
+
+        np.save("phase_analysis/data/fe_ch.npy", self.fe_ch)
+        np.save("phase_analysis/data/comp_ch.npy", self.comp_ch)
 
     def calc_fe_above_convex_hull(self):
         rss_result_fe = self.rss_result_fe
@@ -191,7 +245,8 @@ class ConvexHullAnalyzer:
             else:
                 multi_count += len(res["formation_e"])
 
-        with open(f"ch/near_ch_{threshold}meV.log", "w") as f:
+        os.makedirs(f"phase_analysis/threshold_{threshold}meV", exist_ok=True)
+        with open(f"phase_analysis/threshold_{threshold}meV/struct_cands.log", "w") as f:
             print(
                 f"--- Number of structures within {threshold} meV/atom from the convex hull ---",
                 file=f,
@@ -218,4 +273,16 @@ class ConvexHullAnalyzer:
                     )
                 print("", file=f)
 
-        return near_ch, not_near_ch
+        not_near_ch = self._convert_ndarray_to_json(not_near_ch)
+        near_ch = self._convert_ndarray_to_json(near_ch)
+        with open(f"phase_analysis/threshold_{threshold}meV/not_near_ch.json", "w") as f:
+            json.dump(not_near_ch, f)
+        with open(f"phase_analysis/threshold_{threshold}meV/near_ch.json", "w") as f:
+            json.dump(near_ch, f)
+
+    def _convert_ndarray_to_json(self, data):
+        converted = {
+            str(k): {key: val.tolist() for key, val in v.items()}
+            for k, v in data.items()
+        }
+        return converted

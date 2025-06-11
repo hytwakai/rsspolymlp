@@ -42,6 +42,7 @@ rss-uniq-struct = "rsspolymlp.rss.rss_uniq_struct:run"
 rss-summarize = "rsspolymlp.analysis.rss_summarize:run"
 rss-outlier = "rsspolymlp.analysis.outlier_cands:run"
 rss-outlier-detect = "rsspolymlp.analysis.outlier_cands:run_compare_dft"
+rss-phase-analysis = "rsspolymlp.analysis.phase_analysis:run"
 plot-binary = "rsspolymlp.analysis.plot.binary:run"
 
 [tool.setuptools]

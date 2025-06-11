@@ -33,14 +33,20 @@ for pressure in pressure_set:
         shell=True,
         check=True,
     )
-    print("- plot-binary")
+    print("- rss-phase-analysis")
     subprocess.run(
         (
-            "plot-binary --elements Al Cu "
+            "rss-phase-analysis --elements Al Cu "
             "--result_paths ./json/* "
             "--outlier_file outlier/outlier_detection.log "
-            "--thresholds 10 20 40 50 30"
+            "--thresholds 10 20 30 40 50"
         ),
+        shell=True,
+        check=True,
+    )
+    print("- plot-binary")
+    subprocess.run(
+        "plot-binary --elements Al Cu --threshold 30",
         shell=True,
         check=True,
     )
