@@ -75,7 +75,7 @@ plot-binary --elements Al Cu --result_paths <summary_dir>/json/*
 
 ### Workflow
 
-<img src="docs/workflow_rsspolymlp.png" alt="single_plot" width="70%" />
+<img src="docs/workflow.png" alt="single_plot" width="75%" />
 
 The command-line interface of `rsspolymlp` is organized into 6 steps.
 
@@ -104,10 +104,14 @@ Steps 4–6 analyze the results aggregated over each (`p`, `c`) condition.
 
 5. **Outlier detection (`rss-outlier`)**
    
-   Provides utilities for identifying and filtering out anomalous structures based on energy values.
+   Identifying and filtering out anomalous structures based on energy values are performed.
 
-6. **Binary phase diagram plotting (`plot-binary`)**
+6. **Phase stability analysis (`rss-phase-analysis`)**
+
+   This step computes the relative or formation energies of structures obtained from the RSS and outputs the global minimum structures. It also identifies metastable structures near the convex hull based on a energy threshold (e.g., 30 meV/atom).
+
+7. (Optional) Plotting RSS results (e.g., `plot-binary`)
    
-   Visualizes the convex hull and stability of binary systems based on the summarized results.
+   The energy distribution of structures obtained through this RSS workflow is visualized.
 
 [Additional information is here](docs/rss.md)
