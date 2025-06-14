@@ -44,11 +44,28 @@ class PropUtil:
 
     @property
     def least_distance(self):
+        """
+        Calculate the nearest neighbor atomic distance within a periodic lattice.
+
+        Parameters
+        ----------
+        lattice : ndarray (3,3)
+            Lattice matrix.
+        frac_coo : ndarray (3, N)
+            Atomic coordinates in fractional coordinates.
+
+        Returns
+        -------
+        distance_min : float
+            Minimum atomic distance considering periodic boundary conditions.
+        """
+
         lat = self.axis
         coo = self.positions
         cartesian_coo = lat.T @ coo.T
-        c1 = cartesian_coo
+        c1 = cartesian_coo  # (3, N)     
 
+        # Generate periodic image translations along x, y, and z
         image_x, image_y, image_z = np.meshgrid(
             np.arange(-1, 1.1), np.arange(-1, 1.1), np.arange(-1, 1.1), indexing="ij"
         )
@@ -56,20 +73,18 @@ class PropUtil:
             np.stack([image_x, image_y, image_z], axis=-1).reshape(-1, 3).T
         )  # (3, num_images)
 
+        # Compute the translations due to periodic images
         parallel_move = lat.T @ image_matrix
-        parallel_move = np.tile(
-            parallel_move[:, None, :], (1, c1.shape[-1], 1)
-        )  # (3, N, num_images)
+        parallel_move = np.tile(parallel_move[:, None, :], (1, c1.shape[-1], 1))
         c2_all = cartesian_coo[:, :, None] + parallel_move
+        
+        # Compute squared distances between all pairs of atoms in all periodic images
         z = (c1[:, None, :, None] - c2_all[:, :, None, :]) ** 2  # (3, N, N, num_images)
-
         _dist_mat = np.sqrt(np.sum(z, axis=0))  # (N, N, num_images)
-        dist_mat = np.min(_dist_mat, axis=-1)  # (N, N)
-
-        dist_mat_refine = np.where(dist_mat > 1e-10, dist_mat, np.inf)
-        distance_min = np.min(dist_mat_refine)
-        if np.isinf(distance_min):
-            _dist_mat = np.where(_dist_mat > 1e-10, _dist_mat, np.inf)
-            distance_min = np.min(_dist_mat)
+        _dist_mat_refine = np.where(_dist_mat > 1e-10, _dist_mat, np.inf)
+        
+        # Find the minimum distance for each pair
+        dist_mat = np.min(_dist_mat_refine, axis=-1)  # (N, N)
+        distance_min = np.min(dist_mat)
 
         return distance_min
