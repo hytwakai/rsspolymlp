@@ -24,7 +24,7 @@ for pressure in pressure_set:
         check=True,
     )
     subprocess.run(
-        "rss-outlier --compare_dft --dft_path ./outlier_candidates_dft",
+        "rss-outlier --compare_dft --dft_dir ./outlier_candidates_dft",
         shell=True,
         check=True,
     )

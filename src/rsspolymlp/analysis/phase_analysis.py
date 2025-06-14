@@ -1,10 +1,15 @@
 import argparse
 import json
 import os
+from collections import defaultdict
 
 import numpy as np
 import yaml
 from scipy.spatial import ConvexHull
+
+from pypolymlp.core.interface_vasp import Vasprun
+from rsspolymlp.common.comp_ratio import compute_composition
+from rsspolymlp.utils.ground_state_e import ground_state_energy
 
 
 def run():
@@ -21,25 +26,34 @@ def run():
         nargs="+",
         type=str,
         required=True,
-        help="Paths to RSS result log files",
+        help="Paths to RSS result log files, or to directories "
+        "containing VASP geometry optimization results (used when --parse_vasp is enabled)",
     )
     parser.add_argument(
         "--outlier_file",
         type=str,
         default=None,
-        help="Path to file listing outlier structure names to be excluded",
+        help="Path to a file listing the names of outlier structures to exclude",
     )
     parser.add_argument(
         "--thresholds",
         nargs="*",
         type=float,
         default=None,
-        help="Threshold values for energy above the convex hull in meV/atom ",
+        help="Threshold values for energy above the convex hull in meV/atom",
+    )
+    parser.add_argument(
+        "--parse_vasp",
+        action="store_true",
+        help="If set, parse VASP output directories instead of RSS log files",
     )
     args = parser.parse_args()
 
     ch_analyzer = ConvexHullAnalyzer(
-        args.elements, args.result_paths, args.outlier_file
+        args.elements,
+        args.result_paths,
+        args.outlier_file,
+        args.parse_vasp,
     )
     ch_analyzer.run_calc()
 
@@ -51,17 +65,26 @@ def run():
 
 class ConvexHullAnalyzer:
 
-    def __init__(self, elements, result_paths, outlier_file=None):
+    def __init__(self, elements, result_paths, outlier_file=None, parse_vasp=False):
 
         self.elements = elements
         self.result_paths = result_paths
         self.outlier_file = outlier_file
+        self.parse_vasp = parse_vasp
         self.rss_result_fe = {}
         self.ch_obj = None
         self.fe_ch = None
         self.comp_ch = None
         self.poscar_ch = None
-        os.makedirs("phase_analysis/data", exist_ok=True)
+
+        if not self.parse_vasp:
+            dir_path = os.path.dirname(self.result_paths[0])
+            os.makedirs(f"{dir_path}/../phase_analysis/data", exist_ok=True)
+            os.chdir(f"{dir_path}/../")
+        else:
+            base_dir = os.path.basename(self.result_paths[0])
+            os.makedirs(f"{base_dir}/../phase_analysis/data", exist_ok=True)
+            os.chdir(f"{base_dir}/../")
 
     def run_calc(self):
         self.calc_formation_e()
@@ -69,17 +92,45 @@ class ConvexHullAnalyzer:
         self.calc_fe_above_convex_hull()
 
     def calc_formation_e(self):
+        if not self.parse_vasp:
+            self._parse_mlp_results()
+        else:
+            self._parse_vasp_results()
+
+        comps = np.array(list(self.rss_result_fe.keys()))
+        sort_idx = np.lexsort(comps.T)
+        sorted_keys = [list(self.rss_result_fe.keys())[i] for i in sort_idx]
+        self.rss_result_fe = {key: self.rss_result_fe[key] for key in sorted_keys}
+
+        e_ends = []
+        keys = np.array(list(self.rss_result_fe))
+        valid_keys = keys[np.any(keys == 1, axis=1)]
+        sorted_keys = sorted(valid_keys, key=lambda x: np.argmax(x))
+        for key in sorted_keys:
+            key_tuple = tuple(key)
+            energy = self.rss_result_fe[key_tuple]["formation_e"][0]
+            e_ends.append(energy)
+        e_ends = np.array(e_ends)
+
+        for key in self.rss_result_fe:
+            self.rss_result_fe[key]["formation_e"] -= np.dot(e_ends, np.array(key))
+
+        rss_result_fe_serial = self._convert_ndarray_to_json(self.rss_result_fe)
+        with open("phase_analysis/data/rss_result_fe.json", "w") as f:
+            json.dump(rss_result_fe_serial, f)
+
+    def _parse_mlp_results(self):
         is_not_outliers = []
         if self.outlier_file is not None:
             with open(self.outlier_file) as f:
                 outlier_data = yaml.safe_load(f)
-            for entry in outlier_data["outliers"]:
-                if entry.get("assessment") == "Not an outlier":
-                    is_not_outliers.append(str(entry["structure"]))
+            if outlier_data["outliers"] is not None:
+                for entry in outlier_data["outliers"]:
+                    if entry.get("assessment") == "Not an outlier":
+                        is_not_outliers.append(str(entry["structure"]))
         is_not_outliers_set = set(is_not_outliers)
 
         n_changed = 0
-
         for res_path in self.result_paths:
             with open(res_path) as f:
                 loaded_dict = json.load(f)
@@ -121,27 +172,40 @@ class ConvexHullAnalyzer:
 
             self.rss_result_fe[comp_ratio_array] = rss_results_array
 
-        comps = np.array(list(self.rss_result_fe.keys()))
-        sort_idx = np.lexsort(comps.T)
-        sorted_keys = [list(self.rss_result_fe.keys())[i] for i in sort_idx]
-        self.rss_result_fe = {key: self.rss_result_fe[key] for key in sorted_keys}
+    def _parse_vasp_results(self):
+        dft_dict = defaultdict(list)
+        for dft_path in self.result_paths:
+            vasprun_path = f"{dft_path}/vasprun.xml"
+            try:
+                vaspobj = Vasprun(vasprun_path)
+            except Exception:
+                print(vasprun_path, "failed")
+                continue
 
-        e_ends = []
-        keys = np.array(list(self.rss_result_fe))
-        valid_keys = keys[np.any(keys == 1, axis=1)]
-        sorted_keys = sorted(valid_keys, key=lambda x: np.argmax(x))
-        for key in sorted_keys:
-            key_tuple = tuple(key)
-            energy = self.rss_result_fe[key_tuple]["formation_e"][0]
-            e_ends.append(energy)
-        e_ends = np.array(e_ends)
+            energy_dft = vaspobj.energy
+            structure = vaspobj.structure
+            for element in structure.elements:
+                energy_dft -= ground_state_energy(element)
+            energy_dft /= len(structure.elements)
 
-        for key in self.rss_result_fe:
-            self.rss_result_fe[key]["formation_e"] -= np.dot(e_ends, np.array(key))
+            comp_res = compute_composition(structure.elements, self.elements)
+            comp_ratio = tuple(
+                np.round(
+                    np.array(comp_res.comp_ratio) / sum(comp_res.comp_ratio), 10
+                ).tolist()
+            )
+            dft_dict[comp_ratio].append(
+                {"formation_e": energy_dft, "poscars": vasprun_path}
+            )
 
-        rss_result_fe_serial = self._convert_ndarray_to_json(self.rss_result_fe)
-        with open("phase_analysis/data/rss_result_fe.json", "w") as f:
-            json.dump(rss_result_fe_serial, f)
+        dft_dict_array = {}
+        for comp_ratio, entries in dft_dict.items():
+            dft_dict_array[comp_ratio] = {
+                "formation_e": np.array([entry["formation_e"] for entry in entries]),
+                "poscars": np.array([entry["poscars"] for entry in entries]),
+            }
+
+        self.rss_result_fe = dft_dict_array
 
     def calc_convex_hull(self):
         rss_result_fe = self.rss_result_fe

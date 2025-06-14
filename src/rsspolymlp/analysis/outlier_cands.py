@@ -81,7 +81,7 @@ def run():
         help="Path(s) to RSS result log file(s).",
     )
     parser.add_argument(
-        "--dft_path",
+        "--dft_dir",
         type=str,
         default=None,
         help="Path to the directory containing DFT results for outlier structures.",
@@ -89,14 +89,19 @@ def run():
     args = parser.parse_args()
 
     if not args.compare_dft:
+        dir_path = os.path.dirname(args.result_paths[0])
+        os.makedirs(f"{dir_path}/../outlier/outlier_candidates", exist_ok=True)
+        os.chdir(f"{dir_path}/../")
         outlier_candidates(args.result_paths)
     else:
-        detect_actual_outlier(args.dft_path)
+        base_dir = os.path.basename(args.dft_dir)
+        os.makedirs(f"{base_dir}/../outlier/outlier_candidates", exist_ok=True)
+        os.chdir(f"{base_dir}/../")
+        detect_actual_outlier(args.dft_dir)
 
 
 def outlier_candidates(result_paths):
     # Prepare output directory: remove existing files if already exists
-    os.makedirs("outlier/outlier_candidates", exist_ok=True)
     out_dir = "outlier/outlier_candidates"
     for filename in os.listdir(out_dir):
         if "POSCAR" in filename:
@@ -191,7 +196,7 @@ def detect_actual_outlier(dft_path):
             delta = diff["diff"]
 
             print(f"  - structure: {poscar}", file=f)
-            if delta is not None:
+            if not delta == "null":
                 print(f"    energy_diff_meV_per_atom: {delta*1000:.3f}", file=f)
                 if delta < -0.1:
                     assessment = "Marked as outlier"
