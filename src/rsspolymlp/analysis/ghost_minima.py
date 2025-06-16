@@ -10,7 +10,7 @@ import numpy as np
 from sklearn.cluster import KMeans
 
 from pypolymlp.core.interface_vasp import Vasprun
-from rsspolymlp.utils.ground_state_e import ground_state_energy
+from rsspolymlp.common.ground_state_e import ground_state_energy
 
 EV = 1.602176634e-19  # [J]
 EVAngstromToGPa = EV * 1e21

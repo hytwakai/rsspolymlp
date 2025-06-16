@@ -9,7 +9,7 @@ from scipy.spatial import ConvexHull
 
 from pypolymlp.core.interface_vasp import Vasprun
 from rsspolymlp.common.composition import compute_composition
-from rsspolymlp.utils.ground_state_e import ground_state_energy
+from rsspolymlp.common.ground_state_e import ground_state_energy
 
 
 def run():

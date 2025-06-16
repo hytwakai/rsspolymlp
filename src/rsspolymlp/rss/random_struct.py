@@ -6,8 +6,8 @@ import numpy as np
 from scipy.linalg import cholesky
 
 from rsspolymlp.common.parse_arguments import ParseArgument
-from rsspolymlp.utils.vasp_utils import write_poscar
 from rsspolymlp.common.property import PropUtil
+from rsspolymlp.utils.vasp_utils import write_poscar
 
 
 def run():
