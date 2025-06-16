@@ -8,7 +8,7 @@ import yaml
 from scipy.spatial import ConvexHull
 
 from pypolymlp.core.interface_vasp import Vasprun
-from rsspolymlp.common.comp_ratio import compute_composition
+from rsspolymlp.common.composition import compute_composition
 from rsspolymlp.utils.ground_state_e import ground_state_energy
 
 
@@ -30,10 +30,10 @@ def run():
         "containing VASP geometry optimization results (used when --parse_vasp is enabled)",
     )
     parser.add_argument(
-        "--outlier_file",
+        "--ghost_minima_file",
         type=str,
         default=None,
-        help="Path to a file listing the names of outlier structures to exclude",
+        help="Path to a file listing the names of ghost_minima structures to exclude",
     )
     parser.add_argument(
         "--thresholds",
@@ -52,7 +52,7 @@ def run():
     ch_analyzer = ConvexHullAnalyzer(
         args.elements,
         args.result_paths,
-        args.outlier_file,
+        args.ghost_minima_file,
         args.parse_vasp,
     )
     ch_analyzer.run_calc()
@@ -65,11 +65,13 @@ def run():
 
 class ConvexHullAnalyzer:
 
-    def __init__(self, elements, result_paths, outlier_file=None, parse_vasp=False):
+    def __init__(
+        self, elements, result_paths, ghost_minima_file=None, parse_vasp=False
+    ):
 
         self.elements = elements
         self.result_paths = result_paths
-        self.outlier_file = outlier_file
+        self.ghost_minima_file = ghost_minima_file
         self.parse_vasp = parse_vasp
         self.rss_result_fe = {}
         self.ch_obj = None
@@ -120,15 +122,15 @@ class ConvexHullAnalyzer:
             json.dump(rss_result_fe_serial, f)
 
     def _parse_mlp_results(self):
-        is_not_outliers = []
-        if self.outlier_file is not None:
-            with open(self.outlier_file) as f:
-                outlier_data = yaml.safe_load(f)
-            if outlier_data["outliers"] is not None:
-                for entry in outlier_data["outliers"]:
-                    if entry.get("assessment") == "Not an outlier":
-                        is_not_outliers.append(str(entry["structure"]))
-        is_not_outliers_set = set(is_not_outliers)
+        is_not_ghost_minima = []
+        if self.ghost_minima_file is not None:
+            with open(self.ghost_minima_file) as f:
+                ghost_minima_data = yaml.safe_load(f)
+            if ghost_minima_data["ghost_minima"] is not None:
+                for entry in ghost_minima_data["ghost_minima"]:
+                    if entry.get("assessment") == "Not an ghost_minima":
+                        is_not_ghost_minima.append(str(entry["structure"]))
+        is_not_ghost_minima_set = set(is_not_ghost_minima)
 
         n_changed = 0
         for res_path in self.result_paths:
@@ -152,24 +154,29 @@ class ConvexHullAnalyzer:
             rss_results_array = {
                 "formation_e": np.array([r["energy"] for r in rss_results]),
                 "poscars": np.array([r["poscar"] for r in rss_results]),
-                "is_outliers": np.array([r["is_outlier"] for r in rss_results]),
+                "is_ghost_minima": np.array(
+                    [r["is_ghost_minima"] for r in rss_results]
+                ),
                 "struct_no": np.array([r["struct_no"] for r in rss_results]),
                 "struct_tag": np.array(
                     [f"POSCAR_{logname}_No{r['struct_no']}" for r in rss_results]
                 ),
             }
 
-            for i in range(len(rss_results_array["is_outliers"])):
+            for i in range(len(rss_results_array["is_ghost_minima"])):
                 name = rss_results_array["struct_tag"][i]
-                if rss_results_array["is_outliers"][i] and name in is_not_outliers_set:
-                    rss_results_array["is_outliers"][i] = False
+                if (
+                    rss_results_array["is_ghost_minima"][i]
+                    and name in is_not_ghost_minima_set
+                ):
+                    rss_results_array["is_ghost_minima"][i] = False
                     n_changed += 1
-            rss_results_array = {
-                key: rss_results_array[key][~rss_results_array["is_outliers"]]
+
+            rss_results_valid = {
+                key: rss_results_array[key][~rss_results_array["is_ghost_minima"]]
                 for key in rss_results_array
             }
-
-            self.rss_result_fe[comp_ratio_array] = rss_results_array
+            self.rss_result_fe[comp_ratio_array] = rss_results_valid
 
     def _parse_vasp_results(self):
         dft_dict = defaultdict(list)

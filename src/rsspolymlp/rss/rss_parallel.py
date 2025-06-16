@@ -13,7 +13,7 @@ import time
 
 import joblib
 
-from rsspolymlp.common.parse_arg import ParseArgument
+from rsspolymlp.common.parse_arguments import ParseArgument
 from rsspolymlp.rss.rss_mlp import RandomStructureSearch
 
 

@@ -24,7 +24,7 @@ class PropUtil:
         return np.degrees(np.arccos(np.clip(dot_product / norms, -1.0, 1.0)))
 
     @property
-    def axis_to_abc(self):
+    def abc(self):
         """Convert lattice vectors to unit cell parameters."""
         a, b, c = np.array(self.axis)
         norm_a = np.linalg.norm(a)
@@ -44,21 +44,7 @@ class PropUtil:
 
     @property
     def least_distance(self):
-        """
-        Calculate the nearest neighbor atomic distance within a periodic lattice.
-
-        Parameters
-        ----------
-        lattice : ndarray (3,3)
-            Lattice matrix.
-        frac_coo : ndarray (3, N)
-            Atomic coordinates in fractional coordinates.
-
-        Returns
-        -------
-        distance_min : float
-            Minimum atomic distance considering periodic boundary conditions.
-        """
+        """Calculate the nearest neighbor atomic distance within a periodic lattice"""
 
         lat = self.axis
         coo = self.positions

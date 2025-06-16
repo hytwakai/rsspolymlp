@@ -15,14 +15,14 @@ import numpy as np
 
 from pypolymlp.core.interface_vasp import Poscar
 from pypolymlp.core.io_polymlp import load_mlps
-from rsspolymlp.analysis.outlier_cands import detect_outlier
+from rsspolymlp.analysis.ghost_minima import detect_ghost_minima
 from rsspolymlp.analysis.struct_matcher.utils import get_distance_cluster
 from rsspolymlp.analysis.unique_struct import (
     UniqueStructureAnalyzer,
     generate_unique_structs,
 )
-from rsspolymlp.common.comp_ratio import compute_composition
-from rsspolymlp.common.parse_arg import ParseArgument
+from rsspolymlp.common.composition import compute_composition
+from rsspolymlp.common.parse_arguments import ParseArgument
 from rsspolymlp.common.property import PropUtil
 from rsspolymlp.rss.load_logfile import LogfileLoader
 from rsspolymlp.utils.convert_dict import polymlp_struct_to_dict
@@ -43,12 +43,12 @@ def run():
 def log_unique_structures(
     file_name,
     unique_structs,
-    is_outlier,
+    is_ghost_minima,
     pressure=None,
     unique_struct_iters=None,
 ):
     for i in range(len(unique_structs)):
-        if not is_outlier[i]:
+        if not is_ghost_minima[i]:
             energy_min = unique_structs[i].energy
             break
 
@@ -78,8 +78,8 @@ def log_unique_structures(
                 info.append(f"iteration {unique_struct_iters[idx]}")
             print(f"    other_info: {' / '.join(info)}", file=f)
 
-            if is_outlier[idx]:
-                print("    outlier_flag: true", file=f)
+            if is_ghost_minima[idx]:
+                print("    ghost_minima_flag: true", file=f)
 
             _res = {}
             _res["poscar"] = _str.input_poscar
@@ -90,7 +90,7 @@ def log_unique_structures(
             _res["pressure"] = pressure
             _res["spg_list"] = _str.spg_list
             _res["struct_no"] = idx + 1
-            _res["is_outlier"] = bool(is_outlier[idx])
+            _res["is_ghost_minima"] = bool(is_ghost_minima[idx])
             rss_results.append(_res)
 
     comp_res = compute_composition(unique_structs[0].original_structure.elements)
@@ -212,7 +212,7 @@ class RSSResultAnalyzer:
 
         polymlp_st = Poscar(poscar_name).structure
         objprop = PropUtil(polymlp_st.axis.T, polymlp_st.positions.T)
-        axis_abc = objprop.axis_to_abc
+        axis_abc = objprop.abc
         _struct_prop = struct_prop
         _struct_prop["structure"] = polymlp_st
 
@@ -374,12 +374,12 @@ class RSSResultAnalyzer:
         iters_sorted = [iters[i] for i in sort_idx]
 
         if len(energies) > 50:
-            is_outlier, _ = detect_outlier(energies[sort_idx], distances[sort_idx])
+            is_ghost_minima, _ = detect_ghost_minima(energies[sort_idx], distances[sort_idx])
         else:
-            is_outlier = np.full_like(energies, False, dtype=bool)
+            is_ghost_minima = np.full_like(energies, False, dtype=bool)
 
         rss_result_all = log_unique_structures(
-            file_name, unique_str_sorted, is_outlier, self.pressure, iters_sorted
+            file_name, unique_str_sorted, is_ghost_minima, self.pressure, iters_sorted
         )
         with open("rss_result/rss_results.json", "w") as f:
             json.dump(rss_result_all, f)

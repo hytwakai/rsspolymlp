@@ -5,8 +5,9 @@ import os
 import numpy as np
 from scipy.linalg import cholesky
 
-from rsspolymlp.common.parse_arg import ParseArgument
+from rsspolymlp.common.parse_arguments import ParseArgument
 from rsspolymlp.utils.vasp_utils import write_poscar
+from rsspolymlp.common.property import PropUtil
 
 
 def run():
@@ -29,59 +30,12 @@ def run():
         gen_str.random_structure(min_volume=args.min_volume, max_volume=args.max_volume)
 
 
-def nearest_neighbor_atomic_distance(lattice, frac_coo):
-    """
-    Calculate the nearest neighbor atomic distance within a periodic lattice.
-
-    Parameters
-    ----------
-    lattice : ndarray (3,3)
-        Lattice matrix.
-    frac_coo : ndarray (3, N)
-        Atomic coordinates in fractional coordinates.
-
-    Returns
-    -------
-    distance_min : float
-        Minimum atomic distance considering periodic boundary conditions.
-    """
-
-    cartesian_coo = lattice @ frac_coo
-    c1 = cartesian_coo
-
-    # Generate periodic image translations along x, y, and z
-    image_x, image_y, image_z = np.meshgrid(
-        np.arange(-1, 1.1), np.arange(-1, 1.1), np.arange(-1, 1.1), indexing="ij"
-    )
-    image_matrix = (
-        np.stack([image_x, image_y, image_z], axis=-1).reshape(-1, 3).T
-    )  # (3, num_images)
-
-    # Compute the translations due to periodic images
-    parallel_move = lattice @ image_matrix
-    parallel_move = np.tile(
-        parallel_move[:, None, :], (1, c1.shape[-1], 1)
-    )  # (3, N, num_images)
-    c2_all = cartesian_coo[:, :, None] + parallel_move
-
-    # Compute squared distances between all pairs of atoms in all periodic images
-    z = (c1[:, None, :, None] - c2_all[:, :, None, :]) ** 2  # (3, N, N, num_images)
-    _dist_mat = np.sqrt(np.sum(z, axis=0))  # (N, N, num_images)
-    _dist_mat_refine = np.where(_dist_mat > 1e-10, _dist_mat, np.inf)
-
-    # Find the minimum distance for each pair
-    dist_mat = np.min(_dist_mat_refine, axis=-1)  # (N, N)
-    distance_min = np.min(dist_mat)
-
-    return distance_min
-
-
 class GenerateRandomStructure:
     """Class for creating initial random structures for RSS."""
 
     def __init__(
         self,
-        elements,
+        element_list,
         atom_counts,
         max_str: int = 5000,
         least_distance: float = 0.0,
@@ -92,7 +46,7 @@ class GenerateRandomStructure:
 
         Parameters
         ----------
-        elements : list
+        element_list : list
             List of element symbols.
         atom_counts : list
             List of the number of atoms for each element.
@@ -104,7 +58,7 @@ class GenerateRandomStructure:
             Initial structure count.
         """
 
-        self.elements = elements
+        self.element_list = element_list
         self.atom_counts = atom_counts
         self.max_str = max_str
         self.least_distance = least_distance
@@ -164,10 +118,11 @@ class GenerateRandomStructure:
                 # Filter structures based on interatomic distance constraints
                 distance_sets = np.array(
                     [
-                        nearest_neighbor_atomic_distance(lat, coo)
+                        PropUtil(lat.T, coo.T).least_distance
                         for lat, coo in zip(valid_l_matrices, random_atomic_position)
                     ]
                 )
+                print(distance_sets)
                 valid_l_matrices = valid_l_matrices[distance_sets > self.least_distance]
                 valid_positions = valid_positions[distance_sets > self.least_distance]
                 print(
@@ -175,13 +130,16 @@ class GenerateRandomStructure:
                 )
 
             # Save valid structures
+            elements = []
+            for i, el in enumerate(self.element_list):
+                for h in range(self.atom_counts[i]):
+                    elements.append(el)
             for axis, positions in zip(valid_l_matrices, valid_positions):
                 self.str_count += 1
                 write_poscar(
                     axis,
                     positions,
-                    self.elements,
-                    self.atom_counts,
+                    elements,
                     f"initial_struct/POSCAR_{self.str_count}",
                 )
                 if self.str_count == self.max_str:

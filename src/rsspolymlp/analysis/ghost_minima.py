@@ -16,8 +16,8 @@ EV = 1.602176634e-19  # [J]
 EVAngstromToGPa = EV * 1e21
 
 
-def detect_outlier(energies: np.array, distances: np.array):
-    """Detect outliers and potential outliers in a 1D energy array"""
+def detect_ghost_minima(energies: np.array, distances: np.array):
+    """Detect ghost minima and potential ghost minima in a 1D energy array"""
     n = len(energies)
     if n == 1:
         return np.array([False]), np.array([False])
@@ -34,19 +34,19 @@ def detect_outlier(energies: np.array, distances: np.array):
         [np.mean(distances[group_ids == gid]) for gid in unique_groups]
     )
 
-    outliers, not_outliers, is_outlier_group = _detect_outlier_kmeans(
+    ghost_minima, not_ghost_minima, is_ghost_minima_group = _detect_ghost_minima_kmeans(
         cent_e, cent_dist, len(cent_e)
     )
 
-    is_outlier = np.full_like(energies, False, dtype=bool)
-    for gid, is_out in zip(unique_groups, is_outlier_group):
+    is_ghost_minima = np.full_like(energies, False, dtype=bool)
+    for gid, is_out in zip(unique_groups, is_ghost_minima_group):
         idx = group_ids == gid
-        is_outlier[idx] = is_out
+        is_ghost_minima[idx] = is_out
 
-    return is_outlier, [not_outliers[0], outliers]
+    return is_ghost_minima, [not_ghost_minima[0], ghost_minima]
 
 
-def _detect_outlier_kmeans(cent_e, cent_dist, num_energy):
+def _detect_ghost_minima_kmeans(cent_e, cent_dist, num_energy):
     for prop in [0.5, 0.2, 0.1, 0.01]:
         window = int(round(num_energy * prop))
         window = max(window, 5)
@@ -66,59 +66,59 @@ def _detect_outlier_kmeans(cent_e, cent_dist, num_energy):
         labels = kmeans.labels_
 
         cluster_means = [np.mean(valid_data[labels == i]) for i in range(2)]
-        outlier_label = np.argmin(cluster_means)
+        ghost_minima_label = np.argmin(cluster_means)
 
-        is_outlier_valid_data = np.full(valid_data.shape, False, dtype=bool)
-        outlier_indices = np.where(labels == outlier_label)[0]
-        is_outlier_valid_data[outlier_indices] = True
-        # print(is_outlier_valid_data)
-        is_outlier_valid_data[np.argmax(~is_outlier_valid_data) + 1 :] = False
+        is_ghost_minima_valid_data = np.full(valid_data.shape, False, dtype=bool)
+        ghost_minima_indices = np.where(labels == ghost_minima_label)[0]
+        is_ghost_minima_valid_data[ghost_minima_indices] = True
+        # print(is_ghost_minima_valid_data)
+        is_ghost_minima_valid_data[np.argmax(~is_ghost_minima_valid_data) + 1 :] = False
 
-        outliers_valdat = valid_data[is_outlier_valid_data]
-        not_outliers_valdat = valid_data[~is_outlier_valid_data]
-        # print(outliers_valdat)
-        # print(not_outliers_valdat)
+        ghost_minima_valdat = valid_data[is_ghost_minima_valid_data]
+        not_ghost_minima_valdat = valid_data[~is_ghost_minima_valid_data]
+        # print(ghost_minima_valdat)
+        # print(not_ghost_minima_valdat)
 
-        is_outlier = np.full(cent_dist.shape, False, dtype=bool)
+        is_ghost_minima = np.full(cent_dist.shape, False, dtype=bool)
         if len(invalid_data_idx) > 0:
-            is_outlier[invalid_data_idx] = True
+            is_ghost_minima[invalid_data_idx] = True
 
-        if len(outliers_valdat) > 0:
-            outlier_mean = np.mean(outliers_valdat)
-            # print(outlier_mean)
-            not_outlier_mean = np.mean(not_outliers_valdat)
-            # print(not_outlier_mean)
-            if outlier_mean / not_outlier_mean < 0.8:
-                is_outlier[valid_data_idx[is_outlier_valid_data]] = True
-                is_outlier[np.argmax(~is_outlier) + 1 :] = False
-                outliers = cent_dist[is_outlier]
-                not_outliers = cent_dist[~is_outlier]
+        if len(ghost_minima_valdat) > 0:
+            ghost_minima_mean = np.mean(ghost_minima_valdat)
+            # print(ghost_minima_mean)
+            not_ghost_minima_mean = np.mean(not_ghost_minima_valdat)
+            # print(not_ghost_minima_mean)
+            if ghost_minima_mean / not_ghost_minima_mean < 0.8:
+                is_ghost_minima[valid_data_idx[is_ghost_minima_valid_data]] = True
+                is_ghost_minima[np.argmax(~is_ghost_minima) + 1 :] = False
+                ghost_minima = cent_dist[is_ghost_minima]
+                not_ghost_minima = cent_dist[~is_ghost_minima]
                 break
 
-        is_outlier[np.argmax(~is_outlier) + 1 :] = False
-        outliers = cent_dist[is_outlier]
-        not_outliers = cent_dist[~is_outlier]
+        is_ghost_minima[np.argmax(~is_ghost_minima) + 1 :] = False
+        ghost_minima = cent_dist[is_ghost_minima]
+        not_ghost_minima = cent_dist[~is_ghost_minima]
 
-    return outliers, not_outliers, is_outlier
+    return ghost_minima, not_ghost_minima, is_ghost_minima
 
 
-def get_outlier_results(dir_path):
+def get_ghost_minima_dists(dir_path):
     dist_min_e = []
-    with open(f"{dir_path}/outlier/dist_minE_struct.dat") as f:
+    with open(f"{dir_path}/ghost_minima/dist_minE_struct.dat") as f:
         for line in f:
             dist_min_e.append(float(line.split()[0]))
     dist_min_e = np.array(dist_min_e)
     print("dist_min_e")
     # print(np.sort(dist_min_e))
     print("min, max =", np.min(dist_min_e), np.max(dist_min_e))
-    if os.path.isfile(f"{dir_path}/outlier/dist_outlier.dat"):
-        with open(f"{dir_path}/outlier/dist_outlier.dat") as f:
+    if os.path.isfile(f"{dir_path}/ghost_minima/dist_ghost_minima.dat"):
+        with open(f"{dir_path}/ghost_minima/dist_ghost_minima.dat") as f:
             content = f.read()
-        dist_outlier = re.findall(r"\d+\.\d+", content)
-        dist_outlier = np.array([float(n) for n in dist_outlier])
-        print("dist_outlier")
-        print(np.sort(dist_outlier))
-        # print("min, max =", np.min(dist_outlier), np.max(dist_outlier))
+        dist_ghost_minima = re.findall(r"\d+\.\d+", content)
+        dist_ghost_minima = np.array([float(n) for n in dist_ghost_minima])
+        print("dist_ghost_minima")
+        print(np.sort(dist_ghost_minima))
+        # print("min, max =", np.min(dist_ghost_minima), np.max(dist_ghost_minima))
 
 
 def run():
@@ -126,8 +126,8 @@ def run():
     parser.add_argument(
         "--compare_dft",
         action="store_true",
-        help="If set, runs detect_true_outlier() to compare with DFT;"
-        " otherwise, runs outlier_candidates().",
+        help="If set, runs detect_true_ghost_minima() to compare with DFT;"
+        " otherwise, runs ghost_minima_candidates().",
     )
     parser.add_argument(
         "--result_paths",
@@ -140,33 +140,37 @@ def run():
         "--dft_dir",
         type=str,
         default=None,
-        help="Path to the directory containing DFT results for outlier structures.",
+        help="Path to the directory containing DFT results for ghost_minima structures.",
     )
     args = parser.parse_args()
 
     if not args.compare_dft:
         dir_path = os.path.dirname(args.result_paths[0])
-        os.makedirs(f"{dir_path}/../outlier/outlier_candidates", exist_ok=True)
+        os.makedirs(
+            f"{dir_path}/../ghost_minima/ghost_minima_candidates", exist_ok=True
+        )
         os.chdir(f"{dir_path}/../")
-        outlier_candidates(args.result_paths)
+        ghost_minima_candidates(args.result_paths)
     else:
         base_dir = os.path.basename(args.dft_dir)
-        os.makedirs(f"{base_dir}/../outlier/outlier_candidates", exist_ok=True)
+        os.makedirs(
+            f"{base_dir}/../ghost_minima/ghost_minima_candidates", exist_ok=True
+        )
         os.chdir(f"{base_dir}/../")
-        detect_actual_outlier(args.dft_dir)
+        detect_actual_ghost_minima(args.dft_dir)
 
 
-def outlier_candidates(result_paths):
+def ghost_minima_candidates(result_paths):
     # Prepare output directory: remove existing files if already exists
-    out_dir = "outlier/outlier_candidates"
+    out_dir = "ghost_minima/ghost_minima_candidates"
     for filename in os.listdir(out_dir):
         if "POSCAR" in filename:
             file_path = os.path.join(out_dir, filename)
             if os.path.isfile(file_path):
                 os.remove(file_path)
 
-    # Copy weak outlier POSCARs
-    outliers_all = []
+    # Copy weak ghost_minima POSCARs
+    ghost_minima_all = []
     for res_path in result_paths:
         with open(res_path) as f:
             loaded_dict = json.load(f)
@@ -174,33 +178,31 @@ def outlier_candidates(result_paths):
 
         logname = os.path.basename(res_path).split(".json")[0]
         for res in rss_results:
-            if res.get("is_outlier"):
-                dest = (
-                    f"outlier/outlier_candidates/POSCAR_{logname}_No{res['struct_no']}"
-                )
+            if res.get("is_ghost_minima"):
+                dest = f"ghost_minima/ghost_minima_candidates/POSCAR_{logname}_No{res['struct_no']}"
                 shutil.copy(res["poscar"], dest)
                 _res = res
                 _res.pop("structure", None)
-                _res["outlier_poscar"] = f"POSCAR_{logname}_No{res['struct_no']}"
-                outliers_all.append(_res)
+                _res["ghost_minima_poscar"] = f"POSCAR_{logname}_No{res['struct_no']}"
+                ghost_minima_all.append(_res)
 
-    with open("outlier/outlier_candidates.dat", "w") as f:
-        for res in outliers_all:
+    with open("ghost_minima/ghost_minima_candidates.dat", "w") as f:
+        for res in ghost_minima_all:
             print(res, file=f)
-    print(f"Detected {len(outliers_all)} potential outliers")
+    print(f"Detected {len(ghost_minima_all)} potential ghost_minima")
 
 
-def detect_actual_outlier(dft_path):
-    # Load outlier candidates
-    outliers_all = []
-    with open("outlier/outlier_candidates.dat") as f:
+def detect_actual_ghost_minima(dft_path):
+    # Load ghost_minima candidates
+    ghost_minima_all = []
+    with open("ghost_minima/ghost_minima_candidates.dat") as f:
         for line in f:
-            outliers_all.append(ast.literal_eval(line.strip()))
+            ghost_minima_all.append(ast.literal_eval(line.strip()))
 
     diff_all = []
-    for res in outliers_all:
+    for res in ghost_minima_all:
         pressure = res["pressure"]
-        poscar_name = res["outlier_poscar"]
+        poscar_name = res["ghost_minima_poscar"]
         vasprun_paths = glob.glob(f"{dft_path}/{poscar_name}/vasprun*.xml")
 
         vasprun_get = False
@@ -244,26 +246,26 @@ def detect_actual_outlier(dft_path):
         )
 
     # Write results
-    n_true_outlier = 0
-    with open("outlier/outlier_detection.yaml", "w") as f:
-        print("outliers:", file=f)
+    n_true_ghost_minima = 0
+    with open("ghost_minima/ghost_minima_detection.yaml", "w") as f:
+        print("ghost_minima:", file=f)
         for diff in diff_all:
-            poscar = diff["res"]["outlier_poscar"]
+            poscar = diff["res"]["ghost_minima_poscar"]
             delta = diff["diff"]
 
             print(f"  - structure: {poscar}", file=f)
             if not delta == "null":
                 print(f"    energy_diff_meV_per_atom: {delta*1000:.3f}", file=f)
                 if delta < -0.1:
-                    assessment = "Marked as outlier"
-                    n_true_outlier += 1
+                    assessment = "Marked as ghost_minima"
+                    n_true_ghost_minima += 1
                 else:
-                    assessment = "Not an outlier"
+                    assessment = "Not an ghost_minima"
                 print(f"    assessment: {assessment}", file=f)
             else:
                 print("    energy_diff_meV_per_atom: null", file=f)
-                print("    assessment: Marked as outlier", file=f)
-                n_true_outlier += 1
+                print("    assessment: Marked as ghost_minima", file=f)
+                n_true_ghost_minima += 1
 
             print("    details:", file=f)
             for key, val in diff.items():
@@ -271,4 +273,4 @@ def detect_actual_outlier(dft_path):
                     continue
                 print(f"      {key}: {val}", file=f)
 
-    print(f"Detected {n_true_outlier} actual outliers")
+    print(f"Detected {n_true_ghost_minima} actual ghost minima")

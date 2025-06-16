@@ -14,7 +14,7 @@ from rsspolymlp.analysis.struct_matcher.struct_match import (
     struct_match,
 )
 from rsspolymlp.analysis.struct_matcher.utils import get_recommend_symprecs
-from rsspolymlp.common.comp_ratio import compute_composition
+from rsspolymlp.common.composition import compute_composition
 from rsspolymlp.common.property import PropUtil
 
 
@@ -104,7 +104,7 @@ def generate_unique_struct(
         irrep_struct_set=irrep_struct_set,
         recommend_symprecs=recommend_symprecs,
         original_structure=polymlp_st,
-        axis_abc=objprop.axis_to_abc,
+        axis_abc=objprop.abc,
         n_atoms=int(len(polymlp_st.elements)),
         volume=objprop.volume,
         least_distance=objprop.least_distance,

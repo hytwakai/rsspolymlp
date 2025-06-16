@@ -7,12 +7,12 @@ from time import time
 import numpy as np
 import yaml
 
-from rsspolymlp.analysis.outlier_cands import detect_outlier
+from rsspolymlp.analysis.ghost_minima import detect_ghost_minima
 from rsspolymlp.analysis.unique_struct import (
     UniqueStructureAnalyzer,
     generate_unique_structs,
 )
-from rsspolymlp.common.parse_arg import ParseArgument
+from rsspolymlp.common.parse_arguments import ParseArgument
 from rsspolymlp.rss.rss_uniq_struct import log_unique_structures
 from rsspolymlp.utils.convert_dict import polymlp_struct_from_dict
 
@@ -65,7 +65,7 @@ class RSSResultSummarizer:
 
     def run_sorting(self):
         os.makedirs("json", exist_ok=True)
-        os.makedirs("outlier", exist_ok=True)
+        os.makedirs("ghost_minima", exist_ok=True)
 
         paths_same_comp = defaultdict(list)
         results_same_comp = defaultdict(dict)
@@ -119,20 +119,20 @@ class RSSResultSummarizer:
             sort_idx = np.argsort(energies)
             unique_str_sorted = [unique_structs[i] for i in sort_idx]
 
-            is_outlier, outlier_info = detect_outlier(
+            is_ghost_minima, ghost_minima_info = detect_ghost_minima(
                 energies[sort_idx], distances[sort_idx]
             )
-            with open("outlier/dist_minE_struct.dat", "a") as f:
-                print(f"{outlier_info[0]:.3f}  {log_name}", file=f)
-            if len(outlier_info[1]) > 0:
-                with open("outlier/dist_outlier.dat", "a") as f:
+            with open("ghost_minima/dist_minE_struct.dat", "a") as f:
+                print(f"{ghost_minima_info[0]:.3f}  {log_name}", file=f)
+            if len(ghost_minima_info[1]) > 0:
+                with open("ghost_minima/dist_ghost_minima.dat", "a") as f:
                     print(log_name, file=f)
-                    print(np.round(outlier_info[1], 3), file=f)
+                    print(np.round(ghost_minima_info[1], 3), file=f)
 
             rss_result_all = log_unique_structures(
                 log_name + ".yaml",
                 unique_str_sorted,
-                is_outlier,
+                is_ghost_minima,
                 pressure=pressure,
             )
 
