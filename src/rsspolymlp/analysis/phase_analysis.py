@@ -1,4 +1,3 @@
-import argparse
 import json
 import os
 from collections import defaultdict
@@ -10,57 +9,6 @@ from scipy.spatial import ConvexHull
 from pypolymlp.core.interface_vasp import Vasprun
 from rsspolymlp.common.composition import compute_composition
 from rsspolymlp.common.ground_state_e import ground_state_energy
-
-
-def run():
-    parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "--elements",
-        nargs="*",
-        type=str,
-        required=True,
-        help="phase_analysisemical elements, e.g., La Bi",
-    )
-    parser.add_argument(
-        "--result_paths",
-        nargs="+",
-        type=str,
-        required=True,
-        help="Paths to RSS result log files, or to directories "
-        "containing VASP geometry optimization results (used when --parse_vasp is enabled)",
-    )
-    parser.add_argument(
-        "--ghost_minima_file",
-        type=str,
-        default=None,
-        help="Path to a file listing the names of ghost_minima structures to exclude",
-    )
-    parser.add_argument(
-        "--thresholds",
-        nargs="*",
-        type=float,
-        default=None,
-        help="Threshold values for energy above the convex hull in meV/atom",
-    )
-    parser.add_argument(
-        "--parse_vasp",
-        action="store_true",
-        help="If set, parse VASP output directories instead of RSS log files",
-    )
-    args = parser.parse_args()
-
-    ch_analyzer = ConvexHullAnalyzer(
-        args.elements,
-        args.result_paths,
-        args.ghost_minima_file,
-        args.parse_vasp,
-    )
-    ch_analyzer.run_calc()
-
-    if args.thresholds is not None:
-        threshold_list = args.thresholds
-        for threshold in threshold_list:
-            ch_analyzer.get_struct_near_ch(threshold)
 
 
 class ConvexHullAnalyzer:
@@ -128,7 +76,7 @@ class ConvexHullAnalyzer:
                 ghost_minima_data = yaml.safe_load(f)
             if ghost_minima_data["ghost_minima"] is not None:
                 for entry in ghost_minima_data["ghost_minima"]:
-                    if entry.get("assessment") == "Not an ghost_minima":
+                    if entry.get("assessment") == "Not a ghost minimum":
                         is_not_ghost_minima.append(str(entry["structure"]))
         is_not_ghost_minima_set = set(is_not_ghost_minima)
 

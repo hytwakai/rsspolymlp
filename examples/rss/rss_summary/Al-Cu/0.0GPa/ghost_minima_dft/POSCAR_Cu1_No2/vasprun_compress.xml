@@ -1,0 +1,57 @@
+<?xml version="1.0" ?><modeling><calculation><energy>
+   <i name="e_fr_energy">    126.50511235 </i>
+   <i name="e_wo_entrp">    126.50513969 </i>
+   <i name="e_0_energy">     -0.00008202 </i>
+  </energy>
+  <varray name="forces">
+   <v>       0.00000000       0.00000000       0.00000000 </v>
+   <v>       0.00257575      -0.00901414      12.48519173 </v>
+   <v>      -0.00257575       0.00901414     -12.48519173 </v>
+  </varray>
+  <varray name="stress">
+   <v>   41477.56328910       0.01324405       0.19994605 </v>
+   <v>       0.01324167    2035.71516133      -1.19081698 </v>
+   <v>       0.19994879      -1.19081498    1417.72460355 </v>
+  </varray>
+  <structure name="finalpos">
+  <crystal>
+   <varray name="basis">
+    <v>       0.91450377       0.00000000       0.00000000 </v>
+    <v>      -0.29811814       4.00284418       0.00000000 </v>
+    <v>      -0.27801560      -2.00006200       8.02219303 </v>
+   </varray>
+   <i name="volume">     29.36616899 </i>
+   <varray name="rec_basis">
+    <v>       1.09348920       0.08143934       0.05819989 </v>
+    <v>       0.00000000       0.24982237       0.06228474 </v>
+    <v>       0.00000000       0.00000000       0.12465419 </v>
+   </varray>
+  </crystal>
+  <varray name="positions">
+   <v>       0.50000000       0.00000000       0.50000000 </v>
+   <v>       0.25997260       0.56674178       0.63345818 </v>
+   <v>       0.74002740       0.43325822       0.36654182 </v>
+  </varray>
+ </structure>
+<array name="atomtypes">
+   <dimension dim="1">type</dimension>
+   <field type="int">atomspertype</field>
+   <field type="string">element</field>
+   <field>mass</field>
+   <field>valence</field>
+   <field type="string">pseudopotential</field>
+   <set>
+    <rc><c>   3</c><c>Cu</c><c>     63.54600000</c><c>     11.00000000</c><c>  PAW_PBE Cu 22Jun2005                  </c></rc>
+   </set>
+  </array>
+ <array name="atoms">
+   <dimension dim="1">ion</dimension>
+   <field type="string">element</field>
+   <field type="int">atomtype</field>
+   <set>
+    <rc><c>Cu</c><c>   1</c></rc>
+    <rc><c>Cu</c><c>   1</c></rc>
+    <rc><c>Cu</c><c>   1</c></rc>
+   </set>
+  </array>
+  </calculation></modeling>

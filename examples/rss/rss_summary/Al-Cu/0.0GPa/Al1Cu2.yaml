@@ -1,5 +1,5 @@
 general_information:
-  sorting_time_sec:      0.38
+  sorting_time_sec:      0.37
   pressure_GPa:          0.0
   num_optimized_structs: 81
   num_unique_structs:    79
@@ -37,12 +37,12 @@ unique_structures:
     space_group: ['C2/c (15)', 'C2/c (15)', 'C2/c (15)', 'C2/c (15)']
     other_info: 12 atom / distance 2.58 (Ang.) / volume 12.86 (A^3/atom)
   - struct_No: 4
-    poscar_name: ../../../rss_mlp/Al-Cu/0.0GPa/2_4/opt_struct/POSCAR_77
+    poscar_name: ../../../rss_mlp/Al-Cu/0.0GPa/1_2/opt_struct/POSCAR_10
     energy_diff_meV_per_atom: 12.22
     duplicates: 1
-    enthalpy: -3.6644620343032384
-    axis: [3.061254496390705, 3.061254496390705, 8.197707332907866, 90.0, 90.0, 90.0]
-    positions: [[0.0, 0.0, 0.0], [0.5, 0.5, 0.5], [0.0, 0.0, 0.33325613101428], [0.5, 0.5, 0.16674386898572], [0.5, 0.5, 0.83325613101428], [0.0, 0.0, 0.66674386898572]]
+    enthalpy: -3.664462034303213
+    axis: [3.061254469032553, 3.061254469032553, 8.197707553508039, 90.0, 90.0, 90.0]
+    positions: [[0.0, 0.0, 0.0], [0.5, 0.5, 0.5], [0.5, 0.5, 0.166743870518999], [0.0, 0.0, 0.333256129481001], [0.0, 0.0, 0.666743870518999], [0.5, 0.5, 0.833256129481001]]
     elements: ['Al', 'Al', 'Cu', 'Cu', 'Cu', 'Cu']
     space_group: ['I4/mmm (139)', 'I4/mmm (139)', 'I4/mmm (139)', 'I4/mmm (139)']
     other_info: 6 atom / distance 2.559 (Ang.) / volume 12.8 (A^3/atom)
@@ -457,12 +457,12 @@ unique_structures:
     space_group: ['P1 (1)', 'P1 (1)', 'P1 (1)', 'P1 (1)']
     other_info: 6 atom / distance 2.391 (Ang.) / volume 28.19 (A^3/atom)
   - struct_No: 46
-    poscar_name: ../../../rss_mlp/Al-Cu/0.0GPa/2_4/opt_struct/POSCAR_102
+    poscar_name: ../../../rss_mlp/Al-Cu/0.0GPa/1_2/opt_struct/POSCAR_3
     energy_diff_meV_per_atom: 492.34
     duplicates: 1
-    enthalpy: -3.184337678483383
-    axis: [19.727579698207236, 2.694466567636114, 2.6944666137265805, 90.0, 97.85005937540407, 90.0]
-    positions: [[0.0, 0.5, 0.5], [0.5, 0.0, 0.5], [0.586277865287376, 0.5, 0.086276220187227], [0.913722134712624, 0.0, 0.913723779812773], [0.086277865287376, 0.0, 0.086276220187227], [0.413722134712624, 0.5, 0.913723779812773]]
+    enthalpy: -3.184337678482763
+    axis: [3.810551083170591, 3.810551290779063, 9.95536619770096, 90.0, 101.03319222410484, 90.0]
+    positions: [[0.0, 0.0, 0.5], [0.5, 0.5, 0.5], [0.413723986083933, 0.0, 0.327444280151391], [0.586276013916067, 0.0, 0.672555719848609], [0.913723986083933, 0.5, 0.327444280151391], [0.086276013916067, 0.5, 0.672555719848609]]
     elements: ['Al', 'Al', 'Cu', 'Cu', 'Cu', 'Cu']
     space_group: ['C2/m (12)', 'I4/mmm (139)', 'I4/mmm (139)', 'I4/mmm (139)']
     other_info: 6 atom / distance 2.544 (Ang.) / volume 23.65 (A^3/atom)

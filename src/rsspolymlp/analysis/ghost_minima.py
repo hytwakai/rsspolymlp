@@ -1,4 +1,3 @@
-import argparse
 import ast
 import glob
 import json
@@ -121,45 +120,6 @@ def get_ghost_minima_dists(dir_path):
         # print("min, max =", np.min(dist_ghost_minima), np.max(dist_ghost_minima))
 
 
-def run():
-    parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "--compare_dft",
-        action="store_true",
-        help="If set, runs detect_true_ghost_minima() to compare with DFT;"
-        " otherwise, runs ghost_minima_candidates().",
-    )
-    parser.add_argument(
-        "--result_paths",
-        nargs="*",
-        type=str,
-        default=None,
-        help="Path(s) to RSS result log file(s).",
-    )
-    parser.add_argument(
-        "--dft_dir",
-        type=str,
-        default=None,
-        help="Path to the directory containing DFT results for ghost_minima structures.",
-    )
-    args = parser.parse_args()
-
-    if not args.compare_dft:
-        dir_path = os.path.dirname(args.result_paths[0])
-        os.makedirs(
-            f"{dir_path}/../ghost_minima/ghost_minima_candidates", exist_ok=True
-        )
-        os.chdir(f"{dir_path}/../")
-        ghost_minima_candidates(args.result_paths)
-    else:
-        base_dir = os.path.basename(args.dft_dir)
-        os.makedirs(
-            f"{base_dir}/../ghost_minima/ghost_minima_candidates", exist_ok=True
-        )
-        os.chdir(f"{base_dir}/../")
-        detect_actual_ghost_minima(args.dft_dir)
-
-
 def ghost_minima_candidates(result_paths):
     # Prepare output directory: remove existing files if already exists
     out_dir = "ghost_minima/ghost_minima_candidates"
@@ -256,15 +216,16 @@ def detect_actual_ghost_minima(dft_path):
             print(f"  - structure: {poscar}", file=f)
             if not delta == "null":
                 print(f"    energy_diff_meV_per_atom: {delta*1000:.3f}", file=f)
-                if delta < -0.1:
-                    assessment = "Marked as ghost_minima"
+                ghost_threshold = -0.1  # unit: eV/atom
+                if delta < ghost_threshold:
+                    assessment = "Marked as ghost minimum"
                     n_true_ghost_minima += 1
                 else:
-                    assessment = "Not an ghost_minima"
+                    assessment = "Not a ghost minimum"
                 print(f"    assessment: {assessment}", file=f)
             else:
                 print("    energy_diff_meV_per_atom: null", file=f)
-                print("    assessment: Marked as ghost_minima", file=f)
+                print("    assessment: Marked as ghost minimum", file=f)
                 n_true_ghost_minima += 1
 
             print("    details:", file=f)

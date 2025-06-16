@@ -1,5 +1,5 @@
 general_information:
-  sorting_time_sec:      0.64
+  sorting_time_sec:      0.67
   pressure_GPa:          0.0
   num_optimized_structs: 154
   num_unique_structs:    149
@@ -1495,4 +1495,4 @@ unique_structures:
     positions: [[0.282306279241332, 0.091030417365254, 0.978175506939161], [0.782490858548106, 0.445504223936918, 0.726220389116797], [0.782255605981545, 0.339425936301905, 0.061250770123857]]
     elements: ['Al', 'Al', 'Cu']
     space_group: ['P1 (1)', 'P1 (1)', 'Pm (6)', 'Pm (6)']
-    other_info: 3 atom / distance 2.352 (Ang.) / volume 23.44 (A^3/atom)
+    other_info: 3 atom / distance 0.811 (Ang.) / volume 23.44 (A^3/atom)

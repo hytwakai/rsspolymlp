@@ -1,4 +1,3 @@
-import argparse
 import json
 import os
 from collections import defaultdict
@@ -12,39 +11,8 @@ from rsspolymlp.analysis.unique_struct import (
     UniqueStructureAnalyzer,
     generate_unique_structs,
 )
-from rsspolymlp.common.parse_arguments import ParseArgument
 from rsspolymlp.rss.rss_uniq_struct import log_unique_structures
 from rsspolymlp.utils.convert_dict import polymlp_struct_from_dict
-
-
-def run():
-    parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "--elements",
-        nargs="*",
-        type=str,
-        default=None,
-        help="List of target element symbols",
-    )
-    parser.add_argument(
-        "--rss_paths",
-        nargs="*",
-        type=str,
-        required=True,
-        help="Path(s) to directories where RSS was performed",
-    )
-    ParseArgument.add_parallelization_arguments(parser)
-    ParseArgument.add_analysis_arguments(parser)
-    args = parser.parse_args()
-
-    analyzer_all = RSSResultSummarizer(
-        args.elements,
-        args.rss_paths,
-        args.use_joblib,
-        args.num_process,
-        args.backend,
-    )
-    analyzer_all.run_sorting()
 
 
 class RSSResultSummarizer:
@@ -201,7 +169,3 @@ class RSSResultSummarizer:
             analyzer.identify_duplicate_struct(res)
 
         return analyzer.unique_str, num_opt_struct, integrated_res_paths, pressure
-
-
-if __name__ == "__main__":
-    run()

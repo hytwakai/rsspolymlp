@@ -12,14 +12,21 @@ from rsspolymlp.utils.wait_readfile import wait_for_file_lines
 
 class RandomStructureSearch:
 
-    def __init__(self, args):
-        # Parsed command-line arguments containing optimization settings.
-        self.pot = args.pot
-        self.pressure = args.pressure
-        self.solver_method = args.solver_method
-        self.maxiter = args.maxiter
-        self.num_opt_str = args.num_opt_str
-        self.not_stop_rss = args.not_stop_rss
+    def __init__(
+        self,
+        pot="polymlp.yaml",
+        pressure=0.0,
+        solver_method="CG",
+        maxiter=100,
+        num_opt_str=1000,
+        not_stop_rss=False,
+    ):
+        self.pot = pot
+        self.pressure = pressure
+        self.solver_method = solver_method
+        self.maxiter = maxiter
+        self.num_opt_str = num_opt_str
+        self.not_stop_rss = not_stop_rss
         self._stop_rss = False
 
     def run_optimization(self, poscar_path):

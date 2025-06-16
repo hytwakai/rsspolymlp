@@ -4,7 +4,6 @@ identify and retain unique structures based on irreducible structure representat
 and write detailed computational statistics to the log.
 """
 
-import argparse
 import glob
 import json
 import os
@@ -22,22 +21,9 @@ from rsspolymlp.analysis.unique_struct import (
     generate_unique_structs,
 )
 from rsspolymlp.common.composition import compute_composition
-from rsspolymlp.common.parse_arguments import ParseArgument
 from rsspolymlp.common.property import PropUtil
 from rsspolymlp.rss.load_logfile import LogfileLoader
 from rsspolymlp.utils.convert_dict import polymlp_struct_to_dict
-
-
-def run():
-    parser = argparse.ArgumentParser()
-    ParseArgument.add_parallelization_arguments(parser)
-    ParseArgument.add_analysis_arguments(parser)
-    args = parser.parse_args()
-
-    analyzer = RSSResultAnalyzer()
-    if args.cutoff is not None:
-        analyzer.cutoff = args.cutoff
-    analyzer.run_rss_uniq_struct(args)
 
 
 def log_unique_structures(
@@ -274,19 +260,23 @@ class RSSResultAnalyzer:
             _res["fval"] = self.fval_str[-1]
             _res["gval"] = self.gval_str[-1]
 
-    def run_rss_uniq_struct(self, args):
+    def run_rss_uniq_struct(
+        self,
+        num_str=-1,
+        pressure=None,
+        use_joblib=False,
+        num_process=-1,
+        backend="loky",
+    ):
         """Sort structures and write the results to a log file."""
-        if args.pressure is not None:
-            self.pressure = args.pressure
-
         time_start = time()
 
         with open("rss_result/finish.dat") as f:
             finished_set = [line.strip() for line in f]
         with open("rss_result/success.dat") as f:
             sucessed_set = [line.strip() for line in f]
-        if not args.num_str == -1:
-            sucessed_set = sucessed_set[: args.num_str]
+        if not num_str == -1:
+            sucessed_set = sucessed_set[:num_str]
             fin_poscar = sucessed_set[-1]
             index = finished_set.index(fin_poscar)
             finished_set = finished_set[: index + 1]
@@ -295,7 +285,7 @@ class RSSResultAnalyzer:
         struct_properties = self._load_rss_logfiles()
 
         unique_structs, unique_str_prop = self._analysis_unique_structure(
-            struct_properties, args.use_joblib, args.num_process, args.backend
+            struct_properties, use_joblib, num_process, backend
         )
 
         time_finish = time() - time_start
@@ -326,6 +316,8 @@ class RSSResultAnalyzer:
 
         # Write results to log file
         file_name = "rss_result/rss_results.yaml"
+        if pressure is not None:
+            self.pressure = pressure
         with open(file_name, "w") as f:
             print("general_information:", file=f)
             print(f"  sorting_time_sec:         {round(time_finish, 2)}", file=f)
@@ -374,7 +366,9 @@ class RSSResultAnalyzer:
         iters_sorted = [iters[i] for i in sort_idx]
 
         if len(energies) > 50:
-            is_ghost_minima, _ = detect_ghost_minima(energies[sort_idx], distances[sort_idx])
+            is_ghost_minima, _ = detect_ghost_minima(
+                energies[sort_idx], distances[sort_idx]
+            )
         else:
             is_ghost_minima = np.full_like(energies, False, dtype=bool)
 
@@ -407,7 +401,3 @@ class RSSResultAnalyzer:
                 f"  layer_structure: {self.error_poscar['invalid_layer_struct']}",
                 file=f,
             )
-
-
-if __name__ == "__main__":
-    run()

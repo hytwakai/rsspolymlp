@@ -1,33 +1,8 @@
-import argparse
-import glob
-import os
-
 import numpy as np
 from scipy.linalg import cholesky
 
-from rsspolymlp.common.parse_arguments import ParseArgument
 from rsspolymlp.common.property import PropUtil
 from rsspolymlp.utils.vasp_utils import write_poscar
-
-
-def run():
-    parser = argparse.ArgumentParser()
-    ParseArgument.add_initial_structure_arguments(parser)
-    args = parser.parse_args()
-
-    os.makedirs("initial_struct", exist_ok=True)
-
-    # Generate new structures if necessary
-    pre_str_count = len(glob.glob("initial_struct/*"))
-    if args.num_init_str > pre_str_count:
-        gen_str = GenerateRandomStructure(
-            args.elements,
-            args.atom_counts,
-            args.num_init_str,
-            least_distance=args.least_distance,
-            pre_str_count=pre_str_count,
-        )
-        gen_str.random_structure(min_volume=args.min_volume, max_volume=args.max_volume)
 
 
 class GenerateRandomStructure:
@@ -145,7 +120,3 @@ class GenerateRandomStructure:
                 if self.str_count == self.max_str:
                     return
             iteration += 1
-
-
-if __name__ == "__main__":
-    run()

@@ -1,0 +1,54 @@
+<?xml version="1.0" ?><modeling><calculation><energy>
+   <i name="e_fr_energy">     39.87645447 </i>
+   <i name="e_wo_entrp">     39.87642221 </i>
+   <i name="e_0_energy">      0.00009678 </i>
+  </energy>
+  <varray name="forces">
+   <v>      -0.00000739       0.00043073      -0.00024836 </v>
+   <v>       0.00000739      -0.00043073       0.00024836 </v>
+  </varray>
+  <varray name="stress">
+   <v>   14392.48649701      -0.02605628      -0.04235520 </v>
+   <v>      -0.02606004      97.79851849       0.05962214 </v>
+   <v>      -0.04235736       0.05962173      97.86410518 </v>
+  </varray>
+  <structure name="finalpos">
+  <crystal>
+   <varray name="basis">
+    <v>       1.03160018       0.00000000       0.00000000 </v>
+    <v>      -0.23277309       4.86439905       0.00000000 </v>
+    <v>      -0.23335400      -2.43162572       4.21302006 </v>
+   </varray>
+   <i name="volume">     21.14141897 </i>
+   <varray name="rec_basis">
+    <v>       0.96936780       0.04638656       0.08046499 </v>
+    <v>       0.00000000       0.20557524       0.11865171 </v>
+    <v>       0.00000000       0.00000000       0.23735942 </v>
+   </varray>
+  </crystal>
+  <varray name="positions">
+   <v>       0.00017037       0.83330626       0.66669344 </v>
+   <v>       0.99982963       0.16669374       0.33330656 </v>
+  </varray>
+ </structure>
+<array name="atomtypes">
+   <dimension dim="1">type</dimension>
+   <field type="int">atomspertype</field>
+   <field type="string">element</field>
+   <field>mass</field>
+   <field>valence</field>
+   <field type="string">pseudopotential</field>
+   <set>
+    <rc><c>   2</c><c>Cu</c><c>     63.54600000</c><c>     11.00000000</c><c>  PAW_PBE Cu 22Jun2005                  </c></rc>
+   </set>
+  </array>
+ <array name="atoms">
+   <dimension dim="1">ion</dimension>
+   <field type="string">element</field>
+   <field type="int">atomtype</field>
+   <set>
+    <rc><c>Cu</c><c>   1</c></rc>
+    <rc><c>Cu</c><c>   1</c></rc>
+   </set>
+  </array>
+  </calculation></modeling>

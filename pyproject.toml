@@ -18,10 +18,11 @@ requires-python = ">=3.9"
 dependencies = [
     "numpy",
     "scipy",
-    "pypolymlp",
-    "symfc",
-    "spglib",
+    "scikit-learn",
     "joblib",
+    "pypolymlp",
+    "spglib",
+    "symfc",
 ]
 
 [project.optional-dependencies]
@@ -35,14 +36,14 @@ homepage = "https://github.com/hytwakai/rsspolymlp"
 repository = "https://github.com/hytwakai/rsspolymlp"
 
 [project.scripts]
-rss-init-struct = "rsspolymlp.rss.random_struct:run"
-rss-single-srun = "rsspolymlp.rss.rss_parallel:run_single_srun"
-rss-parallel = "rsspolymlp.rss.rss_parallel:run"
-rss-uniq-struct = "rsspolymlp.rss.rss_uniq_struct:run"
-rss-summarize = "rsspolymlp.analysis.rss_summarize:run"
-rss-ghost-minima = "rsspolymlp.analysis.ghost_minima:run"
-rss-phase-analysis = "rsspolymlp.analysis.phase_analysis:run"
-plot-binary = "rsspolymlp.analysis.plot.binary:run"
+rss-init-struct = "rsspolymlp.api.cli_rss:run_rss_init_struct"
+rss-parallel = "rsspolymlp.api.cli_rss:run_rss_parallel"
+rss-single-srun = "rsspolymlp.api.cli_rss:run_rss_single_srun"
+rss-uniq-struct = "rsspolymlp.api.cli_rss:run_rss_uniq_struct"
+rss-summarize = "rsspolymlp.api.cli_rss:run_rss_summarize"
+rss-ghost-minima = "rsspolymlp.api.cli_rss:run_rss_ghost_minima"
+rss-phase-analysis = "rsspolymlp.api.cli_rss:run_rss_phase_analysis"
+plot-binary = "rsspolymlp.api.cli_plot:run_plot_binary"
 
 [tool.setuptools]
 package-dir = {"" = "src"}

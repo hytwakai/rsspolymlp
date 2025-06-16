@@ -1,5 +1,5 @@
 general_information:
-  sorting_time_sec:      0.99
+  sorting_time_sec:      1.01
   pressure_GPa:          0.0
   num_optimized_structs: 225
   num_unique_structs:    218
@@ -57,12 +57,12 @@ unique_structures:
     space_group: ['C2/m (12)', 'C2/m (12)', 'C2/m (12)', 'C2/m (12)']
     other_info: 8 atom / distance 2.585 (Ang.) / volume 13.52 (A^3/atom)
   - struct_No: 6
-    poscar_name: ../../../rss_mlp/Al-Cu/0.0GPa/2_2/opt_struct/POSCAR_91
+    poscar_name: ../../../rss_mlp/Al-Cu/0.0GPa/3_3/opt_struct/POSCAR_93
     energy_diff_meV_per_atom: 9.79
     duplicates: 1
-    enthalpy: -3.6058243629599627
-    axis: [2.827577072249347, 2.827577072249347, 3.401799365174477, 90.0, 90.0, 90.0]
-    positions: [[0.0, 0.0, 0.0], [0.5, 0.5, 0.5]]
+    enthalpy: -3.6058243629605613
+    axis: [2.827577746613742, 2.827577746613742, 3.4017973988938, 90.0, 90.0, 90.0]
+    positions: [[0.5, 0.5, 0.0], [0.0, 0.0, 0.5]]
     elements: ['Al', 'Cu']
     space_group: ['P4/mmm (123)', 'P4/mmm (123)', 'P4/mmm (123)', 'P4/mmm (123)']
     other_info: 2 atom / distance 2.625 (Ang.) / volume 13.6 (A^3/atom)
@@ -357,12 +357,12 @@ unique_structures:
     space_group: ['Cm (8)', 'Cm (8)', 'Cm (8)', 'Cm (8)']
     other_info: 16 atom / distance 2.382 (Ang.) / volume 13.95 (A^3/atom)
   - struct_No: 36
-    poscar_name: ../../../rss_mlp/Al-Cu/0.0GPa/2_2/opt_struct/POSCAR_43
+    poscar_name: ../../../rss_mlp/Al-Cu/0.0GPa/3_3/opt_struct/POSCAR_165
     energy_diff_meV_per_atom: 42.37
     duplicates: 1
-    enthalpy: -3.573248309586127
-    axis: [2.783911563045513, 2.783911563045513, 12.336148439256785, 90.0, 90.0, 120.00000000000001]
-    positions: [[0.333333333333333, 0.666666666666667, 0.166666666666667], [-0.0, -0.0, 0.5], [0.666666666666667, 0.333333333333333, 0.833333333333333], [0.0, 0.0, 0.0], [0.666666666666667, 0.333333333333333, 0.333333333333333], [0.333333333333333, 0.666666666666667, 0.666666666666667]]
+    enthalpy: -3.5732483095861216
+    axis: [2.783911546802337, 2.783911546802337, 12.336147996104716, 90.0, 90.0, 119.99999999999999]
+    positions: [[0.0, 0.0, 0.0], [0.666666666666667, 0.333333333333333, 0.333333333333333], [0.333333333333333, 0.666666666666667, 0.666666666666667], [0.333333333333333, 0.666666666666667, 0.166666666666667], [-0.0, -0.0, 0.5], [0.666666666666667, 0.333333333333333, 0.833333333333333]]
     elements: ['Al', 'Al', 'Al', 'Cu', 'Cu', 'Cu']
     space_group: ['R-3m (166)', 'R-3m (166)', 'R-3m (166)', 'R-3m (166)']
     other_info: 6 atom / distance 2.61 (Ang.) / volume 13.8 (A^3/atom)
@@ -2155,7 +2155,7 @@ unique_structures:
     positions: [[0.0, 0.0, 0.0], [0.0, 0.0, 0.5]]
     elements: ['Al', 'Cu']
     space_group: ['P6/mmm (191)', 'P6/mmm (191)', 'P6/mmm (191)', 'P6/mmm (191)']
-    other_info: 2 atom / distance 4.548 (Ang.) / volume 25.53 (A^3/atom)
+    other_info: 2 atom / distance 2.546 (Ang.) / volume 25.53 (A^3/atom)
   - struct_No: 216
     poscar_name: ../../../rss_mlp/Al-Cu/0.0GPa/2_2/opt_struct/POSCAR_148
     energy_diff_meV_per_atom: 1042.49

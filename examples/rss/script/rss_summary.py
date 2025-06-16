@@ -17,14 +17,14 @@ for pressure in pressure_set:
         check=True,
     )
     print("- rss-summarize finished")
-    print("- rss-outlier")
+    print("- rss-ghost-minima")
     subprocess.run(
-        "rss-outlier --result_paths ./json/*",
+        "rss-ghost-minima --result_paths ./json/*",
         shell=True,
         check=True,
     )
     subprocess.run(
-        "rss-outlier --compare_dft --dft_dir ./outlier_candidates_dft",
+        "rss-ghost-minima --compare_dft --dft_dir ./ghost_minima_dft",
         shell=True,
         check=True,
     )
@@ -33,7 +33,7 @@ for pressure in pressure_set:
         (
             "rss-phase-analysis --elements Al Cu "
             "--result_paths ./json/* "
-            "--outlier_file outlier/outlier_detection.yaml "
+            "--ghost_minima_file ghost_minima/ghost_minima_detection.yaml "
             "--thresholds 10 20 30 40 50"
         ),
         shell=True,

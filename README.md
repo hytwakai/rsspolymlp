@@ -23,10 +23,11 @@ If you use `rsspolymlp` in your study, please cite the following articles.
 ### Required libraries and python modules
 
 - python >= 3.9
-- pypolymlp
-- symfc
-- spglib
+- scikit-learn
 - joblib
+- pypolymlp
+- spglib
+- symfc
 
 [Optional]
 - matplotlib (if plotting RSS results)

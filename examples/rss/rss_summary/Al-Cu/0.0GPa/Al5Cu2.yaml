@@ -1,5 +1,5 @@
 general_information:
-  sorting_time_sec:      0.44
+  sorting_time_sec:      0.42
   pressure_GPa:          0.0
   num_optimized_structs: 92
   num_unique_structs:    92
@@ -855,7 +855,7 @@ unique_structures:
     positions: [[0.763721265039792, 0.834060894623814, 0.855575650358429], [0.261086756288644, 0.029364632835682, 0.760371305950541], [0.252459774451629, 0.698083027224698, 0.448660585001837], [0.755497025030927, 0.51608875306787, 0.558417637516207], [0.261335647651762, 0.564417321494368, 0.769386534492515], [0.755936009299506, 0.918587041268011, 0.574260772485626], [0.258430202546472, 0.752145651672623, 0.664393830747239]]
     elements: ['Al', 'Al', 'Al', 'Al', 'Al', 'Cu', 'Cu']
     space_group: ['P1 (1)', 'P1 (1)', 'P1 (1)', 'P1 (1)']
-    other_info: 7 atom / distance 2.574 (Ang.) / volume 43.2 (A^3/atom)
+    other_info: 7 atom / distance 2.571 (Ang.) / volume 43.2 (A^3/atom)
   - struct_No: 86
     poscar_name: ../../../rss_mlp/Al-Cu/0.0GPa/5_2/opt_struct/POSCAR_7
     energy_diff_meV_per_atom: 528.31

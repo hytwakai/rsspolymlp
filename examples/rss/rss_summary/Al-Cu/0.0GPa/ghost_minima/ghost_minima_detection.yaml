@@ -1,0 +1,43 @@
+ghost_minima:
+  - structure: POSCAR_Cu1_No1
+    energy_diff_meV_per_atom: -68739.524
+    assessment: Marked as ghost minimum
+    details:
+      diff: -68.73952360114805
+      dft_value: 38.53689619
+      mlp_value: -30.202627411148054
+  - structure: POSCAR_Cu1_No2
+    energy_diff_meV_per_atom: -69670.013
+    assessment: Marked as ghost minimum
+    details:
+      diff: -69.67001283378487
+      dft_value: 42.410693226666666
+      mlp_value: -27.259319607118197
+  - structure: POSCAR_Cu1_No3
+    energy_diff_meV_per_atom: -61629.579
+    assessment: Marked as ghost minimum
+    details:
+      diff: -61.62957913119363
+      dft_value: 36.33695048666667
+      mlp_value: -25.292628644526957
+  - structure: POSCAR_Cu1_No4
+    energy_diff_meV_per_atom: -40503.307
+    assessment: Marked as ghost minimum
+    details:
+      diff: -40.503307193966286
+      dft_value: 29.464085817500003
+      mlp_value: -11.039221376466282
+  - structure: POSCAR_Cu1_No5
+    energy_diff_meV_per_atom: -24703.495
+    assessment: Marked as ghost minimum
+    details:
+      diff: -24.70349485687234
+      dft_value: 20.180524435000002
+      mlp_value: -4.522970421872335
+  - structure: POSCAR_Cu1_No6
+    energy_diff_meV_per_atom: -26176.427
+    assessment: Marked as ghost minimum
+    details:
+      diff: -26.176426854343127
+      dft_value: 22.267997110000003
+      mlp_value: -3.908429744343123
