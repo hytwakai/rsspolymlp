@@ -52,7 +52,10 @@ class RandomStructureSearch:
             c1_set = [None, 0.9, 0.99]
             c2_set = [None, 0.99, 0.999]
 
-            print("Selected potential:", self.pot)
+            if isinstance(self.pot, list):
+                print("Selected potential:", self.pot)
+            else:
+                print("Selected potential:", [self.pot])
             print("Pressure (GPa):", self.pressure)
             unitcell = Poscar(poscar_path).structure
 

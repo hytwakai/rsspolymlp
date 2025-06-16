@@ -48,7 +48,7 @@ class ParseArgument:
             "--pot",
             nargs="*",
             type=str,
-            default="polymlp.yaml",
+            default=["polymlp.yaml"],
             help="Potential file for polynomial MLP",
         )
         parser.add_argument(

@@ -5,7 +5,8 @@ import os
 import subprocess
 import time
 
-import joblib
+from joblib import Parallel, delayed
+from joblib.externals.loky import get_reusable_executor
 
 from rsspolymlp.rss.eliminate_duplicates import RSSResultAnalyzer
 from rsspolymlp.rss.optimization_mlp import RandomStructureSearch
@@ -79,24 +80,25 @@ def rss_parallel(
         num_opt_str=num_opt_str,
         not_stop_rss=not_stop_rss,
     )
+    if num_process == -1:
+        num_process = multiprocessing.cpu_count()
 
     if parallel_method == "joblib":
         # Perform parallel optimization with joblib
         time_start = time.time()
-        joblib.Parallel(n_jobs=num_process, backend=backend)(
-            joblib.delayed(rssobj.run_optimization)(poscar)
-            for poscar in poscar_path_all
+        Parallel(n_jobs=num_process, backend=backend)(
+            delayed(rssobj.run_optimization)(poscar) for poscar in poscar_path_all
         )
+        executor = get_reusable_executor(max_workers=num_process)
+        executor.shutdown(wait=True)
         elapsed = time.time() - time_start
         with open("rss_result/parallel_time.log", "a") as f:
-            print("Number of CPU cores:", multiprocessing.cpu_count(), file=f)
+            print("Number of CPU cores:", num_process, file=f)
             print("Number of the structures:", len(glob.glob("log/*")), file=f)
             print("Computational time:", elapsed, file=f)
             print("", file=f)
 
     elif parallel_method == "srun":
-        if num_process == -1:
-            num_process = multiprocessing.cpu_count()
         if len(poscar_path_all) > num_process:
             with open("rss_result/start.dat", "w") as f:
                 pass

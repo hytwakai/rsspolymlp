@@ -1,5 +1,13 @@
+import glob
 import os
-import subprocess
+
+from rsspolymlp.api.api_plot import plot_binary
+from rsspolymlp.api.api_rss_postprocess import (
+    rss_ghost_minima_cands,
+    rss_ghost_minima_validate,
+    rss_phase_analysis,
+    rss_summarize,
+)
 
 pressure_set = [0.0]
 base_dir = os.getcwd()
@@ -9,41 +17,27 @@ for pressure in pressure_set:
     os.makedirs(dir_path, exist_ok=True)
     os.chdir(dir_path)
 
-    rss_paths = f"../../../rss_mlp/Al-Cu/{pressure}GPa/*"
     print("- rss-summarize start")
-    subprocess.run(
-        f"rss-summarize --elements Al Cu --use_joblib --rss_paths {rss_paths}",
-        shell=True,
-        check=True,
+    rss_paths = sorted(glob.glob(f"../../../rss_mlp/Al-Cu/{pressure}GPa/*"))
+    rss_summarize(
+        elements=["Al", "Cu"],
+        rss_paths=rss_paths,
+        use_joblib=True,
     )
     print("- rss-summarize finished")
+
     print("- rss-ghost-minima")
-    subprocess.run(
-        "rss-ghost-minima --result_paths ./json/*",
-        shell=True,
-        check=True,
-    )
-    subprocess.run(
-        "rss-ghost-minima --compare_dft --dft_dir ./ghost_minima_dft",
-        shell=True,
-        check=True,
-    )
+    rss_ghost_minima_cands(glob.glob("./json/*"))
+    rss_ghost_minima_validate("./ghost_minima_dft")
+
     print("- rss-phase-analysis")
-    subprocess.run(
-        (
-            "rss-phase-analysis --elements Al Cu "
-            "--result_paths ./json/* "
-            "--ghost_minima_file ghost_minima/ghost_minima_detection.yaml "
-            "--thresholds 10 20 30 40 50"
-        ),
-        shell=True,
-        check=True,
+    rss_phase_analysis(
+        elements=["Al", "Cu"],
+        result_paths=glob.glob("./json/*"),
+        ghost_minima_file="ghost_minima/ghost_minima_detection.yaml",
+        thresholds=[10, 20, 30, 40, 50],
     )
     print("- plot-binary")
-    subprocess.run(
-        "plot-binary --elements Al Cu --threshold 30",
-        shell=True,
-        check=True,
-    )
+    plot_binary(elements=["Al", "Cu"], threshold=30)
 
     os.chdir(base_dir)
