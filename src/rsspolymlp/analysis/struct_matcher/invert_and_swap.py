@@ -9,7 +9,7 @@ def invert_and_swap_positions(lattice, positions, spg_number, symprec):
     crystallographically equivalent lattice axes."""
     # Axis lengths (a, b, c) and angles (α, β, γ)
     prop = PropUtil(lattice, positions)
-    abc_angle = np.asarray(prop.axis_to_abc, dtype=float)  # (6,)
+    abc_angle = np.asarray(prop.abc, dtype=float)  # (6,)
     abc, angles = abc_angle[:3], abc_angle[3:]
     tol = symprec * 10.0
 
