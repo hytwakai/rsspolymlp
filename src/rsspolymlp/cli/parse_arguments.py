@@ -98,29 +98,3 @@ class ParseArgument:
             default="loky",
             help="Backend for joblib parallelization",
         )
-
-    @staticmethod
-    def add_analysis_arguments(parser):
-        parser.add_argument(
-            "--num_str",
-            type=int,
-            default=-1,
-            help="Number of optimized structures to analyze (-1 means all)",
-        )
-        parser.add_argument(
-            "--use_joblib",
-            action="store_true",
-            help="Enable parallel processing using joblib.",
-        )
-        parser.add_argument(
-            "--cutoff",
-            type=float,
-            default=None,
-            help="Cutoff radius used in the MLP model (optional)",
-        )
-        parser.add_argument(
-            "--pressure",
-            type=float,
-            default=None,
-            help="Pressure settings (in GPa) (optional)",
-        )

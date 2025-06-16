@@ -12,7 +12,7 @@ from rsspolymlp.api.rss_postprocess import (
     rss_phase_analysis,
     rss_summarize,
 )
-from rsspolymlp.common.parse_arguments import ParseArgument
+from rsspolymlp.cli.parse_arguments import ParseArgument
 
 
 def run_rss_init_struct():
@@ -66,8 +66,30 @@ def run_rss_single_srun():
 
 def run_rss_uniq_struct():
     parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--num_str",
+        type=int,
+        default=-1,
+        help="Number of optimized structures to analyze (-1 means all)",
+    )
+    parser.add_argument(
+        "--use_joblib",
+        action="store_true",
+        help="Enable parallel processing using joblib.",
+    )
+    parser.add_argument(
+        "--cutoff",
+        type=float,
+        default=None,
+        help="Cutoff radius used in the MLP model (optional)",
+    )
+    parser.add_argument(
+        "--pressure",
+        type=float,
+        default=None,
+        help="Pressure settings (in GPa) (optional)",
+    )
     ParseArgument.add_parallelization_arguments(parser)
-    ParseArgument.add_analysis_arguments(parser)
     args = parser.parse_args()
 
     rss_uniq_struct(
@@ -96,8 +118,12 @@ def run_rss_summarize():
         required=True,
         help="Path(s) to directories where RSS was performed",
     )
+    parser.add_argument(
+        "--use_joblib",
+        action="store_true",
+        help="Enable parallel processing using joblib.",
+    )
     ParseArgument.add_parallelization_arguments(parser)
-    ParseArgument.add_analysis_arguments(parser)
     args = parser.parse_args()
 
     rss_summarize(
