@@ -147,18 +147,20 @@ class ConvexHullAnalyzer:
                 ).tolist()
             )
 
+            logname = os.path.basename(res_path).split(".")[0]
             rss_results = loaded_dict["rss_results"]
             rss_results_array = {
                 "formation_e": np.array([r["energy"] for r in rss_results]),
                 "poscars": np.array([r["poscar"] for r in rss_results]),
                 "is_outliers": np.array([r["is_outlier"] for r in rss_results]),
                 "struct_no": np.array([r["struct_no"] for r in rss_results]),
+                "struct_tag": np.array(
+                    [f"POSCAR_{logname}_No{r['struct_no']}" for r in rss_results]
+                ),
             }
 
-            logname = os.path.basename(res_path).split(".")[0]
             for i in range(len(rss_results_array["is_outliers"])):
-                struct_no = rss_results_array["struct_no"][i]
-                name = f"POSCAR_{logname}_No{struct_no}"
+                name = rss_results_array["struct_tag"][i]
                 if rss_results_array["is_outliers"][i] and name in is_not_outliers_set:
                     rss_results_array["is_outliers"][i] = False
                     n_changed += 1
@@ -265,27 +267,31 @@ class ConvexHullAnalyzer:
         near_ch = {}
         not_near_ch = {}
 
-        rss_result_fe = self.rss_result_fe
-        for key in rss_result_fe:
-            is_near = rss_result_fe[key]["fe_above_ch"] < threshold / 1000
-            near_ch[key] = {"formation_e": None, "poscars": None, "fe_above_ch": None}
-            near_ch[key]["formation_e"] = rss_result_fe[key]["formation_e"][is_near]
-            near_ch[key]["poscars"] = rss_result_fe[key]["poscars"][is_near]
-            near_ch[key]["fe_above_ch"] = rss_result_fe[key]["fe_above_ch"][is_near]
-
-            is_not_near = rss_result_fe[key]["fe_above_ch"] >= threshold / 1000
-            not_near_ch[key] = {
-                "formation_e": None,
+        res = self.rss_result_fe
+        for key in res:
+            is_near = res[key]["fe_above_ch"] < threshold / 1000
+            near_ch[key] = {
+                "struct_tag": None,
                 "poscars": None,
                 "fe_above_ch": None,
+                "formation_e": None,
             }
-            not_near_ch[key]["formation_e"] = rss_result_fe[key]["formation_e"][
-                is_not_near
-            ]
-            not_near_ch[key]["poscars"] = rss_result_fe[key]["poscars"][is_not_near]
-            not_near_ch[key]["fe_above_ch"] = rss_result_fe[key]["fe_above_ch"][
-                is_not_near
-            ]
+            near_ch[key]["struct_tag"] = res[key]["struct_tag"][is_near]
+            near_ch[key]["poscars"] = res[key]["poscars"][is_near]
+            near_ch[key]["fe_above_ch"] = res[key]["fe_above_ch"][is_near]
+            near_ch[key]["formation_e"] = res[key]["formation_e"][is_near]
+
+            is_not_near = res[key]["fe_above_ch"] >= threshold / 1000
+            not_near_ch[key] = {
+                "struct_tag": None,
+                "poscars": None,
+                "fe_above_ch": None,
+                "formation_e": None,
+            }
+            not_near_ch[key]["struct_tag"] = res[key]["struct_tag"][is_not_near]
+            not_near_ch[key]["poscars"] = res[key]["poscars"][is_not_near]
+            not_near_ch[key]["fe_above_ch"] = res[key]["fe_above_ch"][is_not_near]
+            not_near_ch[key]["formation_e"] = res[key]["formation_e"][is_not_near]
 
         element_count = 0
         multi_count = 0
@@ -314,7 +320,8 @@ class ConvexHullAnalyzer:
                 print(f"  - composition: {key}", file=f)
                 print("    structures:", file=f)
                 for i in range(len(res["formation_e"])):
-                    print(f"      - poscar:     {res['poscars'][i]}", file=f)
+                    print(f"      - struct_tag: {res['struct_tag'][i]}", file=f)
+                    print(f"        poscar:     {res['poscars'][i]}", file=f)
                     print(
                         f"        delta_F_ch: {res['fe_above_ch'][i]:.6f}",
                         file=f,
