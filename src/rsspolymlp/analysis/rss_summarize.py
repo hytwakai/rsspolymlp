@@ -4,8 +4,10 @@ import os
 from collections import defaultdict
 from time import time
 
+import numpy as np
 import yaml
 
+from rsspolymlp.analysis.outlier_cands import detect_outlier
 from rsspolymlp.analysis.unique_struct import (
     UniqueStructureAnalyzer,
     generate_unique_structs,
@@ -63,6 +65,7 @@ class RSSResultSummarizer:
 
     def run_sorting(self):
         os.makedirs("json", exist_ok=True)
+        os.makedirs("outlier", exist_ok=True)
 
         paths_same_comp = defaultdict(list)
         results_same_comp = defaultdict(dict)
@@ -73,7 +76,7 @@ class RSSResultSummarizer:
 
             rel_path = os.path.relpath(f"{path_name}/opt_struct", start=os.getcwd())
             for i in range(len(loaded_dict["rss_results"])):
-                poscar_name = loaded_dict["rss_results"][i]["poscar"]
+                poscar_name = loaded_dict["rss_results"][i]["poscar"].split("/")[-1]
                 loaded_dict["rss_results"][i]["poscar"] = f"{rel_path}/{poscar_name}"
 
             target_elements = loaded_dict["elements"]
@@ -92,7 +95,7 @@ class RSSResultSummarizer:
                     log_name += f"{self.elements[i]}{comp_ratio[i]}"
 
             time_start = time()
-            unique_str, num_opt_struct, integrated_res_paths, pressure = (
+            unique_structs, num_opt_struct, integrated_res_paths, pressure = (
                 self._sorting_in_same_comp(
                     comp_ratio, res_paths, results_same_comp[comp_ratio]
                 )
@@ -104,12 +107,33 @@ class RSSResultSummarizer:
                 print(f"  sorting_time_sec:      {round(time_finish, 2)}", file=f)
                 print(f"  pressure_GPa:          {pressure}", file=f)
                 print(f"  num_optimized_structs: {num_opt_struct}", file=f)
-                print(f"  num_unique_structs:    {len(unique_str)}", file=f)
-                print(f"  input_file_names:      {sorted(integrated_res_paths)}", file=f)
+                print(f"  num_unique_structs:    {len(unique_structs)}", file=f)
+                print(
+                    f"  input_file_names:      {sorted(integrated_res_paths)}", file=f
+                )
                 print("", file=f)
 
+            energies = np.array([s.energy for s in unique_structs])
+            distances = np.array([s.least_distance for s in unique_structs])
+
+            sort_idx = np.argsort(energies)
+            unique_str_sorted = [unique_structs[i] for i in sort_idx]
+
+            is_outlier, outlier_info = detect_outlier(
+                energies[sort_idx], distances[sort_idx]
+            )
+            with open("outlier/dist_minE_struct.dat", "a") as f:
+                print(f"{outlier_info[0]:.3f}  {log_name}", file=f)
+            if len(outlier_info[1]) > 0:
+                with open("outlier/dist_outlier.dat", "a") as f:
+                    print(log_name, file=f)
+                    print(np.round(outlier_info[1], 3), file=f)
+
             rss_result_all = log_unique_structures(
-                log_name + ".yaml", unique_str, pressure=pressure, detect_outliers=True
+                log_name + ".yaml",
+                unique_str_sorted,
+                is_outlier,
+                pressure=pressure,
             )
 
             with open(f"json/{log_name}.json", "w") as f:

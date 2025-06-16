@@ -148,14 +148,11 @@ class ConvexHullAnalyzer:
             )
 
             rss_results = loaded_dict["rss_results"]
-            rss_results_valid = [r for r in rss_results if not r["is_strong_outlier"]]
             rss_results_array = {
-                "formation_e": np.array([r["energy"] for r in rss_results_valid]),
-                "poscars": np.array([r["poscar"] for r in rss_results_valid]),
-                "is_outliers": np.array(
-                    [r["is_weak_outlier"] for r in rss_results_valid]
-                ),
-                "struct_no": np.array([r["struct_no"] for r in rss_results_valid]),
+                "formation_e": np.array([r["energy"] for r in rss_results]),
+                "poscars": np.array([r["poscar"] for r in rss_results]),
+                "is_outliers": np.array([r["is_outlier"] for r in rss_results]),
+                "struct_no": np.array([r["struct_no"] for r in rss_results]),
             }
 
             logname = os.path.basename(res_path).split(".")[0]

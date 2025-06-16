@@ -141,3 +141,9 @@ class PymatUtil:
         # angles = lattice_niggli.angles
         # print(abc, angles)
         return lattice_niggli
+    
+    def least_distance(self, pymat_st):
+        dist_mat = pymat_st.distance_matrix
+        dist_mat_refine = np.where(dist_mat > 1e-10, dist_mat, np.inf)
+        distance_min = np.min(dist_mat_refine)
+        return distance_min

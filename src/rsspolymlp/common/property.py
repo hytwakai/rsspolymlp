@@ -63,7 +63,7 @@ class PropUtil:
         lat = self.axis
         coo = self.positions
         cartesian_coo = lat.T @ coo.T
-        c1 = cartesian_coo  # (3, N)     
+        c1 = cartesian_coo  # (3, N)
 
         # Generate periodic image translations along x, y, and z
         image_x, image_y, image_z = np.meshgrid(
@@ -77,12 +77,12 @@ class PropUtil:
         parallel_move = lat.T @ image_matrix
         parallel_move = np.tile(parallel_move[:, None, :], (1, c1.shape[-1], 1))
         c2_all = cartesian_coo[:, :, None] + parallel_move
-        
+
         # Compute squared distances between all pairs of atoms in all periodic images
         z = (c1[:, None, :, None] - c2_all[:, :, None, :]) ** 2  # (3, N, N, num_images)
         _dist_mat = np.sqrt(np.sum(z, axis=0))  # (N, N, num_images)
         _dist_mat_refine = np.where(_dist_mat > 1e-10, _dist_mat, np.inf)
-        
+
         # Find the minimum distance for each pair
         dist_mat = np.min(_dist_mat_refine, axis=-1)  # (N, N)
         distance_min = np.min(dist_mat)

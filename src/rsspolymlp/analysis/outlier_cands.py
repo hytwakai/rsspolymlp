@@ -3,9 +3,11 @@ import ast
 import glob
 import json
 import os
+import re
 import shutil
 
 import numpy as np
+from sklearn.cluster import KMeans
 
 from pypolymlp.core.interface_vasp import Vasprun
 from rsspolymlp.utils.ground_state_e import ground_state_energy
@@ -14,17 +16,8 @@ EV = 1.602176634e-19  # [J]
 EVAngstromToGPa = EV * 1e21
 
 
-def detect_outlier(energies: np.array):
-    """
-    Detect outliers and potential outliers in a 1D energy array.
-
-    Returns
-    -------
-    is_strong_outlier: np.ndarray of bool
-        Boolean array marking strong outliers (energy diff > 1.0).
-    is_weak_outlier : np.ndarray of bool
-        Boolean array marking potential outliers (energy diff > 0.2).
-    """
+def detect_outlier(energies: np.array, distances: np.array):
+    """Detect outliers and potential outliers in a 1D energy array"""
     n = len(energies)
     if n == 1:
         return np.array([False]), np.array([False])
@@ -36,33 +29,96 @@ def detect_outlier(energies: np.array):
     group_ids = np.concatenate([[0], group_ids])
 
     unique_groups = np.unique(group_ids)
-    group_means = np.array(
-        [np.mean(energies[group_ids == gid]) for gid in unique_groups]
+    cent_e = np.array([np.mean(energies[group_ids == gid]) for gid in unique_groups])
+    cent_dist = np.array(
+        [np.mean(distances[group_ids == gid]) for gid in unique_groups]
     )
 
-    window = int(round(len(energies) * 0.05))
-    window = max(window, 10)
+    outliers, not_outliers, is_outlier_group = _detect_outlier_kmeans(
+        cent_e, cent_dist, len(cent_e)
+    )
 
-    is_strong_group = np.full(group_means.shape, False, dtype=bool)
-    is_weak_group = np.full(group_means.shape, False, dtype=bool)
-    for i in range(len(group_means) - 1):
-        end = min(i + window, len(group_means) - 1)
-        diff = abs(group_means[i] - group_means[end])
-        if diff > 1.0:
-            is_strong_group[i] = True
-        elif diff > 0.2:
-            is_weak_group[i] = True
-        else:
-            break
-
-    is_strong_outlier = np.full_like(energies, False, dtype=bool)
-    is_weak_outlier = np.full_like(energies, False, dtype=bool)
-    for gid, strong, weak in zip(unique_groups, is_strong_group, is_weak_group):
+    is_outlier = np.full_like(energies, False, dtype=bool)
+    for gid, is_out in zip(unique_groups, is_outlier_group):
         idx = group_ids == gid
-        is_strong_outlier[idx] = strong
-        is_weak_outlier[idx] = weak
+        is_outlier[idx] = is_out
 
-    return is_strong_outlier, is_weak_outlier
+    return is_outlier, [not_outliers[0], outliers]
+
+
+def _detect_outlier_kmeans(cent_e, cent_dist, num_energy):
+    for prop in [0.5, 0.2, 0.1, 0.01]:
+        window = int(round(num_energy * prop))
+        window = max(window, 5)
+
+        end = min(window, len(cent_e) - 1)
+        data = cent_dist[0 : end + 1]
+
+        if prop == 0.5:
+            dist_mean = np.mean(data)
+        valid_data_idx = np.where(data > dist_mean * 0.5)[0]
+        invalid_data_idx = np.where(data <= dist_mean * 0.5)[0]
+        valid_data = data[valid_data_idx]
+        if len(valid_data) == 0:
+            continue
+
+        kmeans = KMeans(n_clusters=2, random_state=0).fit(valid_data.reshape(-1, 1))
+        labels = kmeans.labels_
+
+        cluster_means = [np.mean(valid_data[labels == i]) for i in range(2)]
+        outlier_label = np.argmin(cluster_means)
+
+        is_outlier_valid_data = np.full(valid_data.shape, False, dtype=bool)
+        outlier_indices = np.where(labels == outlier_label)[0]
+        is_outlier_valid_data[outlier_indices] = True
+        # print(is_outlier_valid_data)
+        is_outlier_valid_data[np.argmax(~is_outlier_valid_data) + 1 :] = False
+
+        outliers_valdat = valid_data[is_outlier_valid_data]
+        not_outliers_valdat = valid_data[~is_outlier_valid_data]
+        # print(outliers_valdat)
+        # print(not_outliers_valdat)
+
+        is_outlier = np.full(cent_dist.shape, False, dtype=bool)
+        if len(invalid_data_idx) > 0:
+            is_outlier[invalid_data_idx] = True
+
+        if len(outliers_valdat) > 0:
+            outlier_mean = np.mean(outliers_valdat)
+            # print(outlier_mean)
+            not_outlier_mean = np.mean(not_outliers_valdat)
+            # print(not_outlier_mean)
+            if outlier_mean / not_outlier_mean < 0.8:
+                is_outlier[valid_data_idx[is_outlier_valid_data]] = True
+                is_outlier[np.argmax(~is_outlier) + 1 :] = False
+                outliers = cent_dist[is_outlier]
+                not_outliers = cent_dist[~is_outlier]
+                break
+
+        is_outlier[np.argmax(~is_outlier) + 1 :] = False
+        outliers = cent_dist[is_outlier]
+        not_outliers = cent_dist[~is_outlier]
+
+    return outliers, not_outliers, is_outlier
+
+
+def get_outlier_results(dir_path):
+    dist_min_e = []
+    with open(f"{dir_path}/outlier/dist_minE_struct.dat") as f:
+        for line in f:
+            dist_min_e.append(float(line.split()[0]))
+    dist_min_e = np.array(dist_min_e)
+    print("dist_min_e")
+    # print(np.sort(dist_min_e))
+    print("min, max =", np.min(dist_min_e), np.max(dist_min_e))
+    if os.path.isfile(f"{dir_path}/outlier/dist_outlier.dat"):
+        with open(f"{dir_path}/outlier/dist_outlier.dat") as f:
+            content = f.read()
+        dist_outlier = re.findall(r"\d+\.\d+", content)
+        dist_outlier = np.array([float(n) for n in dist_outlier])
+        print("dist_outlier")
+        print(np.sort(dist_outlier))
+        # print("min, max =", np.min(dist_outlier), np.max(dist_outlier))
 
 
 def run():
@@ -118,7 +174,7 @@ def outlier_candidates(result_paths):
 
         logname = os.path.basename(res_path).split(".json")[0]
         for res in rss_results:
-            if res.get("is_weak_outlier"):
+            if res.get("is_outlier"):
                 dest = (
                     f"outlier/outlier_candidates/POSCAR_{logname}_No{res['struct_no']}"
                 )

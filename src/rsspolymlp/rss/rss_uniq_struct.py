@@ -43,32 +43,19 @@ def run():
 def log_unique_structures(
     file_name,
     unique_structs,
+    is_outlier,
     pressure=None,
     unique_struct_iters=None,
-    detect_outliers=False,
 ):
-    # Sort structures by energy
-    energies = np.array([s.energy for s in unique_structs])
-    sort_indices = np.argsort(energies)
-    unique_str = [unique_structs[i] for i in sort_indices]
-    if unique_struct_iters is not None:
-        _iters = [unique_struct_iters[i] for i in sort_indices]
-
-    if detect_outliers or len(energies) > 100:
-        is_strong_outlier, is_weak_outlier = detect_outlier(energies[sort_indices])
-    else:
-        is_strong_outlier = np.full_like(energies, False, dtype=bool)
-        is_weak_outlier = np.full_like(energies, False, dtype=bool)
-
-    for i in range(len(unique_str)):
-        if not is_weak_outlier[i]:
-            energy_min = unique_str[i].energy
+    for i in range(len(unique_structs)):
+        if not is_outlier[i]:
+            energy_min = unique_structs[i].energy
             break
 
     rss_results = []
     with open(file_name, "a") as f:
         print("unique_structures:", file=f)
-        for idx, _str in enumerate(unique_str):
+        for idx, _str in enumerate(unique_structs):
             e_diff = round((_str.energy - energy_min) * 1000, 2)
             print(f"  - struct_No: {idx+1}", file=f)
             print(f"    poscar_name: {_str.input_poscar}", file=f)
@@ -88,13 +75,11 @@ def log_unique_structures(
                 f"volume {round(_str.volume, 2)} (A^3/atom)",
             ]
             if unique_struct_iters is not None:
-                info.append(f"iteration {_iters[idx]}")
+                info.append(f"iteration {unique_struct_iters[idx]}")
             print(f"    other_info: {' / '.join(info)}", file=f)
 
-            if is_strong_outlier[idx]:
-                print("    outlier_flag: strong", file=f)
-            elif is_weak_outlier[idx]:
-                print("    outlier_flag: weak", file=f)
+            if is_outlier[idx]:
+                print("    outlier_flag: true", file=f)
 
             _res = {}
             _res["poscar"] = _str.input_poscar
@@ -105,8 +90,7 @@ def log_unique_structures(
             _res["pressure"] = pressure
             _res["spg_list"] = _str.spg_list
             _res["struct_no"] = idx + 1
-            _res["is_strong_outlier"] = bool(is_strong_outlier[idx])
-            _res["is_weak_outlier"] = bool(is_weak_outlier[idx])
+            _res["is_outlier"] = bool(is_outlier[idx])
             rss_results.append(_res)
 
     comp_res = compute_composition(unique_structs[0].original_structure.elements)
@@ -310,7 +294,7 @@ class RSSResultAnalyzer:
 
         struct_properties = self._load_rss_logfiles()
 
-        unique_str, unique_str_prop = self._analysis_unique_structure(
+        unique_structs, unique_str_prop = self._analysis_unique_structure(
             struct_properties, args.use_joblib, args.num_process, args.backend
         )
 
@@ -380,9 +364,22 @@ class RSSResultAnalyzer:
             )
             print("", file=f)
 
-        _iters = np.array([s["iter"] for s in unique_str_prop])
+        # Sort structures by energy
+        energies = np.array([s.energy for s in unique_structs])
+        distances = np.array([s.least_distance for s in unique_structs])
+        iters = np.array([s["iter"] for s in unique_str_prop])
+
+        sort_idx = np.argsort(energies)
+        unique_str_sorted = [unique_structs[i] for i in sort_idx]
+        iters_sorted = [iters[i] for i in sort_idx]
+
+        if len(energies) > 50:
+            is_outlier, _ = detect_outlier(energies[sort_idx], distances[sort_idx])
+        else:
+            is_outlier = np.full_like(energies, False, dtype=bool)
+
         rss_result_all = log_unique_structures(
-            file_name, unique_str, self.pressure, _iters
+            file_name, unique_str_sorted, is_outlier, self.pressure, iters_sorted
         )
         with open("rss_result/rss_results.json", "w") as f:
             json.dump(rss_result_all, f)

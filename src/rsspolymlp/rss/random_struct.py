@@ -67,16 +67,11 @@ def nearest_neighbor_atomic_distance(lattice, frac_coo):
     # Compute squared distances between all pairs of atoms in all periodic images
     z = (c1[:, None, :, None] - c2_all[:, :, None, :]) ** 2  # (3, N, N, num_images)
     _dist_mat = np.sqrt(np.sum(z, axis=0))  # (N, N, num_images)
+    _dist_mat_refine = np.where(_dist_mat > 1e-10, _dist_mat, np.inf)
 
     # Find the minimum distance for each pair
-    dist_mat = np.min(_dist_mat, axis=-1)  # (N, N)
-    dist_mat_refine = np.where(dist_mat > 1e-10, dist_mat, np.inf)
-    distance_min = np.min(dist_mat_refine)
-
-    # Handle self-interaction case
-    if np.isinf(distance_min):
-        _dist_mat = np.where(_dist_mat > 1e-10, _dist_mat, np.inf)
-        distance_min = np.min(_dist_mat)
+    dist_mat = np.min(_dist_mat_refine, axis=-1)  # (N, N)
+    distance_min = np.min(dist_mat)
 
     return distance_min
 
