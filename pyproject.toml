@@ -36,14 +36,14 @@ homepage = "https://github.com/hytwakai/rsspolymlp"
 repository = "https://github.com/hytwakai/rsspolymlp"
 
 [project.scripts]
-rss-init-struct = "rsspolymlp.cli.run_rss:run_rss_init_struct"
-rss-parallel = "rsspolymlp.cli.run_rss:run_rss_parallel"
-rss-single-srun = "rsspolymlp.cli.run_rss:run_rss_single_srun"
-rss-uniq-struct = "rsspolymlp.cli.run_rss:run_rss_uniq_struct"
-rss-summarize = "rsspolymlp.cli.run_rss:run_rss_summarize"
-rss-ghost-minima = "rsspolymlp.cli.run_rss:run_rss_ghost_minima"
-rss-phase-analysis = "rsspolymlp.cli.run_rss:run_rss_phase_analysis"
-plot-binary = "rsspolymlp.cli.run_plot:run_plot_binary"
+rss-init-struct = "rsspolymlp.api.cli_rss:run_rss_init_struct"
+rss-parallel = "rsspolymlp.api.cli_rss:run_rss_parallel"
+rss-single-srun = "rsspolymlp.api.cli_rss:run_rss_single_srun"
+rss-uniq-struct = "rsspolymlp.api.cli_rss:run_rss_uniq_struct"
+rss-summarize = "rsspolymlp.api.cli_rss:run_rss_summarize"
+rss-ghost-minima = "rsspolymlp.api.cli_rss:run_rss_ghost_minima"
+rss-phase-analysis = "rsspolymlp.api.cli_rss:run_rss_phase_analysis"
+plot-binary = "rsspolymlp.api.cli_plot:run_plot_binary"
 
 [tool.setuptools]
 package-dir = {"" = "src"}
