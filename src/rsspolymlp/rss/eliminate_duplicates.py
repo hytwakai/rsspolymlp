@@ -21,9 +21,9 @@ from rsspolymlp.analysis.unique_struct import (
     generate_unique_structs,
 )
 from rsspolymlp.common.composition import compute_composition
+from rsspolymlp.common.convert_dict import polymlp_struct_to_dict
 from rsspolymlp.common.property import PropUtil
 from rsspolymlp.rss.load_logfile import LogfileLoader
-from rsspolymlp.utils.convert_dict import polymlp_struct_to_dict
 
 
 def log_unique_structures(
