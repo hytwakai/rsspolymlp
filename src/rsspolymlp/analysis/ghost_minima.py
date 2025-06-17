@@ -58,7 +58,7 @@ def _detect_ghost_minima_kmeans(cent_e, cent_dist, num_energy):
         valid_data_idx = np.where(data > dist_mean * 0.5)[0]
         invalid_data_idx = np.where(data <= dist_mean * 0.5)[0]
         valid_data = data[valid_data_idx]
-        if len(valid_data) == 0:
+        if len(valid_data) < 5:
             continue
 
         kmeans = KMeans(n_clusters=2, random_state=0).fit(valid_data.reshape(-1, 1))

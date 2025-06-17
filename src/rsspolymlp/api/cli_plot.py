@@ -1,6 +1,6 @@
 import argparse
 
-from rsspolymlp.api.plot import plot_binary
+from rsspolymlp.api.api_plot import plot_binary
 
 
 def run_plot_binary():

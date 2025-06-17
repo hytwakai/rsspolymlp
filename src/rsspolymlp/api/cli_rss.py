@@ -1,18 +1,18 @@
 import argparse
 
-from rsspolymlp.api.rss import (
+from rsspolymlp.api.api_rss import (
     rss_init_struct,
     rss_parallel,
     rss_single_srun,
     rss_uniq_struct,
 )
-from rsspolymlp.api.rss_postprocess import (
+from rsspolymlp.api.api_rss_postprocess import (
     rss_ghost_minima_cands,
     rss_ghost_minima_validate,
     rss_phase_analysis,
     rss_summarize,
 )
-from rsspolymlp.cli.parse_arguments import ParseArgument
+from rsspolymlp.api.parse_arguments import ParseArgument
 
 
 def run_rss_init_struct():
