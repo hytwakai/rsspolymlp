@@ -9,7 +9,7 @@ from pypolymlp.core.data_format import PolymlpStructure
 from pypolymlp.core.interface_vasp import Poscar
 from pypolymlp.utils.vasp_utils import write_poscar_file
 from rsspolymlp.analysis.struct_matcher.irrep_position import IrrepPosition
-from rsspolymlp.common.comp_ratio import compute_composition
+from rsspolymlp.common.composition import compute_composition
 from rsspolymlp.utils.spglib_utils import SymCell
 
 

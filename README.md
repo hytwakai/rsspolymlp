@@ -50,7 +50,7 @@ conda install -c conda-forge rsspolymlp
 ```shell
 conda create -n rsspolymlp
 conda activate rsspolymlp
-conda install -c conda-forge pypolymlp symfc spglib joblib
+conda install -c conda-forge scikit-learn joblib pypolymlp spglib symfc
 pip install rsspolymlp
 ```
 
