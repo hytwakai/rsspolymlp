@@ -12,7 +12,7 @@ from rsspolymlp.analysis.unique_struct import (
     generate_unique_structs,
 )
 from rsspolymlp.common.convert_dict import polymlp_struct_from_dict
-from rsspolymlp.rss.rss_uniq_struct import log_unique_structures
+from rsspolymlp.rss.eliminate_duplicates import log_unique_structures
 
 
 class RSSResultSummarizer:

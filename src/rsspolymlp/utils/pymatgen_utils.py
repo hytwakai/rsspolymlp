@@ -7,7 +7,7 @@ from pymatgen.core.structure import Structure
 from pymatgen.io.cif import CifParser
 from pymatgen.io.vasp.inputs import Poscar
 from pymatgen.symmetry.analyzer import SpacegroupAnalyzer
-from rsspolymlp.utils.property import PropUtil
+from rsspolymlp.common.property import PropUtil
 
 np.set_printoptions(precision=15)
 
