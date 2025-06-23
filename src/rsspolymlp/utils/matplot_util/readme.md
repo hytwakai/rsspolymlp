@@ -6,8 +6,8 @@
 
 ```python
 import numpy as np
-from matplot_util.custom_plt import CustomPlt
-from matplot_util.make_plot import MakePlot
+from rsspolymlp.utils.rsspolymlp.utils.matplot_util.custom_plt import CustomPlt
+from rsspolymlp.utils.matplot_util.make_plot import MakePlot
 
 x = np.linspace(0, 10, 100)
 y = np.sin(x)
@@ -49,15 +49,15 @@ plt.savefig("images/example.png", dpi=600, bbox_inches="tight", pad_inches=0.01)
 
 ```
 
-<img src="images/example.png" alt="example" width="45%" />
+<img src="images/example.png" alt="example" width="40%" />
 
 ### Single plot
 
 ```python
 
 import numpy as np
-from matplot_util.custom_plt import CustomPlt
-from matplot_util.make_plot import MakePlot
+from rsspolymlp.utils.matplot_util.custom_plt import CustomPlt
+from rsspolymlp.utils.matplot_util.make_plot import MakePlot
 
 x_set = []
 y_set = []
@@ -103,15 +103,15 @@ plt.savefig("images/single_plot.png", dpi=600, bbox_inches="tight", pad_inches=0
 
 ```
 
-<img src="images/single_plot.png" alt="single_plot" width="45%" />
+<img src="images/single_plot.png" alt="single_plot" width="40%" />
 
 ### Multiple plots
 
 ```python
 
 import numpy as np
-from matplot_util.custom_plt import CustomPlt
-from matplot_util.make_plot import MakePlot
+from rsspolymlp.utils.matplot_util.custom_plt import CustomPlt
+from rsspolymlp.utils.matplot_util.make_plot import MakePlot
 
 custom_template = CustomPlt()
 plt = custom_template.get_custom_plt()
@@ -151,4 +151,4 @@ plt.savefig("images/multiple_plot.png", dpi=600, bbox_inches="tight", pad_inches
 
 ```
 
-<img src="images/multiple_plot.png" alt="multiple_plot" width="90%" />
+<img src="images/multiple_plot.png" alt="multiple_plot" width="80%" />
