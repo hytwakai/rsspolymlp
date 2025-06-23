@@ -8,7 +8,7 @@ from scipy.spatial import ConvexHull
 
 from pypolymlp.core.interface_vasp import Vasprun
 from rsspolymlp.common.composition import compute_composition
-from rsspolymlp.common.ground_state_e import ground_state_energy
+from rsspolymlp.common.atomic_energy import atomic_energy
 
 
 class ConvexHullAnalyzer:
@@ -139,7 +139,7 @@ class ConvexHullAnalyzer:
             energy_dft = vaspobj.energy
             structure = vaspobj.structure
             for element in structure.elements:
-                energy_dft -= ground_state_energy(element)
+                energy_dft -= atomic_energy(element)
             energy_dft /= len(structure.elements)
 
             comp_res = compute_composition(structure.elements, self.elements)
@@ -191,7 +191,7 @@ class ConvexHullAnalyzer:
         with open("phase_analysis/global_minima.yaml", "w") as f:
             print("global_minima:", file=f)
             for i in range(len(self.comp_ch)):
-                print("  - composition:      ", self.comp_ch[i], file=f)
+                print("  - composition:      ", self.comp_ch[i].tolist(), file=f)
                 print("    structure:        ", self.poscar_ch[i], file=f)
                 print("    formation_energy: ", self.fe_ch[i][0], file=f)
 
@@ -272,7 +272,7 @@ class ConvexHullAnalyzer:
             for key, res in near_ch.items():
                 if len(res["formation_e"]) == 0:
                     continue
-                print(f"  - composition: {key}", file=f)
+                print(f"  - composition: {list(key)}", file=f)
                 print("    structures:", file=f)
                 for i in range(len(res["formation_e"])):
                     print(f"      - struct_tag: {res['struct_tag'][i]}", file=f)

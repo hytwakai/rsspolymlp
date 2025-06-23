@@ -122,10 +122,8 @@ class RSSResultSummarizer:
         if os.path.isfile(log_name + ".yaml"):
             with open(log_name + ".yaml") as f:
                 yaml_data = yaml.safe_load(f)
-                num_opt_struct = yaml_data["general_information"][
-                    "num_optimized_structs"
-                ]
-                pre_result_paths = yaml_data["general_information"]["input_file_names"]
+            num_opt_struct = yaml_data["general_information"]["num_optimized_structs"]
+            pre_result_paths = yaml_data["general_information"]["input_file_names"]
 
             with open(f"./json/{log_name}.json") as f:
                 loaded_dict = json.load(f)

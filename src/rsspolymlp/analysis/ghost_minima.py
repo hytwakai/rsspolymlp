@@ -9,7 +9,7 @@ import numpy as np
 from sklearn.cluster import KMeans
 
 from pypolymlp.core.interface_vasp import Vasprun
-from rsspolymlp.common.ground_state_e import ground_state_energy
+from rsspolymlp.common.atomic_energy import atomic_energy
 
 EV = 1.602176634e-19  # [J]
 EVAngstromToGPa = EV * 1e21
@@ -63,31 +63,25 @@ def _detect_ghost_minima_kmeans(cent_e, cent_dist, num_energy):
 
         kmeans = KMeans(n_clusters=2, random_state=0).fit(valid_data.reshape(-1, 1))
         labels = kmeans.labels_
-
         cluster_means = [np.mean(valid_data[labels == i]) for i in range(2)]
-        ghost_minima_label = np.argmin(cluster_means)
 
         is_ghost_minima_valid_data = np.full(valid_data.shape, False, dtype=bool)
-        ghost_minima_indices = np.where(labels == ghost_minima_label)[0]
-        is_ghost_minima_valid_data[ghost_minima_indices] = True
-        # print(is_ghost_minima_valid_data)
+        ghmin_indices = np.where(labels == np.argmin(cluster_means))[0]
+        is_ghost_minima_valid_data[ghmin_indices] = True
         is_ghost_minima_valid_data[np.argmax(~is_ghost_minima_valid_data) + 1 :] = False
 
         ghost_minima_valdat = valid_data[is_ghost_minima_valid_data]
         not_ghost_minima_valdat = valid_data[~is_ghost_minima_valid_data]
-        # print(ghost_minima_valdat)
-        # print(not_ghost_minima_valdat)
 
         is_ghost_minima = np.full(cent_dist.shape, False, dtype=bool)
         if len(invalid_data_idx) > 0:
             is_ghost_minima[invalid_data_idx] = True
 
         if len(ghost_minima_valdat) > 0:
-            ghost_minima_mean = np.mean(ghost_minima_valdat)
-            # print(ghost_minima_mean)
-            not_ghost_minima_mean = np.mean(not_ghost_minima_valdat)
-            # print(not_ghost_minima_mean)
-            if ghost_minima_mean / not_ghost_minima_mean < 0.8:
+            ghmin_mean = np.mean(ghost_minima_valdat)
+            not_ghmin_mean = np.mean(not_ghost_minima_valdat)
+
+            if ghmin_mean / not_ghmin_mean < 0.8:
                 is_ghost_minima[valid_data_idx[is_ghost_minima_valid_data]] = True
                 is_ghost_minima[np.argmax(~is_ghost_minima) + 1 :] = False
                 ghost_minima = cent_dist[is_ghost_minima]
@@ -186,7 +180,7 @@ def detect_actual_ghost_minima(dft_path):
         energy_dft = vaspobj.energy
         structure = vaspobj.structure
         for element in structure.elements:
-            energy_dft -= ground_state_energy(element)
+            energy_dft -= atomic_energy(element)
         energy_dft /= len(structure.elements)
 
         # Subtract pressure term from MLP enthalpy
@@ -207,6 +201,7 @@ def detect_actual_ghost_minima(dft_path):
 
     # Write results
     n_true_ghost_minima = 0
+    n_not_ghost_minima = 0
     with open("ghost_minima/ghost_minima_detection.yaml", "w") as f:
         print("ghost_minima:", file=f)
         for diff in diff_all:
@@ -222,6 +217,7 @@ def detect_actual_ghost_minima(dft_path):
                     n_true_ghost_minima += 1
                 else:
                     assessment = "Not a ghost minimum"
+                    n_not_ghost_minima += 1
                 print(f"    assessment: {assessment}", file=f)
             else:
                 print("    energy_diff_meV_per_atom: null", file=f)
@@ -234,4 +230,5 @@ def detect_actual_ghost_minima(dft_path):
                     continue
                 print(f"      {key}: {val}", file=f)
 
-    print(f"Detected {n_true_ghost_minima} actual ghost minima")
+    print(f"{n_true_ghost_minima} structures are actual ghost minima")
+    print(f"{n_not_ghost_minima} structures are not ghost minima.")

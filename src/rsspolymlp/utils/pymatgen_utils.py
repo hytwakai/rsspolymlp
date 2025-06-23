@@ -17,16 +17,16 @@ class PymatUtil:
     def __init__(self):
         pass
 
-    def parameter_to_pymat_st(self, lattice, coo, species):
+    def parameter_to_pymat_st(self, lattice, frac_coords, species):
         """
         Parameters
         ----------
         lattice : parameters of lattice (3*3)
-        coo : parameters of atomic postions
+        coords : parameters of atomic postions
         species : string atom_type
         Returns: pymatgen.core.structure
         """
-        return Structure(lattice=lattice, species=species, coords=coo)
+        return Structure(lattice=lattice, species=species, coords=frac_coords)
 
     def space_group(self, pymat_st, symprec_in=10**-5):
         """pymat_st : pymatgen.core.structure"""
@@ -65,7 +65,7 @@ class PymatUtil:
         pymat_st = parser.parse_structures(primitive=True)[0]
         return pymat_st
 
-    def output_poscar(self, pymat_st, file_name):
+    def output_poscar(self, pymat_st, file_name="./POSCAR"):
         writer = Poscar(pymat_st).get_string(significant_figures=16)
         with open(file_name, "w") as f:
             print(writer, file=f)
@@ -141,7 +141,7 @@ class PymatUtil:
         # angles = lattice_niggli.angles
         # print(abc, angles)
         return lattice_niggli
-    
+
     def least_distance(self, pymat_st):
         dist_mat = pymat_st.distance_matrix
         dist_mat_refine = np.where(dist_mat > 1e-10, dist_mat, np.inf)
