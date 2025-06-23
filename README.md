@@ -56,7 +56,7 @@ pip install rsspolymlp
 
 ## Workflow
 
-<img src="docs/workflow.png" alt="single_plot" width="70%" />
+<img src="docs/workflow.png" alt="workflow" width="70%" />
 
 ### The command-line interface of `rsspolymlp`
 
