@@ -12,7 +12,7 @@ parser.add_argument(
     "--path",
     type=str,
     default=None,
-    help="Directory including model parameter candidates",
+    help="Directory path including model parameter candidates",
 )
 args = parser.parse_args()
 
