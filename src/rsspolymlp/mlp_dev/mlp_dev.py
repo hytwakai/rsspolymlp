@@ -58,11 +58,11 @@ def prepare_polymlp_input_file(
             if not os.path.isdir(data_path):
                 continue
             if "/ws_large_force" in data_path:
-                f.write(f"test_data {data_path}/* True 1.0\n")
+                f.write(f"test_data {data_path}/* True {weight_small}\n")
             elif "/wo_force" in data_path:
                 f.write(f"test_data {data_path}/* False 0.1\n")
             else:
-                f.write(f"test_data {data_path}/* True {weight_small}\n")
+                f.write(f"test_data {data_path}/* True 1.0\n")
 
     # Replace alpha parameters if specified
     if alpha_param is not None:
