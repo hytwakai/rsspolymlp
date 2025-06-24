@@ -55,7 +55,7 @@ def prepare_polymlp_input_file(
                 f.write(f"train_data {data_path}/* True 1.0\n")
         f.write("\n")
         for data_path in test_data_paths:
-            if not os.path.isdir(data_path + "/test"):
+            if not os.path.isdir(data_path):
                 continue
             if "/ws_large_force" in data_path:
                 f.write(f"test_data {data_path}/* True 1.0\n")
@@ -133,6 +133,6 @@ if __name__ == "__main__":
         args.alpha_param,
     )
 
-    input_files = glob.glob("polymlp*.in")
+    input_files = sorted(glob.glob("polymlp*.in"))
     cmd = ["pypolymlp", "-i"] + input_files
     subprocess.run(cmd, check=True)
