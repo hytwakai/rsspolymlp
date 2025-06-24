@@ -45,7 +45,7 @@ def prepare_polymlp_input_file(
             + "\n\n"
         )
 
-        # Write training and test data section
+        # Write training and test data
         for data_path in training_data_paths:
             if "/ws_large_force" in data_path:
                 f.write(f"train_data {data_path}/* True {weight_small}\n")

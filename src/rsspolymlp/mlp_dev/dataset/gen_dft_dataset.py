@@ -26,7 +26,7 @@ def max_iteration_reached(vasp_path: str) -> bool:
     return nelm is not None and iteration == nelm
 
 
-def convert(vasprun_path, output_dir: str):
+def compress(vasprun_path, output_dir: str):
     if os.path.isfile(f"{output_dir}/{'.'.join(vasprun_path.split('/'))}"):
         return True
 
@@ -75,7 +75,7 @@ if __name__ == "__main__":
             vasprun_status["fail_iteration"] += 1
             continue
 
-        judge = convert(vasp_path)
+        judge = compress(vasp_path)
         if judge:
             vasprun_status["success"] += 1
         else:
