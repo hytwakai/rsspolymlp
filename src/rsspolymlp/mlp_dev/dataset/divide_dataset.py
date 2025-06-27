@@ -17,6 +17,12 @@ parser.add_argument(
     required=True,
     help="Directory path containing vasprun.xml files.",
 )
+parser.add_argument(
+    "--threshold_close_minima",
+    type=float,
+    default=1.0,
+    help="Force threshold for filtering structures classified as close_minima.",
+)
 args = parser.parse_args()
 
 vasprun_paths = sorted(glob.glob(args.path + "/*"))
@@ -50,7 +56,7 @@ for vasprun_path in vasprun_paths:
         vasprun_dict["ws_large_force"].append(vasprun_path)
         continue
 
-    if np.all(np.abs(force) <= 1):
+    if np.all(np.abs(force) <= args.threshold_close_minima):
         vasprun_dict["close_minima"].append(vasprun_path)
         continue
 
@@ -76,6 +82,10 @@ for data_name, vasprun_list in vasprun_dict.items():
     print("  - test_data:", len(test_data))
 
     with open(f"{output_dir}/dataset.yaml", "a") as f:
+        print("arguments:", file=f)
+        print("  path:", args.path, file=f)
+        print("  threshold_close_minima:", args.threshold_close_minima, file=f)
+        print("", file=f)
         print(f"{data_name}:", file=f)
         print("  train:", file=f)
         for p in train_data:
