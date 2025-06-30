@@ -8,14 +8,17 @@ def pareto_front(points: np.ndarray):
     sorted_idx = np.argsort(points[:, 0])
     sorted_points = points[sorted_idx]
 
-    _pareto_front_idx = []
-    min_obj2 = np.inf
-    for i in range(len(sorted_points)):
-        if sorted_points[i][1] < min_obj2:
-            _pareto_front_idx.append(i)
-            min_obj2 = sorted_points[i][1]
+    pareto = []
+    pareto_val = []
+    for i, p in enumerate(sorted_points):
+        if pareto_val == []:
+            pareto.append(i)
+            pareto_val.append(p)
+        elif not any(p > o for p, o in zip(p[1:], np.array(pareto_val)[-1, 1:])):
+            pareto.append(i)
+            pareto_val.append(p)
 
-    pareto_front_idx = sorted_idx[_pareto_front_idx]
+    pareto_front_idx = sorted_idx[pareto]
     return pareto_front_idx
 
 
@@ -33,6 +36,11 @@ parser.add_argument(
     help="If enabled, the errors and costs of the polynomial MLPs are shown in a plot.",
 )
 parser.add_argument(
+    "--include_force",
+    action="store_true",
+    help="",
+)
+parser.add_argument(
     "--rmse_path",
     type=str,
     default="test/close_minima",
@@ -44,7 +52,7 @@ args = parser.parse_args()
 cwd_path = os.getcwd()
 mlp_paths = args.path
 
-res_dict = {"cost": [], "e_rmse": [], "mlp_name": []}
+res_dict = {"cost": [], "rmse": [], "mlp_name": []}
 for mlp_path in mlp_paths:
     os.chdir(mlp_path)
 
@@ -62,13 +70,11 @@ for mlp_path in mlp_paths:
     )
     with open("polymlp_error.yaml") as f:
         lines = [line.strip() for line in f]
-    res_dict["e_rmse"].append(
-        next(
-            float(lines[i + 1].split()[-1])
-            for i, line in enumerate(lines)
-            if args.rmse_path in line
-        )
-    )
+    for i, line in enumerate(lines):
+        if args.rmse_path in line:
+            res_dict["rmse"].append(
+                [float(lines[i + 1].split()[-1]), float(lines[i + 2].split()[-1])]
+            )
     res_dict["mlp_name"].append(mlp_path)
 
     os.chdir(cwd_path)
@@ -76,13 +82,18 @@ for mlp_path in mlp_paths:
 sort_idx = np.argsort(res_dict["cost"])
 res_dict = {key: np.array(_list)[sort_idx] for key, _list in res_dict.items()}
 
-rmse_time = []
+rmse_e_time = []
+rmse_ef_time = []
 for i in range(len(res_dict["cost"])):
-    rmse_time.append([res_dict["cost"][i], res_dict["e_rmse"][i]])
+    rmse_e_time.append([res_dict["cost"][i], res_dict["rmse"][i][0]])
+    rmse_ef_time.append(
+        [res_dict["cost"][i], res_dict["rmse"][i][0], res_dict["rmse"][i][1]]
+    )
 
-pareto_idx = pareto_front(np.array(rmse_time))
-not_pareto_idx = np.ones(len(rmse_time), dtype=bool)
-not_pareto_idx[pareto_idx] = False
+pareto_e_idx = pareto_front(np.array(rmse_e_time))
+pareto_ef_idx = pareto_front(np.array(rmse_ef_time))
+not_pareto_idx = np.ones(len(rmse_e_time), dtype=bool)
+not_pareto_idx[pareto_e_idx] = False
 
 os.makedirs("analyze_pareto", exist_ok=True)
 os.chdir("analyze_pareto")
@@ -90,13 +101,23 @@ os.chdir("analyze_pareto")
 with open("pareto_optimum.yaml", "w") as f:
     print("units:", file=f)
     print("  cost:        'msec/atom/step'", file=f)
-    print("  energy_rmse: 'meV/atom'", file=f)
+    print("  rmse_energy: 'meV/atom'", file=f)
+    print("  rmse_force:  'eV/angstrom'", file=f)
     print("", file=f)
     print("pareto_optimum:", file=f)
-    for idx in pareto_idx:
+    for idx in pareto_e_idx:
         print(f"  {res_dict['mlp_name'][idx]}:", file=f)
         print(f"    cost:        {res_dict['cost'][idx]}", file=f)
-        print(f"    energy_rmse: {res_dict['e_rmse'][idx]}", file=f)
+        print(f"    rmse_energy: {res_dict['rmse'][idx][0]}", file=f)
+        print(f"    rmse_force:  {res_dict['rmse'][idx][1]}", file=f)
+    print("", file=f)
+    print("# Filter out solutions with worse force error at higher cost", file=f)
+    print("pareto_optimum_include_force:", file=f)
+    for idx in pareto_ef_idx:
+        print(f"  {res_dict['mlp_name'][idx]}:", file=f)
+        print(f"    cost:        {res_dict['cost'][idx]}", file=f)
+        print(f"    rmse_energy: {res_dict['rmse'][idx][0]}", file=f)
+        print(f"    rmse_force:  {res_dict['rmse'][idx][1]}", file=f)
 
 if args.plot:
     from rsspolymlp.utils.matplot_util.custom_plt import CustomPlt
@@ -119,21 +140,31 @@ if args.plot:
     )
     plotter.initialize_ax()
 
-    plotter.set_visuality(n_color=4, n_line=4, n_marker=1, color_type="grad")
-
     plotter.set_visuality(n_color=3, n_line=0, n_marker=0, color_type="grad")
     plotter.ax_scatter(
         res_dict["cost"][not_pareto_idx],
-        res_dict["e_rmse"][not_pareto_idx],
+        res_dict["rmse"][not_pareto_idx][:, 0],
         plot_type="open",
         label=None,
         plot_size=0.5,
     )
 
+    if args.include_force:
+        close_index = pareto_ef_idx
+    else:
+        close_index = pareto_e_idx
+    plotter.set_visuality(n_color=1, n_line=0, n_marker=1)
+    plotter.ax_plot(
+        res_dict["cost"][pareto_e_idx],
+        res_dict["rmse"][pareto_e_idx][:, 0],
+        plot_type="open",
+        label=None,
+        plot_size=0.7,
+    )
     plotter.set_visuality(n_color=1, n_line=-1, n_marker=1)
     plotter.ax_plot(
-        res_dict["cost"][pareto_idx],
-        res_dict["e_rmse"][pareto_idx],
+        res_dict["cost"][close_index],
+        res_dict["rmse"][close_index][:, 0],
         plot_type="closed",
         label=None,
         plot_size=0.7,
