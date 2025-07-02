@@ -84,17 +84,19 @@ sort_idx = np.argsort(res_dict["cost"])
 res_dict = {key: np.array(_list)[sort_idx] for key, _list in res_dict.items()}
 
 rmse_e_time = []
-rmse_ef_time = []
 for i in range(len(res_dict["cost"])):
     rmse_e_time.append([res_dict["cost"][i], res_dict["rmse"][i][0]])
+pareto_e_idx = pareto_front(np.array(rmse_e_time))
+not_pareto_idx = np.ones(len(rmse_e_time), dtype=bool)
+not_pareto_idx[pareto_e_idx] = False
+
+rmse_ef_time = []
+for i in pareto_e_idx:
     rmse_ef_time.append(
         [res_dict["cost"][i], res_dict["rmse"][i][0], res_dict["rmse"][i][1]]
     )
-
-pareto_e_idx = pareto_front(np.array(rmse_e_time))
-pareto_ef_idx = pareto_front(np.array(rmse_ef_time))
-not_pareto_idx = np.ones(len(rmse_e_time), dtype=bool)
-not_pareto_idx[pareto_e_idx] = False
+_pareto_ef_idx = pareto_front(np.array(rmse_ef_time))
+pareto_ef_idx = np.array(pareto_e_idx)[_pareto_ef_idx]
 
 os.makedirs("analyze_pareto", exist_ok=True)
 os.chdir("analyze_pareto")
