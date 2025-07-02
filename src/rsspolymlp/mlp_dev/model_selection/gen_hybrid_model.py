@@ -11,6 +11,41 @@ from rsspolymlp.mlp_dev.grid_search.pypolymlp_gridsearch import (
 )
 
 
+def get_gtinv_maxl(model_type):
+    if model_type == 2:
+        gtinv_maxl = [
+            np.array([6]),
+            np.array([12]),
+            np.array([6, 2]),
+            np.array([12, 2]),
+            np.array([6, 2, 1]),
+            np.array([12, 2, 1]),
+            np.array([6, 4]),
+            np.array([12, 4]),
+            np.array([6, 4, 1]),
+            np.array([12, 4, 1]),
+            np.array([6, 6]),
+            np.array([12, 6]),
+            np.array([6, 6, 1]),
+            np.array([12, 6, 1]),
+        ]
+    elif model_type == 4:
+        gtinv_maxl = [
+            np.array([6]),
+            np.array([12]),
+            np.array([6, 4]),
+            np.array([12, 4]),
+            np.array([6, 4, 4]),
+            np.array([12, 4, 4]),
+            np.array([12, 8]),
+            np.array([12, 8, 4]),
+        ]
+    else:
+        gtinv_maxl = None
+
+    return gtinv_maxl
+
+
 def get_model(cutoff, model_type, n_gauss, gtinv_maxl):
     if cutoff < 6:
         cut_gauss = cutoff - 0.5
@@ -56,12 +91,7 @@ parser.add_argument(
 args = parser.parse_args()
 
 model_type = args.model_type
-
-gtinv_maxl = []
-with open(f"./misc/grid_hybrid_m{model_type}.dat") as f:
-    for line in f:
-        parts = [int(x.strip()) for x in line.strip().split(",")]
-        gtinv_maxl.append(np.array(parts))
+gtinv_maxl = get_gtinv_maxl(model_type)
 
 os.makedirs(f"./polymlps_hybrid_m{model_type}", exist_ok=True)
 

@@ -30,6 +30,14 @@ parser.add_argument(
     required=True,
     help="Directory paths containing polymlp_error.yaml and polymlp_cost.yaml.",
 )
+# Optional argumants
+parser.add_argument(
+    "--rmse_path",
+    type=str,
+    default="test/close_minima",
+    help="A part of the path name of the dataset used to compute the energy RMSE "
+    "for identifying Pareto-optimal MLPs.",
+)
 parser.add_argument(
     "--plot",
     action="store_true",
@@ -38,14 +46,7 @@ parser.add_argument(
 parser.add_argument(
     "--include_force",
     action="store_true",
-    help="",
-)
-parser.add_argument(
-    "--rmse_path",
-    type=str,
-    default="test/close_minima",
-    help="A part of the path name of the dataset used to compute the energy RMSE "
-    "for identifying Pareto-optimal MLPs.",
+    help="Filtered Pareto-optimal MLPs are shown as closed squares in the plot.",
 )
 args = parser.parse_args()
 

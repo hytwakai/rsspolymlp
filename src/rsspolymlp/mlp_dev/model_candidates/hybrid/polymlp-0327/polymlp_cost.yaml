@@ -1,0 +1,29 @@
+units:
+  time: msec/atom/step
+
+costs:
+  single_core: 13.238270673900843
+  openmp:      1.1342792212963104
+
+conditions:
+  property_calc_iter:
+    single_core: 10
+    openmp:      100
+  cpu:
+    model: 'Intel(R) Xeon(R) CPU E5-2630 v3 @ 2.40GHz'
+    cores: 16
+  structure:
+    axis:
+     - [4, 0, 0]
+     - [0, 4, 0]
+     - [0, 0, 4]
+    positions:
+     - [0.0, 0.0, 0.0]
+     - [0.0, 0.5, 0.5]
+     - [0.5, 0.0, 0.5]
+     - [0.5, 0.5, 0.0]
+    supercell_matrix:
+     - [4, 0, 0]
+     - [0, 4, 0]
+     - [0, 0, 4]
+    n_atoms: 256

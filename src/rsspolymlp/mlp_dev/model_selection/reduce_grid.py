@@ -20,7 +20,7 @@ grid_path = args.path
 path_all = sorted(glob.glob(grid_path + "/*"))
 
 polymlp = PypolymlpCalc(require_mlp=False)
-polymlp.load_structures_from_files(poscars=["./misc/POSCAR_example"])
+polymlp.load_structures_from_files(poscars=["./POSCAR_example"])
 
 for path in path_all:
     n_feature = 0
