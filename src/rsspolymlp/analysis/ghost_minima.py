@@ -81,7 +81,7 @@ def _detect_ghost_minima_kmeans(cent_e, cent_dist, num_energy):
             ghmin_mean = np.mean(ghost_minima_valdat)
             not_ghmin_mean = np.mean(not_ghost_minima_valdat)
 
-            if ghmin_mean / not_ghmin_mean < 0.8:
+            if ghmin_mean / not_ghmin_mean < 0.85:
                 is_ghost_minima[valid_data_idx[is_ghost_minima_valid_data]] = True
                 is_ghost_minima[np.argmax(~is_ghost_minima) + 1 :] = False
                 ghost_minima = cent_dist[is_ghost_minima]

@@ -123,6 +123,17 @@ def run_rss_summarize():
         action="store_true",
         help="Enable parallel processing using joblib.",
     )
+    parser.add_argument(
+        "--output_poscar",
+        action="store_true",
+        help="If set, POSCAR files will be output",
+    )
+    parser.add_argument(
+        "--threshold",
+        type=float,
+        default=None,
+        help="Energy threshold (in meV/atom) for outputting POSCAR files",
+    )
     ParseArgument.add_parallelization_arguments(parser)
     args = parser.parse_args()
 
@@ -132,6 +143,8 @@ def run_rss_summarize():
         use_joblib=args.use_joblib,
         num_process=args.num_process,
         backend=args.backend,
+        output_poscar=args.output_poscar,
+        threshold=args.threshold,
     )
 
 

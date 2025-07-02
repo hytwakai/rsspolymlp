@@ -1,5 +1,6 @@
 import json
 import os
+import shutil
 from collections import defaultdict
 from time import time
 
@@ -24,12 +25,16 @@ class RSSResultSummarizer:
         use_joblib,
         num_process: int = -1,
         backend: str = "loky",
+        output_poscar: bool = False,
+        threshold: float = None,
     ):
         self.elements = elements
         self.rss_paths = rss_paths
         self.use_joblib = use_joblib
         self.num_process = num_process
         self.backend = backend
+        self.output_poscar = output_poscar
+        self.threshold = threshold
 
     def run_sorting(self):
         os.makedirs("json", exist_ok=True)
@@ -107,6 +112,9 @@ class RSSResultSummarizer:
             with open(f"json/{log_name}.json", "w") as f:
                 json.dump(rss_result_all, f)
 
+            if self.output_poscar:
+                self.generate_poscars(f"json/{log_name}.json", threshold=self.threshold)
+
             print(log_name, "finished", flush=True)
 
     def _sorting_in_same_comp(self, comp_ratio, result_paths, rss_result_dict):
@@ -167,3 +175,23 @@ class RSSResultSummarizer:
             analyzer.identify_duplicate_struct(res)
 
         return analyzer.unique_str, num_opt_struct, integrated_res_paths, pressure
+
+    def generate_poscars(self, json_path: str, threshold=None):
+        logname = os.path.basename(json_path).split(".json")[0]
+        os.makedirs(f"poscars/{logname}", exist_ok=True)
+
+        with open(json_path) as f:
+            loaded_dict = json.load(f)
+        rss_results = loaded_dict["rss_results"]
+
+        e_min = None
+        for res in rss_results:
+            if not res.get("is_ghost_minima") and e_min is None:
+                e_min = res["energy"]
+            if e_min is not None and threshold is not None:
+                diff = abs(e_min - res["energy"])
+                if diff * 1000 > threshold:
+                    continue
+
+            dest = f"poscars/{logname}/POSCAR_{logname}_No{res['struct_no']}"
+            shutil.copy(res["poscar"], dest)

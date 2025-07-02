@@ -14,6 +14,8 @@ def rss_summarize(
     use_joblib=False,
     num_process=1,
     backend="loky",
+    output_poscar: bool = False,
+    threshold: float = None,
 ):
     analyzer = RSSResultSummarizer(
         elements,
@@ -21,6 +23,8 @@ def rss_summarize(
         use_joblib,
         num_process,
         backend,
+        output_poscar,
+        threshold,
     )
     analyzer.run_sorting()
 
