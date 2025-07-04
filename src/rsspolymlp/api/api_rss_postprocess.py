@@ -11,7 +11,7 @@ from rsspolymlp.analysis.rss_summarize import RSSResultSummarizer
 def rss_summarize(
     elements,
     rss_paths,
-    use_joblib=False,
+    use_joblib=True,
     num_process=1,
     backend="loky",
     output_poscar: bool = False,

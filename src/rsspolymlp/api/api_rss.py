@@ -50,8 +50,6 @@ def rss_parallel(
     Performing Random Structure Search (RSS) on multiple tasks in parallel
     using polynomial machine learinig potentials (MLPs).
     """
-    os.makedirs("log", exist_ok=True)
-    os.makedirs("opt_struct", exist_ok=True)
     os.makedirs("rss_result", exist_ok=True)
     for file in ["rss_result/finish.dat", "rss_result/success.dat"]:
         open(file, "a").close()
@@ -188,18 +186,19 @@ def rss_uniq_struct(
     num_str=-1,
     cutoff=None,
     pressure=None,
-    use_joblib=False,
+    use_joblib=True,
     num_process=-1,
     backend="loky",
 ):
     analyzer = RSSResultAnalyzer()
     if cutoff is not None:
         analyzer.cutoff = cutoff
+    if pressure is not None:
+        analyzer.pressure = pressure
 
     analyzer.run_rss_uniq_struct(
         num_str=num_str,
         use_joblib=use_joblib,
-        pressure=pressure,
         num_process=num_process,
         backend=backend,
     )

@@ -1,4 +1,5 @@
 import glob
+import os
 import time
 from contextlib import redirect_stdout
 
@@ -27,6 +28,9 @@ class RandomStructureSearch:
         self.num_opt_str = num_opt_str
         self.not_stop_rss = not_stop_rss
         self._stop_rss = False
+        os.makedirs("log", exist_ok=True)
+        os.makedirs("opt_struct", exist_ok=True)
+        os.makedirs("rss_result", exist_ok=True)
 
     def run_optimization(self, poscar_path):
         """

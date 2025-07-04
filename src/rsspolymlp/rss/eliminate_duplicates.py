@@ -263,7 +263,6 @@ class RSSResultAnalyzer:
     def run_rss_uniq_struct(
         self,
         num_str=-1,
-        pressure=None,
         use_joblib=False,
         num_process=-1,
         backend="loky",
@@ -316,8 +315,6 @@ class RSSResultAnalyzer:
 
         # Write results to log file
         file_name = "rss_result/rss_results.yaml"
-        if pressure is not None:
-            self.pressure = pressure
         with open(file_name, "w") as f:
             print("general_information:", file=f)
             print(f"  sorting_time_sec:         {round(time_finish, 2)}", file=f)

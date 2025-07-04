@@ -73,9 +73,9 @@ def run_rss_uniq_struct():
         help="Number of optimized structures to analyze (-1 means all)",
     )
     parser.add_argument(
-        "--use_joblib",
+        "--not_use_joblib",
         action="store_true",
-        help="Enable parallel processing using joblib.",
+        help="Disable parallel processing using joblib.",
     )
     parser.add_argument(
         "--cutoff",
@@ -96,7 +96,7 @@ def run_rss_uniq_struct():
         num_str=args.num_str,
         cutoff=args.cutoff,
         pressure=args.pressure,
-        use_joblib=args.use_joblib,
+        use_joblib=not args.not_use_joblib,
         num_process=args.num_process,
         backend=args.backend,
     )
@@ -119,9 +119,9 @@ def run_rss_summarize():
         help="Path(s) to directories where RSS was performed",
     )
     parser.add_argument(
-        "--use_joblib",
+        "--not_use_joblib",
         action="store_true",
-        help="Enable parallel processing using joblib.",
+        help="Disable parallel processing using joblib.",
     )
     parser.add_argument(
         "--output_poscar",
@@ -140,7 +140,7 @@ def run_rss_summarize():
     rss_summarize(
         elements=args.elements,
         rss_paths=args.rss_paths,
-        use_joblib=args.use_joblib,
+        use_joblib=not args.not_use_joblib,
         num_process=args.num_process,
         backend=args.backend,
         output_poscar=args.output_poscar,
