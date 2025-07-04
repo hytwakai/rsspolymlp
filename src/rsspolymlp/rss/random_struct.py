@@ -97,7 +97,6 @@ class GenerateRandomStructure:
                         for lat, coo in zip(valid_l_matrices, random_atomic_position)
                     ]
                 )
-                print(distance_sets)
                 valid_l_matrices = valid_l_matrices[distance_sets > self.least_distance]
                 valid_positions = valid_positions[distance_sets > self.least_distance]
                 print(

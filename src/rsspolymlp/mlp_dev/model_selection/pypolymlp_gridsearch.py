@@ -236,6 +236,7 @@ class PolymlpGridSearch:
             ]
         )
         for cut, n_gauss, model_type, mp in product:
+            gauss_maxr = cut * (n_gauss - 1) / n_gauss
             model = PolymlpModelParams(
                 cutoff=cut,
                 model_type=model_type,
@@ -243,7 +244,7 @@ class PolymlpGridSearch:
                 max_l=0,
                 feature_type="pair",
                 pair_params_in1=(1.0, 1.0, 1),
-                pair_params_in2=(0.0, cut - 1.0, n_gauss),
+                pair_params_in2=(0.0, gauss_maxr, n_gauss),
             )
             params = PolymlpParams(
                 n_type=len(self._elements),
@@ -274,6 +275,7 @@ class PolymlpGridSearch:
                 _max_p = 1
             else:
                 _max_p = 2
+            gauss_maxr = cut * (n_gauss - 1) / n_gauss
             model = PolymlpModelParams(
                 cutoff=cut,
                 model_type=gtinv_attr.model_type,
@@ -286,7 +288,7 @@ class PolymlpGridSearch:
                     self._grid.gaussian_width,
                     1,
                 ),
-                pair_params_in2=(0, cut - 1.0, n_gauss),
+                pair_params_in2=(0, gauss_maxr, n_gauss),
             )
             params = PolymlpParams(
                 n_type=len(self._elements),
@@ -304,6 +306,7 @@ class PolymlpGridSearch:
         """Enumerate models with many features."""
         for cut in self._grid.cutoffs:
             gtinv_attr = GtinvAttrs(model_type=4, order=4, max_l=(12, 12, 4))
+            gauss_maxr = cut * (15 - 1) / 15
             model = PolymlpModelParams(
                 cutoff=cut,
                 model_type=4,
@@ -316,7 +319,7 @@ class PolymlpGridSearch:
                     self._grid.gaussian_width,
                     1,
                 ),
-                pair_params_in2=(0, cut - 1.0, 15),
+                pair_params_in2=(0, gauss_maxr, 15),
             )
             params = PolymlpParams(
                 n_type=len(self._elements),

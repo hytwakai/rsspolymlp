@@ -1,7 +1,7 @@
 import argparse
 import os
 
-from rsspolymlp.mlp_dev.grid_search.pypolymlp_gridsearch import PolymlpGridSearch
+from rsspolymlp.mlp_dev.model_selection.pypolymlp_gridsearch import PolymlpGridSearch
 
 parser = argparse.ArgumentParser()
 parser.add_argument(
@@ -14,7 +14,8 @@ args = parser.parse_args()
 
 model_type = args.model_type
 
-os.makedirs(f"./polymlps_single_m{model_type}", exist_ok=True)
+if model_type is not None:
+    os.makedirs(f"./polymlps_single_m{model_type}", exist_ok=True)
 polymlp = PolymlpGridSearch(elements=("Z"))
 
 if model_type == str(2):

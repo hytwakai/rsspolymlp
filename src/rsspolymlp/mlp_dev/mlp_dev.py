@@ -10,7 +10,7 @@ def prepare_polymlp_input_file(
     element_list: list[str],
     training_data_paths: list[str],
     test_data_paths: list[str],
-    weight_small: float = 0.1,
+    weight_small: float = 1.0,
     alpha_param: list[int] = None,
 ):
     """
@@ -35,7 +35,7 @@ def prepare_polymlp_input_file(
             f.write(f"n_type {len(element_list)}\n")
             f.write("elements " + " ".join(element_list) + "\n")
     if os.path.isfile(input_path + "/polymlp_cost.yaml"):
-        shutil.copyfile(input_path + "/polymlp_cost.yaml", "./")
+        shutil.copyfile(input_path + "/polymlp_cost.yaml", "./polymlp_cost.yaml")
 
     main_input = "polymlp.in" if os.path.isfile("polymlp.in") else "polymlp1.in"
 
@@ -52,7 +52,7 @@ def prepare_polymlp_input_file(
             if "/ws_large_force" in data_path:
                 f.write(f"train_data {data_path}/* True {weight_small}\n")
             elif "/wo_force" in data_path:
-                f.write(f"train_data {data_path}/* False 0.1\n")
+                f.write(f"train_data {data_path}/* False 1.0\n")
             else:
                 f.write(f"train_data {data_path}/* True 1.0\n")
         f.write("\n")
@@ -62,7 +62,7 @@ def prepare_polymlp_input_file(
             if "/ws_large_force" in data_path:
                 f.write(f"test_data {data_path}/* True {weight_small}\n")
             elif "/wo_force" in data_path:
-                f.write(f"test_data {data_path}/* False 0.1\n")
+                f.write(f"test_data {data_path}/* False 1.0\n")
             else:
                 f.write(f"test_data {data_path}/* True 1.0\n")
 

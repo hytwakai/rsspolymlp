@@ -4,7 +4,7 @@ import os
 import numpy as np
 
 from pypolymlp.core.data_format import PolymlpModelParams, PolymlpParams
-from rsspolymlp.mlp_dev.grid_search.pypolymlp_gridsearch import (
+from rsspolymlp.mlp_dev.model_selection.pypolymlp_gridsearch import (
     GtinvAttrs,
     save_hybrid_models,
     save_hybrid_models_3,
