@@ -53,16 +53,9 @@ parser.add_argument(
     default=-1,
     help="Index for extracting structure name from POSCAR path",
 )
-parser.add_argument(
-    "--dir_name",
-    type=int,
-    default=0,
-    help="Index for extracting directory name from POSCAR path (0 to disable)",
-)
 args = parser.parse_args()
 
-os.makedirs("random_struct/poscar", exist_ok=True)
-os.chdir("random_struct")
+os.makedirs("poscar", exist_ok=True)
 with open("struct_size.yaml", "w"):
     pass
 
@@ -87,14 +80,8 @@ for poscar in args.poscars:
 
     per_volume = args.per_volume
     disp_list = np.arange(args.disp_grid, args.disp_max + 0.0001, args.disp_grid)
-    for disp in disp_list:
+    for disp_ratio in disp_list:
+        disp = least_distance * disp_ratio / 100
         str_rand = strgen.random_single_structure(disp, vol_ratio=per_volume)
         _str_name = poscar.split("/")[args.str_name]
-        if not args.dir_name == 0:
-            _dir_name = f"/{poscar.split('/')[args.dir_name]}"
-            os.makedirs(f"poscar{_dir_name}", exist_ok=True)
-        else:
-            _dir_name = ""
-        write_poscar_file(
-            str_rand, f"poscar{_dir_name}/{_str_name}_d{disp}_v{per_volume}"
-        )
+        write_poscar_file(str_rand, f"poscar/{_str_name}_d{disp_ratio}_v{per_volume}")
