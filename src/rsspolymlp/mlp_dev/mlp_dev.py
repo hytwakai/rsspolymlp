@@ -10,7 +10,9 @@ def prepare_polymlp_input_file(
     element_list: list[str],
     training_data_paths: list[str],
     test_data_paths: list[str],
-    weight_small: float = 1.0,
+    w_large_force: float = 1.0,
+    w_wo_force: float = 1.0,
+    include_wo_force: bool = False,
     alpha_param: list[int] = None,
 ):
     """
@@ -50,9 +52,9 @@ def prepare_polymlp_input_file(
         # Write training and test data
         for data_path in training_data_paths:
             if "/ws_large_force" in data_path:
-                f.write(f"train_data {data_path}/* True {weight_small}\n")
+                f.write(f"train_data {data_path}/* True {w_large_force}\n")
             elif "/wo_force" in data_path:
-                f.write(f"train_data {data_path}/* False 1.0\n")
+                f.write(f"train_data {data_path}/* {include_wo_force} {w_wo_force}\n")
             else:
                 f.write(f"train_data {data_path}/* True 1.0\n")
         f.write("\n")
@@ -60,9 +62,9 @@ def prepare_polymlp_input_file(
             if not os.path.isdir(data_path):
                 continue
             if "/ws_large_force" in data_path:
-                f.write(f"test_data {data_path}/* True {weight_small}\n")
+                f.write(f"test_data {data_path}/* True {w_large_force}\n")
             elif "/wo_force" in data_path:
-                f.write(f"test_data {data_path}/* False 1.0\n")
+                f.write(f"test_data {data_path}/* {include_wo_force} {w_wo_force}\n")
             else:
                 f.write(f"test_data {data_path}/* True 1.0\n")
 
@@ -112,10 +114,22 @@ if __name__ == "__main__":
         help="List of paths containing test datasets.",
     )
     parser.add_argument(
-        "--weight_small",
+        "--w_large_force",
         type=float,
-        default=0.1,
-        help="Weight to assign to datasets with some large forces (default: 0.1).",
+        default=1.0,
+        help="Weight to assign to datasets with some large forces.",
+    )
+    parser.add_argument(
+        "--w_wo_force",
+        type=float,
+        default=1.0,
+        help="Weight to assign to datasets with some very large forces.",
+    )
+    parser.add_argument(
+        "--include_wo_force",
+        type=bool,
+        default=False,
+        help="",
     )
     parser.add_argument(
         "--alpha_param",
@@ -131,7 +145,9 @@ if __name__ == "__main__":
         args.elements,
         args.train_data,
         args.test_data,
-        args.weight_small,
+        args.w_large_force,
+        args.w_wo_force,
+        args.include_wo_force,
         args.alpha_param,
     )
 

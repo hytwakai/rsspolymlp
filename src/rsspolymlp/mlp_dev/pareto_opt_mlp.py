@@ -32,6 +32,12 @@ parser.add_argument(
 )
 # Optional argumants
 parser.add_argument(
+    "--error_path",
+    type=str,
+    default="polymlp_error.yaml",
+    help="File name for storing MLP prediction errors.",
+)
+parser.add_argument(
     "--rmse_path",
     type=str,
     default="test/close_minima",
@@ -58,7 +64,7 @@ for mlp_path in mlp_paths:
     os.chdir(mlp_path)
 
     if not os.path.isfile("polymlp_cost.yaml") or not os.path.isfile(
-        "polymlp_error.yaml"
+        args.error_path
     ):
         print(mlp_path, "failed")
         os.chdir(cwd_path)
@@ -69,7 +75,7 @@ for mlp_path in mlp_paths:
     res_dict["cost"].append(
         next(float(line.split()[-1]) for line in lines if "single_core:" in line)
     )
-    with open("polymlp_error.yaml") as f:
+    with open(args.error_path) as f:
         lines = [line.strip() for line in f]
     for i, line in enumerate(lines):
         if args.rmse_path in line:
