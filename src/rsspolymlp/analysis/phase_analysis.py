@@ -7,8 +7,8 @@ import yaml
 from scipy.spatial import ConvexHull
 
 from pypolymlp.core.interface_vasp import Vasprun
-from rsspolymlp.common.composition import compute_composition
 from rsspolymlp.common.atomic_energy import atomic_energy
+from rsspolymlp.common.composition import compute_composition
 
 
 class ConvexHullAnalyzer:
@@ -149,7 +149,11 @@ class ConvexHullAnalyzer:
                 ).tolist()
             )
             dft_dict[comp_ratio].append(
-                {"formation_e": energy_dft, "poscars": vasprun_path}
+                {
+                    "formation_e": energy_dft,
+                    "poscars": vasprun_path,
+                    "struct_tag": dft_path.split("/")[-1],
+                }
             )
 
         dft_dict_array = {}
@@ -157,6 +161,7 @@ class ConvexHullAnalyzer:
             dft_dict_array[comp_ratio] = {
                 "formation_e": np.array([entry["formation_e"] for entry in entries]),
                 "poscars": np.array([entry["poscars"] for entry in entries]),
+                "struct_tag": np.array([entry["struct_tag"] for entry in entries]),
             }
 
         self.rss_result_fe = dft_dict_array
