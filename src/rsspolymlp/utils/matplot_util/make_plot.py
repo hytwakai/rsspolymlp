@@ -142,7 +142,7 @@ class MakePlot:
                 y,
                 markeredgewidth=self._plot_size * 0.15,
                 markersize=self._plot_size,
-                lw=self._line_size * 0.8 * plot_size,
+                lw=self._line_size * 0.8,
                 linestyle=self.line,
                 marker=self.marker,
                 label=label,
@@ -241,9 +241,9 @@ class MakePlot:
             Label for the y-axis, by default None.
         title : str, optional
             Title of the plot, by default None.
-        x_limits : tuple, optional
+        xlimits : tuple, optional
             Tuple (min, max) for x-axis limits, by default None.
-        x_grid : tuple, optional
+        xgrid : tuple, optional
             Tuple (major, minor) grid intervals for x-axis, by default None.
         y_limits : tuple, optional
             Tuple (min, max) for y-axis limits, by default None.

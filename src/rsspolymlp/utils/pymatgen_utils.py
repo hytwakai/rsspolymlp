@@ -110,7 +110,7 @@ class PymatUtil:
         prop = PropUtil(lat, coo)
         _res = {}
         _res["axis"] = lat
-        _res["abc"] = prop.axis_to_abc
+        _res["abc"] = prop.abc
         _res["positions"] = coo.tolist()
         _res["elements"] = [str(el).split()[-1] for el in pymat_st.species]
         unique_elements = list(dict.fromkeys(_res["elements"]))
