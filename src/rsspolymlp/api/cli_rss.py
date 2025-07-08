@@ -134,6 +134,11 @@ def run_rss_summarize():
         default=None,
         help="Energy threshold (in meV/atom) for outputting POSCAR files",
     )
+    parser.add_argument(
+        "--parse_vasp",
+        action="store_true",
+        help="Parse results from vasprun.xml",
+    )
     ParseArgument.add_parallelization_arguments(parser)
     args = parser.parse_args()
 
@@ -145,6 +150,7 @@ def run_rss_summarize():
         backend=args.backend,
         output_poscar=args.output_poscar,
         threshold=args.threshold,
+        parse_vasp=args.parse_vasp,
     )
 
 

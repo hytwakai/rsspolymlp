@@ -1,18 +1,23 @@
 import json
 import os
 import shutil
+import xml.etree.ElementTree as ET
 from collections import defaultdict
 from time import time
 
 import numpy as np
 import yaml
 
+from pypolymlp.core.interface_vasp import Vasprun
 from rsspolymlp.analysis.ghost_minima import detect_ghost_minima
 from rsspolymlp.analysis.unique_struct import (
     UniqueStructureAnalyzer,
     generate_unique_structs,
 )
+from rsspolymlp.common.atomic_energy import atomic_energy
+from rsspolymlp.common.composition import compute_composition
 from rsspolymlp.common.convert_dict import polymlp_struct_from_dict
+from rsspolymlp.common.property import PropUtil
 from rsspolymlp.rss.eliminate_duplicates import log_unique_structures
 
 
@@ -27,6 +32,7 @@ class RSSResultSummarizer:
         backend: str = "loky",
         output_poscar: bool = False,
         threshold: float = None,
+        parse_vasp: bool = False,
     ):
         self.elements = elements
         self.rss_paths = rss_paths
@@ -35,30 +41,16 @@ class RSSResultSummarizer:
         self.backend = backend
         self.output_poscar = output_poscar
         self.threshold = threshold
+        self.parse_vasp = parse_vasp
 
     def run_sorting(self):
         os.makedirs("json", exist_ok=True)
         os.makedirs("ghost_minima", exist_ok=True)
 
-        paths_same_comp = defaultdict(list)
-        results_same_comp = defaultdict(dict)
-        for path_name in self.rss_paths:
-            rss_result_path = f"{path_name}/rss_result/rss_results.json"
-            with open(rss_result_path) as f:
-                loaded_dict = json.load(f)
-
-            rel_path = os.path.relpath(f"{path_name}/opt_struct", start=os.getcwd())
-            for i in range(len(loaded_dict["rss_results"])):
-                poscar_name = loaded_dict["rss_results"][i]["poscar"].split("/")[-1]
-                loaded_dict["rss_results"][i]["poscar"] = f"{rel_path}/{poscar_name}"
-
-            target_elements = loaded_dict["elements"]
-            comp_ratio = tuple(loaded_dict["comp_ratio"])
-            _dicts = dict(zip(target_elements, comp_ratio))
-            comp_ratio_orderd = tuple(_dicts.get(el, 0) for el in self.elements)
-
-            paths_same_comp[comp_ratio_orderd].append(rss_result_path)
-            results_same_comp[comp_ratio_orderd][rss_result_path] = loaded_dict
+        if not self.parse_vasp:
+            paths_same_comp, results_same_comp = self._parse_mlp_result()
+        else:
+            paths_same_comp, results_same_comp = self._parse_vasp_result()
 
         paths_same_comp = dict(paths_same_comp)
         for comp_ratio, res_paths in paths_same_comp.items():
@@ -69,7 +61,7 @@ class RSSResultSummarizer:
 
             time_start = time()
             unique_structs, num_opt_struct, integrated_res_paths, pressure = (
-                self._sorting_in_same_comp(
+                self.sort_in_single_comp(
                     comp_ratio, res_paths, results_same_comp[comp_ratio]
                 )
             )
@@ -92,15 +84,18 @@ class RSSResultSummarizer:
             sort_idx = np.argsort(energies)
             unique_str_sorted = [unique_structs[i] for i in sort_idx]
 
-            is_ghost_minima, ghost_minima_info = detect_ghost_minima(
-                energies[sort_idx], distances[sort_idx]
-            )
-            with open("ghost_minima/dist_minE_struct.dat", "a") as f:
-                print(f"{ghost_minima_info[0]:.3f}  {log_name}", file=f)
-            if len(ghost_minima_info[1]) > 0:
-                with open("ghost_minima/dist_ghost_minima.dat", "a") as f:
-                    print(log_name, file=f)
-                    print(np.round(ghost_minima_info[1], 3), file=f)
+            if not self.parse_vasp:
+                is_ghost_minima, ghost_minima_info = detect_ghost_minima(
+                    energies[sort_idx], distances[sort_idx]
+                )
+                with open("ghost_minima/dist_minE_struct.dat", "a") as f:
+                    print(f"{ghost_minima_info[0]:.3f}  {log_name}", file=f)
+                if len(ghost_minima_info[1]) > 0:
+                    with open("ghost_minima/dist_ghost_minima.dat", "a") as f:
+                        print(log_name, file=f)
+                        print(np.round(ghost_minima_info[1], 3), file=f)
+            else:
+                is_ghost_minima = np.full(energies.shape, False, dtype=bool)
 
             rss_result_all = log_unique_structures(
                 log_name + ".yaml",
@@ -117,7 +112,80 @@ class RSSResultSummarizer:
 
             print(log_name, "finished", flush=True)
 
-    def _sorting_in_same_comp(self, comp_ratio, result_paths, rss_result_dict):
+    def _parse_mlp_result(self):
+        paths_same_comp = defaultdict(list)
+        results_same_comp = defaultdict(dict)
+        for path_name in self.rss_paths:
+            rss_result_path = f"{path_name}/rss_result/rss_results.json"
+            with open(rss_result_path) as f:
+                loaded_dict = json.load(f)
+
+            rel_path = os.path.relpath(f"{path_name}/opt_struct", start=os.getcwd())
+            for i in range(len(loaded_dict["rss_results"])):
+                poscar_name = loaded_dict["rss_results"][i]["poscar"].split("/")[-1]
+                loaded_dict["rss_results"][i]["poscar"] = f"{rel_path}/{poscar_name}"
+
+            target_elements = loaded_dict["elements"]
+            comp_ratio = tuple(loaded_dict["comp_ratio"])
+            _dicts = dict(zip(target_elements, comp_ratio))
+            comp_ratio_orderd = tuple(_dicts.get(el, 0) for el in self.elements)
+
+            paths_same_comp[comp_ratio_orderd].append(rss_result_path)
+            results_same_comp[comp_ratio_orderd][rss_result_path] = loaded_dict
+
+        return paths_same_comp, results_same_comp
+
+    def _parse_vasp_result(self):
+        paths_same_comp = defaultdict(list)
+        results_same_comp = defaultdict(dict)
+        for path_name in self.rss_paths:
+            res_dict = {
+                "poscar": None,
+                "structure": None,
+                "energy": None,
+                "spg_list": None,
+            }
+            try:
+                vaspobj = Vasprun(path_name + "/vasprun.xml")
+            except Exception:
+                continue
+
+            polymlp_st = vaspobj.structure
+            objprop = PropUtil(polymlp_st.axis.T, polymlp_st.positions.T)
+            spg_list = objprop.analyze_space_group(polymlp_st.elements)
+
+            energy_dft = vaspobj.energy
+            for element in polymlp_st.elements:
+                energy_dft -= atomic_energy(element)
+            energy_dft /= len(polymlp_st.elements)
+
+            res_dict["poscar"] = path_name + "/vasprun.xml"
+            res_dict["structure"] = polymlp_st
+            res_dict["energy"] = energy_dft
+            res_dict["spg_list"] = spg_list
+
+            comp_res = compute_composition(
+                polymlp_st.elements, element_order=self.elements
+            )
+            comp_ratio = comp_res.comp_ratio
+            try:
+                tree = ET.parse(path_name + "/vasprun.xml")
+                root = tree.getroot()
+                for incar_item in root.findall(".//incar/i"):
+                    if incar_item.get("name") == "PSTRESS":
+                        pressure = float(incar_item.text.strip()) / 10
+            except Exception:
+                pressure = None
+
+            paths_same_comp[comp_ratio].append(path_name)
+            results_same_comp[comp_ratio][path_name] = {
+                "pressure": pressure,
+                "rss_results": [res_dict],
+            }
+
+        return paths_same_comp, results_same_comp
+
+    def sort_in_single_comp(self, comp_ratio, result_paths, rss_result_dict):
         log_name = ""
         for i in range(len(comp_ratio)):
             if not comp_ratio[i] == 0:
@@ -157,10 +225,11 @@ class RSSResultSummarizer:
         for res_path in not_processed_path:
             loaded_dict = rss_result_dict[res_path]
             rss_res = loaded_dict["rss_results"]
-            for i in range(len(rss_res)):
-                rss_res[i]["structure"] = polymlp_struct_from_dict(
-                    rss_res[i]["structure"]
-                )
+            if not self.parse_vasp:
+                for i in range(len(rss_res)):
+                    rss_res[i]["structure"] = polymlp_struct_from_dict(
+                        rss_res[i]["structure"]
+                    )
             pressure = loaded_dict["pressure"]
             rss_results2.extend(rss_res)
         unique_structs2 = generate_unique_structs(

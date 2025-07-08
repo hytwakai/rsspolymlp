@@ -158,10 +158,11 @@ class ConvexHullAnalyzer:
 
         dft_dict_array = {}
         for comp_ratio, entries in dft_dict.items():
+            sorted_entries = sorted(entries, key=lambda x: x["formation_e"])
             dft_dict_array[comp_ratio] = {
-                "formation_e": np.array([entry["formation_e"] for entry in entries]),
-                "poscars": np.array([entry["poscars"] for entry in entries]),
-                "struct_tag": np.array([entry["struct_tag"] for entry in entries]),
+                "formation_e": np.array([entry["formation_e"] for entry in sorted_entries]),
+                "poscars": np.array([entry["poscars"] for entry in sorted_entries]),
+                "struct_tag": np.array([entry["struct_tag"] for entry in sorted_entries]),
             }
 
         self.rss_result_fe = dft_dict_array

@@ -71,8 +71,8 @@ def generate_unique_struct(
     if poscar_name is None and polymlp_st is None:
         comp_res = compute_composition(elements)
         polymlp_st = PolymlpStructure(
-            axis,
-            positions,
+            axis.T,
+            positions.T,
             comp_res.atom_counts,
             elements,
             comp_res.types,
@@ -117,11 +117,35 @@ def generate_unique_struct(
 def generate_unique_structs(
     rss_results, use_joblib=True, num_process=-1, backend="loky"
 ) -> list[UniqueStructure]:
+    """
+    Generate a list of UniqueStructure objects from the given RSS results.
+
+    Parameters
+    ----------
+    rss_results : list of dict
+        A list of dictionaries, where each dictionary contains a single structure information.
+        Each dictionary must include the following keys:
+            - "poscar": structure in POSCAR format (str or Poscar object)
+            - "structure": PolymlpStructure object
+            - "energy": total energy (float)
+            - "spg_list": list of space group symbols identified under multiple tolerances
+    use_joblib : bool, default=True
+        Whether to use joblib.Parallel for parallel processing.
+    num_process : int, default=-1
+        The number of parallel jobs. -1 means using all available processors.
+    backend : str, default="loky"
+        Backend used by joblib.
+
+    Returns
+    -------
+    unique_structs : list of UniqueStructure
+        A list of UniqueStructure objects.
+    """
     if use_joblib:
         unique_structs = joblib.Parallel(n_jobs=num_process, backend=backend)(
             joblib.delayed(generate_unique_struct)(
-                res["poscar"],
-                res["structure"],
+                poscar_name=res["poscar"],
+                polymlp_st=res["structure"],
                 energy=res["energy"],
                 spg_list=res["spg_list"],
             )
@@ -132,8 +156,8 @@ def generate_unique_structs(
         for res in rss_results:
             unique_structs.append(
                 generate_unique_struct(
-                    res["poscar"],
-                    res["structure"],
+                    poscar_name=res["poscar"],
+                    polymlp_st=res["structure"],
                     energy=res["energy"],
                     spg_list=res["spg_list"],
                 )

@@ -16,6 +16,7 @@ def rss_summarize(
     backend="loky",
     output_poscar: bool = False,
     threshold: float = None,
+    parse_vasp: bool = False,
 ):
     analyzer = RSSResultSummarizer(
         elements,
@@ -25,6 +26,7 @@ def rss_summarize(
         backend,
         output_poscar,
         threshold,
+        parse_vasp,
     )
     analyzer.run_sorting()
 

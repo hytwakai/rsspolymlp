@@ -1,5 +1,9 @@
 import numpy as np
 
+from pypolymlp.core.data_format import PolymlpStructure
+from pypolymlp.utils.spglib_utils import SymCell
+from rsspolymlp.common.composition import compute_composition
+
 
 class PropUtil:
 
@@ -74,3 +78,28 @@ class PropUtil:
         distance_min = np.min(dist_mat)
 
         return distance_min
+
+    def analyze_space_group(self, elements):
+        comp_res = compute_composition(elements)
+        polymlp_st = PolymlpStructure(
+            self.axis.T,
+            self.positions.T,
+            comp_res.atom_counts,
+            elements,
+            comp_res.types,
+        )
+
+        spg_sets = []
+        for tol in [1e-5, 1e-4, 1e-3, 1e-2]:
+            try:
+                sym = SymCell(st=polymlp_st, symprec=tol)
+                spg = sym.get_spacegroup()
+                spg_sets.append(spg)
+            except TypeError:
+                continue
+            except IndexError:
+                continue
+
+        if spg_sets == []:
+            print("Analyzing space group failed.")
+        return spg_sets

@@ -54,6 +54,12 @@ parser.add_argument(
     action="store_true",
     help="Filtered Pareto-optimal MLPs are shown as closed squares in the plot.",
 )
+parser.add_argument(
+    "--rmse_max",
+    type=float,
+    default=30,
+    help="Y axis maximum in the plot",
+)
 args = parser.parse_args()
 
 cwd_path = os.getcwd()
@@ -183,7 +189,7 @@ if args.plot:
         xlabel="Computational time (ms/step/atom) (single CPU core)",
         ylabel="RMSE (meV/atom)",
         x_limits=[1e-2, 30],
-        y_limits=[0, 30],
+        y_limits=[0, args.rmse_max],
         xlog=True,
     )
 

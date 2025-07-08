@@ -19,7 +19,7 @@ def detect_ghost_minima(energies: np.array, distances: np.array):
     """Detect ghost minima and potential ghost minima in a 1D energy array"""
     n = len(energies)
     if n == 1:
-        return np.array([False]), np.array([False])
+        return np.array([False]), [distances[0], []]
 
     energy_diffs = np.diff(energies)
     mask = np.abs(energy_diffs) > 1e-6
@@ -46,6 +46,10 @@ def detect_ghost_minima(energies: np.array, distances: np.array):
 
 
 def _detect_ghost_minima_kmeans(cent_e, cent_dist, num_energy):
+    ghost_minima = []
+    not_ghost_minima = cent_dist
+    is_ghost_minima = np.full(cent_dist.shape, False, dtype=bool)
+
     for prop in [0.5, 0.2, 0.1, 0.01]:
         window = int(round(num_energy * prop))
         window = max(window, 5)
