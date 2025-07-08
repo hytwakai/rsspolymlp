@@ -28,6 +28,35 @@ def struct_match(
     axis_tol: float = 0.01,
     pos_tol: float = 0.01,
 ) -> bool:
+    """
+    Determine whether two sets of IrrepStructure objects are structurally
+    equivalent.
+
+    This function compares all pairs of irreducible representations from the
+    two input sets and checks if any pair matches within the specified lattice
+    and position tolerances.
+    Structures are compared only if they share the same space group number
+    and identical element counts.
+
+    Parameters
+    ----------
+    st_1_set : list of IrrepStructure
+        First set of symmetry-reduced structures (e.g., from structure A).
+    st_2_set : list of IrrepStructure
+        Second set of symmetry-reduced structures (e.g., from structure B).
+    axis_tol : float, default=0.01
+        Tolerance for lattice vector differences, computed using the squared
+        L2 norm along each axis.
+    pos_tol : float, default=0.01
+        Tolerance for atomic position differences. Computed as the minimum of
+        the maximum absolute deviation among all pairwise differences.
+
+    Returns
+    -------
+    bool
+        True if a matching pair of structures is found under the given
+        tolerances, False otherwise.
+    """
 
     struct_match = False
     for st_1 in st_1_set:
@@ -57,7 +86,26 @@ def generate_primitive_cells(
     poscar_name: Optional[str] = None,
     polymlp_st: Optional[PolymlpStructure] = None,
     symprec_set: list[float] = [1e-5],
-) -> PolymlpStructure:
+) -> tuple[list[PolymlpStructure], list[int]]:
+    """
+    Generate primitive cells of a given structure under different symmetry tolerances.
+
+    Parameters
+    ----------
+    poscar_name : str, optional
+        Path to a POSCAR file.
+    polymlp_st : PolymlpStructure, optional
+        PolymlpStructure object.
+    symprec_set : list of float, default=[1e-5]
+        List of symmetry tolerances to use for identifying space group and primitive cell.
+
+    Returns
+    -------
+    primitive_st_set : list of PolymlpStructure
+        List of primitive cells determined from the given structure under each tolerance.
+    spg_number_set : list of int
+        Corresponding list of space group numbers for each primitive structure.
+    """
 
     if poscar_name is not None and polymlp_st is None:
         polymlp_st = Poscar(poscar_name).structure
@@ -88,22 +136,46 @@ def generate_irrep_struct(
     spg_number: int,
     symprec_irreps: list = [1e-5],
 ) -> IrrepStructure:
+    """
+    Generate an IrrepStructure by computing irreducible atomic positions
+    for a primitive structure under different symmetry tolerances.
+
+    Parameters
+    ----------
+    primitive_st : PolymlpStructure
+        Primitive structure.
+    spg_number : int
+        Space group number corresponding to the given primitive structure.
+    symprec_irreps : list of float or list of 3-float lists, default=[1e-5]
+        List of symmetry tolerances used to calculate irreducible representations.
+
+    Returns
+    -------
+    IrrepStructure
+        Object containing the standardized lattice, stacked irreducible positions,
+        element list, element counts, and the space group number.
+    """
 
     irrep_positions = []
     for symprec_irrep in symprec_irreps:
         if isinstance(symprec_irrep, float):
             symprec_irrep = [symprec_irrep] * 3
-        irrep_pos = IrrepPosition(symprec=symprec_irrep)
+
         _axis = primitive_st.axis.T
         _pos = primitive_st.positions.T
         _elements = primitive_st.elements
+
+        volume = np.linalg.det(primitive_st.axis)
+        standardized_axis = _axis / (volume ** (1 / 3))
+
+        irrep_pos = IrrepPosition(symprec=symprec_irrep)
         rep_pos, sorted_elements = irrep_pos.irrep_positions(
             _axis, _pos, _elements, spg_number
         )
         irrep_positions.append(rep_pos)
 
     return IrrepStructure(
-        axis=_axis,
+        axis=standardized_axis,
         positions=np.stack(irrep_positions, axis=0),
         elements=sorted_elements,
         element_count=Counter(sorted_elements),

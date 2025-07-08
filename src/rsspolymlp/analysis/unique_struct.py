@@ -15,6 +15,7 @@ from rsspolymlp.analysis.struct_matcher.struct_match import (
 )
 from rsspolymlp.analysis.struct_matcher.utils import get_recommend_symprecs
 from rsspolymlp.common.composition import compute_composition
+from rsspolymlp.common.convert_dict import polymlp_struct_to_dict
 from rsspolymlp.common.property import PropUtil
 
 
@@ -44,29 +45,32 @@ def generate_unique_struct(
     symprec_set: list[float] = [1e-5, 1e-4, 1e-3, 1e-2],
 ) -> UniqueStructure:
     """
-    Generate a UniqueStructure object from various structure inputs.
+    Generate a UniqueStructure object.
 
     Parameters
     ----------
     poscar_name : str, optional
-        Path to POSCAR file.
+        Path to a POSCAR file.
     polymlp_st : PolymlpStructure, optional
-        Already parsed structure object.
-    axis : np.ndarray, optional
-        3x3 lattice vectors (used if no POSCAR is provided).
-    positions : np.ndarray, optional
-        Fractional atomic positions (N x 3).
-    elements : np.ndarray, optional
-        Element symbols (N).
-    energy : float
-        Enthalpy or energy value of the structure.
-    spg_list : list of str
-        List of space group labels.
+        PolymlpStructure object. If not provided, this tries to construct it
+        from `poscar_name`, or from `axis`, `positions`, and `elements`.
+    axis : np.ndarray, shape (3, 3), optional
+        Lattice vectors of the structure.
+    positions : np.ndarray, shape (N, 3), optional
+        Fractional atomic positions.
+    elements : np.ndarray or list of str, shape (N,), optional
+        Element symbols for each atom.
+    energy : float, optional
+        Total energy or enthalpy of the structure.
+    spg_list : list of str, optional
+        List of space group symbols or labels.
+    symprec_set : list of float, default=[1e-5, 1e-4, 1e-3, 1e-2]
+        Symmetry tolerances used to determine distinct primitive cells.
 
     Returns
     -------
     UniqueStructure
-        A standardized structure object for uniqueness evaluation.
+        A structure object for uniqueness evaluation.
     """
     if poscar_name is None and polymlp_st is None:
         comp_res = compute_composition(elements)
@@ -166,11 +170,136 @@ def generate_unique_structs(
     return unique_structs
 
 
+def log_unique_structures(
+    file_name,
+    unique_structs,
+    is_ghost_minima,
+    pressure=None,
+    unique_struct_iters=None,
+):
+    for i in range(len(unique_structs)):
+        if not is_ghost_minima[i]:
+            energy_min = unique_structs[i].energy
+            break
+
+    rss_results = []
+    with open(file_name, "a") as f:
+        print("unique_structures:", file=f)
+        for idx, _str in enumerate(unique_structs):
+            e_diff = round((_str.energy - energy_min) * 1000, 2)
+            print(f"  - struct_No: {idx+1}", file=f)
+            print(f"    poscar_name: {_str.input_poscar}", file=f)
+            print(f"    energy_diff_meV_per_atom: {e_diff}", file=f)
+            print(f"    duplicates: {_str.dup_count}", file=f)
+            print(f"    enthalpy: {_str.energy}", file=f)
+            print(f"    axis: {_str.axis_abc}", file=f)
+            print(
+                f"    positions: {_str.original_structure.positions.T.tolist()}", file=f
+            )
+            print(f"    elements: {_str.original_structure.elements}", file=f)
+            print(f"    space_group: {_str.spg_list}", file=f)
+
+            info = [
+                f"{_str.n_atoms} atom",
+                f"distance {round(_str.least_distance, 3)} (Ang.)",
+                f"volume {round(_str.volume, 2)} (A^3/atom)",
+            ]
+            if unique_struct_iters is not None:
+                info.append(f"iteration {unique_struct_iters[idx]}")
+            print(f"    other_info: {' / '.join(info)}", file=f)
+
+            if is_ghost_minima[idx]:
+                print("    ghost_minima_flag: true", file=f)
+
+            _res = {}
+            _res["poscar"] = _str.input_poscar
+            polymlp_st = _str.original_structure
+            polymlp_st_dict = polymlp_struct_to_dict(polymlp_st)
+            _res["structure"] = polymlp_st_dict
+            _res["energy"] = _str.energy
+            _res["pressure"] = pressure
+            _res["spg_list"] = _str.spg_list
+            _res["struct_no"] = idx + 1
+            _res["is_ghost_minima"] = bool(is_ghost_minima[idx])
+            rss_results.append(_res)
+
+    comp_res = compute_composition(unique_structs[0].original_structure.elements)
+
+    rss_result_all = {
+        "elements": comp_res.unique_elements.tolist(),
+        "comp_ratio": comp_res.comp_ratio,
+        "pressure": pressure,
+        "rss_results": rss_results,
+    }
+
+    return rss_result_all
+
+
+def log_all_unique_structures(
+    file_name,
+    unique_structs,
+    is_ghost_minima,
+    pressure=None,
+    unique_struct_iters=None,
+):
+    rss_results = []
+    with open(file_name, "a") as f:
+        print("unique_structures:", file=f)
+        for idx1, _str in enumerate(unique_structs):
+            for idx2, _str in enumerate(unique_structs[idx1]):
+                print(f"  - struct_No: {idx1+1}_{idx2+1}", file=f)
+                print(f"    poscar_name: {_str.input_poscar}", file=f)
+                print(f"    enthalpy: {_str.energy}", file=f)
+                print(f"    axis: {_str.axis_abc}", file=f)
+                print(
+                    f"    positions: {_str.original_structure.positions.T.tolist()}",
+                    file=f,
+                )
+                print(f"    elements: {_str.original_structure.elements}", file=f)
+                print(f"    space_group: {_str.spg_list}", file=f)
+
+                info = [
+                    f"{_str.n_atoms} atom",
+                    f"distance {round(_str.least_distance, 3)} (Ang.)",
+                    f"volume {round(_str.volume, 2)} (A^3/atom)",
+                ]
+                if unique_struct_iters is not None:
+                    info.append(f"iteration {unique_struct_iters[idx1]}")
+                print(f"    other_info: {' / '.join(info)}", file=f)
+
+                if is_ghost_minima[idx1]:
+                    print("    ghost_minima_flag: true", file=f)
+
+                _res = {}
+                _res["poscar"] = _str.input_poscar
+                polymlp_st = _str.original_structure
+                polymlp_st_dict = polymlp_struct_to_dict(polymlp_st)
+                _res["structure"] = polymlp_st_dict
+                _res["energy"] = _str.energy
+                _res["pressure"] = pressure
+                _res["spg_list"] = _str.spg_list
+                _res["struct_no"] = f"{idx1 + 1}_{idx2+1}"
+                _res["is_ghost_minima"] = bool(is_ghost_minima[idx1])
+                rss_results.append(_res)
+
+    comp_res = compute_composition(unique_structs[0][0].original_structure.elements)
+
+    rss_result_all = {
+        "elements": comp_res.unique_elements.tolist(),
+        "comp_ratio": comp_res.comp_ratio,
+        "pressure": pressure,
+        "rss_results": rss_results,
+    }
+
+    return rss_result_all
+
+
 class UniqueStructureAnalyzer:
 
     def __init__(self):
         self.unique_str = []  # List to store unique structures
         self.unique_str_prop = []  # List to store unique structure properties
+        self.unique_str_keep = []
 
     def identify_duplicate_struct(
         self,
@@ -178,6 +307,9 @@ class UniqueStructureAnalyzer:
         other_properties: Optional[dict] = None,
         use_energy_spg_check: bool = False,
         energy_diff: float = 1e-8,
+        axis_tol: float = 0.01,
+        pos_tol: float = 0.01,
+        keep_unique: bool = False,
     ):
         """
         Identify and manage duplicate structures based on one or both of the following criteria:
@@ -230,7 +362,13 @@ class UniqueStructureAnalyzer:
                     ):
                         is_change_struct = True
                     break
-            if struct_match(ndstr.irrep_struct_set, _irrep_struct_set):
+
+            if struct_match(
+                ndstr.irrep_struct_set,
+                _irrep_struct_set,
+                axis_tol=axis_tol,
+                pos_tol=pos_tol,
+            ):
                 is_unique = False
                 if self._extract_spg_count(_spg_list) > self._extract_spg_count(
                     ndstr.spg_list
@@ -239,15 +377,19 @@ class UniqueStructureAnalyzer:
                 break
 
         if not is_unique:
-            # Update duplicate count and replace with better data if necessary
             if is_change_struct:
+                # Update duplicate count and replace with better data if necessary
                 unique_struct.dup_count = self.unique_str[idx].dup_count
                 self.unique_str[idx] = unique_struct
                 self.unique_str_prop[idx] = other_properties
             self.unique_str[idx].dup_count += 1
+            if keep_unique:
+                self.unique_str_keep[idx].append(unique_struct)
         else:
             self.unique_str.append(unique_struct)
             self.unique_str_prop.append(other_properties)
+            if keep_unique:
+                self.unique_str_keep.append([unique_struct])
 
         return is_unique, is_change_struct
 

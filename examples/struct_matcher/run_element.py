@@ -11,7 +11,6 @@ all_test_mode = ["invert"]
 all_test_mode = ["symprec_2"]
 all_test_mode = ["test"]
 all_test_mode = ["poscar_3"]
-all_test_mode = ["poscar_else"]
 final_res = []
 pymatgen_res = []
 
@@ -90,6 +89,7 @@ for test_mode in all_test_mode:
     print(st1.elements)
     for irrep_st in unique_struct1.irrep_struct_set:
         print("spg_number", irrep_st.spg_number)
+        print(np.round(irrep_st.axis, 3))
         print(np.round(irrep_st.positions[0].reshape(3, -1), 3))
         print(np.round(irrep_st.positions[1].reshape(3, -1), 3))
         print(np.round(irrep_st.positions[2].reshape(3, -1), 3))
@@ -103,6 +103,7 @@ for test_mode in all_test_mode:
     print(st2.elements)
     for irrep_st in unique_struct2.irrep_struct_set:
         print("spg_number", irrep_st.spg_number)
+        print(np.round(irrep_st.axis, 3))
         print(np.round(irrep_st.positions[0].reshape(3, -1), 3))
         print(np.round(irrep_st.positions[1].reshape(3, -1), 3))
         print(np.round(irrep_st.positions[2].reshape(3, -1), 3))

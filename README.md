@@ -90,7 +90,7 @@ Next, RSS results aggregated for each (`p`, `c`) condition are analyzed.
 4. Identifying unique structures across atom numbers `n`
 
    ```shell
-   rss-summarize --elements Al Cu --rss_paths <rss_directory>/*
+   rss-summarize --elements Al Cu --result_paths <rss_directory>/*
    # <rss_directory>: parent directory of RSS runs at the same pressure
    ```
 

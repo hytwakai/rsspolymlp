@@ -112,7 +112,7 @@ def run_rss_summarize():
         help="List of target element symbols",
     )
     parser.add_argument(
-        "--rss_paths",
+        "--result_paths",
         nargs="*",
         type=str,
         required=True,
@@ -137,20 +137,26 @@ def run_rss_summarize():
     parser.add_argument(
         "--parse_vasp",
         action="store_true",
-        help="Parse results from vasprun.xml",
+        help="If set, parse VASP output directories instead of RSS directories",
+    )
+    parser.add_argument(
+        "--summarize_p",
+        action="store_true",
+        help="",
     )
     ParseArgument.add_parallelization_arguments(parser)
     args = parser.parse_args()
 
     rss_summarize(
         elements=args.elements,
-        rss_paths=args.rss_paths,
+        result_paths=args.result_paths,
         use_joblib=not args.not_use_joblib,
         num_process=args.num_process,
         backend=args.backend,
         output_poscar=args.output_poscar,
         threshold=args.threshold,
         parse_vasp=args.parse_vasp,
+        summarize_p=args.summarize_p,
     )
 
 

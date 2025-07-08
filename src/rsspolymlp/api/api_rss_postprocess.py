@@ -10,17 +10,18 @@ from rsspolymlp.analysis.rss_summarize import RSSResultSummarizer
 
 def rss_summarize(
     elements,
-    rss_paths,
+    result_paths,
     use_joblib=True,
     num_process=1,
     backend="loky",
     output_poscar: bool = False,
     threshold: float = None,
     parse_vasp: bool = False,
+    summarize_p: bool = False,
 ):
     analyzer = RSSResultSummarizer(
         elements,
-        rss_paths,
+        result_paths,
         use_joblib,
         num_process,
         backend,
@@ -28,7 +29,10 @@ def rss_summarize(
         threshold,
         parse_vasp,
     )
-    analyzer.run_sorting()
+    if not summarize_p:
+        analyzer.run_summarize()
+    else:
+        analyzer.run_summarize_p()
 
 
 def rss_ghost_minima_cands(result_paths):
