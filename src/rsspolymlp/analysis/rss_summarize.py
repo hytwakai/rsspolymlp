@@ -161,14 +161,13 @@ class RSSResultSummarizer:
             energies = np.array([s[0].energy for s in unique_structs])
             sort_idx = np.argsort(energies)
             unique_str_sorted = [unique_structs[i] for i in sort_idx]
-
-            is_ghost_minima = [False for i in range(len(unique_structs))]
+            unique_str_sorted = sorted(
+                unique_str_sorted, key=lambda x: len(x), reverse=True
+            )
 
             rss_result_all = log_all_unique_structures(
                 log_name + ".yaml",
                 unique_str_sorted,
-                is_ghost_minima,
-                pressure=self.pressure,
             )
 
             with open(f"json/{log_name}.json", "w") as f:
@@ -275,11 +274,14 @@ class RSSResultSummarizer:
             loaded_dict = rss_result_dict[res_path]
             rss_res = loaded_dict["rss_results"]
             if not self.parse_vasp:
-                for i in range(len(rss_res)):
-                    rss_res[i]["structure"] = polymlp_struct_from_dict(
-                        rss_res[i]["structure"]
-                    )
-            self.pressure = loaded_dict["pressure"]
+                for res in rss_res:
+                    res["structure"] = polymlp_struct_from_dict(res["structure"])
+
+            pressure = loaded_dict.get("pressure")
+            for res in rss_res:
+                res["pressure"] = pressure
+            self.pressure = pressure
+
             rss_results.extend(rss_res)
 
         unique_structs = generate_unique_structs(
@@ -290,9 +292,10 @@ class RSSResultSummarizer:
         )
         self.num_opt_struct += len(unique_structs)
 
-        for res in unique_structs:
+        for unique_struct in unique_structs:
             self.analyzer.identify_duplicate_struct(
-                unique_struct=res, keep_unique=keep_unique
+                unique_struct=unique_struct,
+                keep_unique=keep_unique,
             )
 
     def initialize_uniq_struct(self, yaml_name, result_paths):
