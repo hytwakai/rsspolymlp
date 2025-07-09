@@ -36,6 +36,127 @@ class UniqueStructure:
     dup_count: int = 1
 
 
+class UniqueStructureAnalyzer:
+
+    def __init__(self):
+        self.unique_str = []  # List to store unique structures
+        self.unique_str_prop = []  # List to store unique structure properties
+        self.unique_str_keep = []
+        self.unique_str_prop_keep = []
+
+    def identify_duplicate_struct(
+        self,
+        unique_struct: UniqueStructure,
+        other_properties: Optional[dict] = None,
+        use_energy_spg_check: bool = False,
+        energy_diff: float = 1e-8,
+        axis_tol: float = 0.01,
+        pos_tol: float = 0.01,
+        keep_unique: bool = False,
+    ):
+        """
+        Identify and manage duplicate structures based on one or both of the following criteria:
+
+        1. Energy + space group similarity (optional):
+            If `use_energy_spg_check=True`, a structure is considered a duplicate if its energy
+            is within energy_diff of an existing structure, and it shares at least one space group.
+            Note: This method does not distinguish between chiral structures, as enantiomorphs
+            can exist with identical energy and space group.
+
+        2. Irreducible structural representation:
+            A structure is considered a duplicate if it matches an existing structure based on
+            irreducible position equivalence.
+
+        Parameters
+        ----------
+        unique_struct : UniqueStructure
+            The structure to be compared and registered if unique.
+        other_properties : dict, optional
+            Additional metadata associated with the structure.
+        use_energy_spg_check : bool
+            Whether to enable duplicate detection using energy and space group similarity.
+        energy_diff : float
+            Energy tolerance used in energy-based duplicate detection.
+
+        Returns
+        -------
+        is_unique : bool
+            True if the structure is unique.
+        is_change_struct : bool
+            True if the existing structure was replaced due to higher symmetry.
+        """
+
+        is_unique = True
+        is_change_struct = False
+        _energy = unique_struct.energy
+        _spg_list = unique_struct.spg_list
+        _irrep_struct_set = unique_struct.irrep_struct_set
+        if other_properties is None:
+            other_properties = {}
+
+        for idx, ndstr in enumerate(self.unique_str):
+            if use_energy_spg_check:
+                if abs(ndstr.energy - _energy) < energy_diff and any(
+                    spg in _spg_list for spg in ndstr.spg_list
+                ):
+                    is_unique = False
+                    if self._extract_spg_count(_spg_list) > self._extract_spg_count(
+                        ndstr.spg_list
+                    ):
+                        is_change_struct = True
+                    break
+
+            if struct_match(
+                ndstr.irrep_struct_set,
+                _irrep_struct_set,
+                axis_tol=axis_tol,
+                pos_tol=pos_tol,
+            ):
+                is_unique = False
+                if self._extract_spg_count(_spg_list) > self._extract_spg_count(
+                    ndstr.spg_list
+                ):
+                    is_change_struct = True
+                break
+
+        if not is_unique:
+            if is_change_struct:
+                # Update duplicate count and replace with better data if necessary
+                unique_struct.dup_count = self.unique_str[idx].dup_count
+                self.unique_str[idx] = unique_struct
+                self.unique_str_prop[idx] = other_properties
+            self.unique_str[idx].dup_count += 1
+            if keep_unique:
+                self.unique_str_keep[idx].append(unique_struct)
+                self.unique_str_prop_keep[idx].append(other_properties)
+        else:
+            self.unique_str.append(unique_struct)
+            self.unique_str_prop.append(other_properties)
+            if keep_unique:
+                self.unique_str_keep.append([unique_struct])
+                self.unique_str_prop_keep.append([other_properties])
+
+        return is_unique, is_change_struct
+
+    def _extract_spg_count(self, spg_list):
+        """Extract and sum space group counts from a list of space group strings."""
+        return sum(
+            int(re.search(r"\((\d+)\)", s).group(1))
+            for s in spg_list
+            if re.search(r"\((\d+)\)", s)
+        )
+
+    def _initialize_unique_structs(
+        self, unique_structs, unique_str_prop: Optional[list[dict]] = None
+    ):
+        """Initialize unique structures and their associated properties."""
+        self.unique_str = unique_structs
+        if unique_str_prop is None:
+            self.unique_str_prop = [{} for _ in unique_structs]
+        else:
+            self.unique_str_prop = unique_str_prop
+
+
 def generate_unique_struct(
     poscar_name: Optional[str] = None,
     polymlp_st: Optional[PolymlpStructure] = None,
@@ -311,124 +432,3 @@ def log_all_unique_structures(
     }
 
     return rss_result_all
-
-
-class UniqueStructureAnalyzer:
-
-    def __init__(self):
-        self.unique_str = []  # List to store unique structures
-        self.unique_str_prop = []  # List to store unique structure properties
-        self.unique_str_keep = []
-        self.unique_str_prop_keep = []
-
-    def identify_duplicate_struct(
-        self,
-        unique_struct: UniqueStructure,
-        other_properties: Optional[dict] = None,
-        use_energy_spg_check: bool = False,
-        energy_diff: float = 1e-8,
-        axis_tol: float = 0.01,
-        pos_tol: float = 0.01,
-        keep_unique: bool = False,
-    ):
-        """
-        Identify and manage duplicate structures based on one or both of the following criteria:
-
-        1. Energy + space group similarity (optional):
-            If `use_energy_spg_check=True`, a structure is considered a duplicate if its energy
-            is within energy_diff of an existing structure, and it shares at least one space group.
-            Note: This method does not distinguish between chiral structures, as enantiomorphs
-            can exist with identical energy and space group.
-
-        2. Irreducible structural representation:
-            A structure is considered a duplicate if it matches an existing structure based on
-            irreducible position equivalence.
-
-        Parameters
-        ----------
-        unique_struct : UniqueStructure
-            The structure to be compared and registered if unique.
-        other_properties : dict, optional
-            Additional metadata associated with the structure.
-        use_energy_spg_check : bool
-            Whether to enable duplicate detection using energy and space group similarity.
-        energy_diff : float
-            Energy tolerance used in energy-based duplicate detection.
-
-        Returns
-        -------
-        is_unique : bool
-            True if the structure is unique.
-        is_change_struct : bool
-            True if the existing structure was replaced due to higher symmetry.
-        """
-
-        is_unique = True
-        is_change_struct = False
-        _energy = unique_struct.energy
-        _spg_list = unique_struct.spg_list
-        _irrep_struct_set = unique_struct.irrep_struct_set
-        if other_properties is None:
-            other_properties = {}
-
-        for idx, ndstr in enumerate(self.unique_str):
-            if use_energy_spg_check:
-                if abs(ndstr.energy - _energy) < energy_diff and any(
-                    spg in _spg_list for spg in ndstr.spg_list
-                ):
-                    is_unique = False
-                    if self._extract_spg_count(_spg_list) > self._extract_spg_count(
-                        ndstr.spg_list
-                    ):
-                        is_change_struct = True
-                    break
-
-            if struct_match(
-                ndstr.irrep_struct_set,
-                _irrep_struct_set,
-                axis_tol=axis_tol,
-                pos_tol=pos_tol,
-            ):
-                is_unique = False
-                if self._extract_spg_count(_spg_list) > self._extract_spg_count(
-                    ndstr.spg_list
-                ):
-                    is_change_struct = True
-                break
-
-        if not is_unique:
-            if is_change_struct:
-                # Update duplicate count and replace with better data if necessary
-                unique_struct.dup_count = self.unique_str[idx].dup_count
-                self.unique_str[idx] = unique_struct
-                self.unique_str_prop[idx] = other_properties
-            self.unique_str[idx].dup_count += 1
-            if keep_unique:
-                self.unique_str_keep[idx].append(unique_struct)
-                self.unique_str_prop_keep[idx].append(other_properties)
-        else:
-            self.unique_str.append(unique_struct)
-            self.unique_str_prop.append(other_properties)
-            if keep_unique:
-                self.unique_str_keep.append([unique_struct])
-                self.unique_str_prop_keep.append([other_properties])
-
-        return is_unique, is_change_struct
-
-    def _extract_spg_count(self, spg_list):
-        """Extract and sum space group counts from a list of space group strings."""
-        return sum(
-            int(re.search(r"\((\d+)\)", s).group(1))
-            for s in spg_list
-            if re.search(r"\((\d+)\)", s)
-        )
-
-    def _initialize_unique_structs(
-        self, unique_structs, unique_str_prop: Optional[list[dict]] = None
-    ):
-        """Initialize unique structures and their associated properties."""
-        self.unique_str = unique_structs
-        if unique_str_prop is None:
-            self.unique_str_prop = [{} for _ in unique_structs]
-        else:
-            self.unique_str_prop = unique_str_prop
