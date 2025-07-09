@@ -389,9 +389,9 @@ def log_all_unique_structures(
         print("unique_structures:", file=f)
         for idx1, _str in enumerate(unique_structs):
             print(f"  - struct_No: {idx1+1}", file=f)
-            print("    sub_structures:", file=f)
+            print("    structures:", file=f)
             for idx2, _str in enumerate(unique_structs[idx1]):
-                print(f"    - sub_struct_No: {idx1+1}_{idx2+1}", file=f)
+                print(f"    - sub_struct_No: '{idx1+1}_{idx2+1}'", file=f)
                 print(f"      poscar_name: {_str.input_poscar}", file=f)
                 print(f"      pressure: {_str.pressure}", file=f)
                 print(f"      enthalpy: {_str.energy}", file=f)
