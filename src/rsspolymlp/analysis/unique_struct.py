@@ -246,17 +246,19 @@ def log_all_unique_structures(
     with open(file_name, "a") as f:
         print("unique_structures:", file=f)
         for idx1, _str in enumerate(unique_structs):
+            print(f"  - struct_No: {idx1+1}", file=f)
+            print("    sub_structures:", file=f)
             for idx2, _str in enumerate(unique_structs[idx1]):
-                print(f"  - struct_No: {idx1+1}_{idx2+1}", file=f)
-                print(f"    poscar_name: {_str.input_poscar}", file=f)
-                print(f"    enthalpy: {_str.energy}", file=f)
-                print(f"    axis: {_str.axis_abc}", file=f)
+                print(f"    - sub_struct_No: {idx1+1}_{idx2+1}", file=f)
+                print(f"      poscar_name: {_str.input_poscar}", file=f)
+                print(f"      enthalpy: {_str.energy}", file=f)
+                print(f"      axis: {_str.axis_abc}", file=f)
                 print(
-                    f"    positions: {_str.original_structure.positions.T.tolist()}",
+                    f"      positions: {_str.original_structure.positions.T.tolist()}",
                     file=f,
                 )
-                print(f"    elements: {_str.original_structure.elements}", file=f)
-                print(f"    space_group: {_str.spg_list}", file=f)
+                print(f"      elements: {_str.original_structure.elements}", file=f)
+                print(f"      space_group: {_str.spg_list}", file=f)
 
                 info = [
                     f"{_str.n_atoms} atom",
@@ -265,10 +267,10 @@ def log_all_unique_structures(
                 ]
                 if unique_struct_iters is not None:
                     info.append(f"iteration {unique_struct_iters[idx1]}")
-                print(f"    other_info: {' / '.join(info)}", file=f)
+                print(f"      other_info: {' / '.join(info)}", file=f)
 
                 if is_ghost_minima[idx1]:
-                    print("    ghost_minima_flag: true", file=f)
+                    print("      ghost_minima_flag: true", file=f)
 
                 _res = {}
                 _res["poscar"] = _str.input_poscar

@@ -44,6 +44,10 @@ class RSSResultSummarizer:
         self.threshold = threshold
         self.parse_vasp = parse_vasp
 
+        self.num_opt_struct = 0
+        self.pressure = None
+        self.analyzer = UniqueStructureAnalyzer()
+
     def run_summarize(self):
         os.makedirs("json", exist_ok=True)
         os.makedirs("ghost_minima", exist_ok=True)
@@ -54,25 +58,35 @@ class RSSResultSummarizer:
             paths_same_comp, results_same_comp = self._parse_vasp_result()
 
         for comp_ratio, res_paths in paths_same_comp.items():
+            self.num_opt_struct = 0
+            self.analyzer = UniqueStructureAnalyzer()
+
             log_name = ""
             for i in range(len(comp_ratio)):
                 if not comp_ratio[i] == 0:
                     log_name += f"{self.elements[i]}{comp_ratio[i]}"
 
             time_start = time()
-            analyzer, num_opt_struct, integrated_res_paths, pressure = (
-                self.sort_in_single_comp(
-                    comp_ratio, res_paths, results_same_comp[comp_ratio]
-                )
+
+            log_name = ""
+            for i in range(len(comp_ratio)):
+                if not comp_ratio[i] == 0:
+                    log_name += f"{self.elements[i]}{comp_ratio[i]}"
+            yaml_name = log_name + ".yaml"
+            res_paths, integrated_res_paths = self.initialize_uniq_struct(
+                yaml_name, res_paths
             )
-            unique_structs = analyzer.unique_str
+            self.sort_in_single_comp(res_paths, results_same_comp[comp_ratio])
+
             time_finish = time() - time_start
+
+            unique_structs = self.analyzer.unique_str
 
             with open(log_name + ".yaml", "w") as f:
                 print("general_information:", file=f)
                 print(f"  sorting_time_sec:      {round(time_finish, 2)}", file=f)
-                print(f"  pressure_GPa:          {pressure}", file=f)
-                print(f"  num_optimized_structs: {num_opt_struct}", file=f)
+                print(f"  pressure_GPa:          {self.pressure}", file=f)
+                print(f"  num_optimized_structs: {self.num_opt_struct}", file=f)
                 print(f"  num_unique_structs:    {len(unique_structs)}", file=f)
                 print(
                     f"  input_file_names:      {sorted(integrated_res_paths)}", file=f
@@ -102,7 +116,59 @@ class RSSResultSummarizer:
                 log_name + ".yaml",
                 unique_str_sorted,
                 is_ghost_minima,
-                pressure=pressure,
+                pressure=self.pressure,
+            )
+
+            with open(f"json/{log_name}.json", "w") as f:
+                json.dump(rss_result_all, f)
+
+            if self.output_poscar:
+                self.generate_poscars(f"json/{log_name}.json", threshold=self.threshold)
+
+            print(log_name, "finished", flush=True)
+
+    def run_summarize_p(self):
+        os.makedirs("json", exist_ok=True)
+
+        paths_same_comp, results_same_comp = self._parse_json_result()
+
+        for comp_ratio, res_paths in paths_same_comp.items():
+            self.num_opt_struct = 0
+            self.analyzer = UniqueStructureAnalyzer()
+
+            log_name = ""
+            for i in range(len(comp_ratio)):
+                if not comp_ratio[i] == 0:
+                    log_name += f"{self.elements[i]}{comp_ratio[i]}"
+
+            time_start = time()
+            self.sort_in_single_comp(
+                res_paths, results_same_comp[comp_ratio], keep_unique=True
+            )
+            time_finish = time() - time_start
+
+            unique_structs = self.analyzer.unique_str_keep
+            unique_structs = [sorted(s, key=lambda x: x.energy) for s in unique_structs]
+
+            with open(log_name + ".yaml", "w") as f:
+                print("general_information:", file=f)
+                print(f"  sorting_time_sec:      {round(time_finish, 2)}", file=f)
+                print(f"  num_optimized_structs: {self.num_opt_struct}", file=f)
+                print(f"  num_unique_structs:    {len(unique_structs)}", file=f)
+                print(f"  input_file_names:      {sorted(res_paths)}", file=f)
+                print("", file=f)
+
+            energies = np.array([s[0].energy for s in unique_structs])
+            sort_idx = np.argsort(energies)
+            unique_str_sorted = [unique_structs[i] for i in sort_idx]
+
+            is_ghost_minima = [False for i in range(len(unique_structs))]
+
+            rss_result_all = log_all_unique_structures(
+                log_name + ".yaml",
+                unique_str_sorted,
+                is_ghost_minima,
+                pressure=self.pressure,
             )
 
             with open(f"json/{log_name}.json", "w") as f:
@@ -174,58 +240,38 @@ class RSSResultSummarizer:
                 root = tree.getroot()
                 for incar_item in root.findall(".//incar/i"):
                     if incar_item.get("name") == "PSTRESS":
-                        pressure = float(incar_item.text.strip()) / 10
+                        self.pressure = float(incar_item.text.strip()) / 10
             except Exception:
-                pressure = None
+                self.pressure = None
 
             paths_same_comp[comp_ratio].append(path_name)
             results_same_comp[comp_ratio][path_name] = {
-                "pressure": pressure,
+                "pressure": self.pressure,
                 "rss_results": [res_dict],
             }
 
         return paths_same_comp, results_same_comp
 
-    def sort_in_single_comp(
-        self, comp_ratio, result_paths, rss_result_dict, keep_unique=False
-    ):
-        log_name = ""
-        for i in range(len(comp_ratio)):
-            if not comp_ratio[i] == 0:
-                log_name += f"{self.elements[i]}{comp_ratio[i]}"
-
-        analyzer = UniqueStructureAnalyzer()
-        num_opt_struct = 0
-        pressure = None
-        pre_result_paths = []
-        if os.path.isfile(log_name + ".yaml"):
-            with open(log_name + ".yaml") as f:
-                yaml_data = yaml.safe_load(f)
-            num_opt_struct = yaml_data["general_information"]["num_optimized_structs"]
-            pre_result_paths = yaml_data["general_information"]["input_file_names"]
-
-            with open(f"./json/{log_name}.json") as f:
+    def _parse_json_result(self):
+        paths_same_comp = defaultdict(list)
+        results_same_comp = defaultdict(dict)
+        for path_name in self.result_paths:
+            with open(path_name) as f:
                 loaded_dict = json.load(f)
-            rss_results1 = loaded_dict["rss_results"]
-            for i in range(len(rss_results1)):
-                rss_results1[i]["structure"] = polymlp_struct_from_dict(
-                    rss_results1[i]["structure"]
-                )
-            pressure = loaded_dict["pressure"]
 
-            unique_structs1 = generate_unique_structs(
-                rss_results1,
-                use_joblib=self.use_joblib,
-                num_process=self.num_process,
-                backend=self.backend,
-            )
-            analyzer._initialize_unique_structs(unique_structs1)
+            target_elements = loaded_dict["elements"]
+            comp_ratio = tuple(loaded_dict["comp_ratio"])
+            _dicts = dict(zip(target_elements, comp_ratio))
+            comp_ratio_orderd = tuple(_dicts.get(el, 0) for el in self.elements)
 
-        not_processed_path = list(set(result_paths) - set(pre_result_paths))
-        integrated_res_paths = list(set(result_paths) | set(pre_result_paths))
+            paths_same_comp[comp_ratio_orderd].append(path_name)
+            results_same_comp[comp_ratio_orderd][path_name] = loaded_dict
 
-        rss_results2 = []
-        for res_path in not_processed_path:
+        return paths_same_comp, results_same_comp
+
+    def sort_in_single_comp(self, result_paths, rss_result_dict, keep_unique=False):
+        rss_results = []
+        for res_path in result_paths:
             loaded_dict = rss_result_dict[res_path]
             rss_res = loaded_dict["rss_results"]
             if not self.parse_vasp:
@@ -233,23 +279,54 @@ class RSSResultSummarizer:
                     rss_res[i]["structure"] = polymlp_struct_from_dict(
                         rss_res[i]["structure"]
                     )
-            pressure = loaded_dict["pressure"]
-            rss_results2.extend(rss_res)
+            self.pressure = loaded_dict["pressure"]
+            rss_results.extend(rss_res)
 
-        unique_structs2 = generate_unique_structs(
-            rss_results2,
+        unique_structs = generate_unique_structs(
+            rss_results,
             use_joblib=self.use_joblib,
             num_process=self.num_process,
             backend=self.backend,
         )
-        num_opt_struct += len(unique_structs2)
+        self.num_opt_struct += len(unique_structs)
 
-        for res in unique_structs2:
-            analyzer.identify_duplicate_struct(
+        for res in unique_structs:
+            self.analyzer.identify_duplicate_struct(
                 unique_struct=res, keep_unique=keep_unique
             )
 
-        return analyzer, num_opt_struct, integrated_res_paths, pressure
+    def initialize_uniq_struct(self, yaml_name, result_paths):
+        pre_result_paths = []
+
+        if os.path.isfile(yaml_name):
+            with open(yaml_name) as f:
+                yaml_data = yaml.safe_load(f)
+            self.num_opt_struct = yaml_data["general_information"][
+                "num_optimized_structs"
+            ]
+            pre_result_paths = yaml_data["general_information"]["input_file_names"]
+
+            with open(f"./json/{yaml_name.split('.yaml')[0]}.json") as f:
+                loaded_dict = json.load(f)
+            rss_results = loaded_dict["rss_results"]
+            for i in range(len(rss_results)):
+                rss_results[i]["structure"] = polymlp_struct_from_dict(
+                    rss_results[i]["structure"]
+                )
+            self.pressure = loaded_dict["pressure"]
+
+            unique_structs = generate_unique_structs(
+                rss_results,
+                use_joblib=self.use_joblib,
+                num_process=self.num_process,
+                backend=self.backend,
+            )
+            self.analyzer._initialize_unique_structs(unique_structs)
+
+        not_processed_path = list(set(result_paths) - set(pre_result_paths))
+        integrated_res_paths = list(set(result_paths) | set(pre_result_paths))
+
+        return not_processed_path, integrated_res_paths
 
     def generate_poscars(self, json_path: str, threshold=None):
         logname = os.path.basename(json_path).split(".json")[0]
@@ -270,75 +347,3 @@ class RSSResultSummarizer:
 
             dest = f"poscars/{logname}/POSCAR_{logname}_No{res['struct_no']}"
             shutil.copy(res["poscar"], dest)
-
-    def run_summarize_p(self):
-        os.makedirs("json", exist_ok=True)
-
-        paths_same_comp, results_same_comp = self._parse_json_result()
-
-        for comp_ratio, res_paths in paths_same_comp.items():
-            log_name = ""
-            for i in range(len(comp_ratio)):
-                if not comp_ratio[i] == 0:
-                    log_name += f"{self.elements[i]}{comp_ratio[i]}"
-
-            time_start = time()
-            analyzer, num_opt_struct, integrated_res_paths, pressure = (
-                self.sort_in_single_comp(
-                    comp_ratio,
-                    res_paths,
-                    results_same_comp[comp_ratio],
-                    keep_unique=True,
-                )
-            )
-            unique_structs = analyzer.unique_str_keep
-            unique_structs = [sorted(s, key=lambda x: x.energy) for s in unique_structs]
-            time_finish = time() - time_start
-
-            with open(log_name + ".yaml", "w") as f:
-                print("general_information:", file=f)
-                print(f"  sorting_time_sec:      {round(time_finish, 2)}", file=f)
-                print(f"  num_optimized_structs: {num_opt_struct}", file=f)
-                print(f"  num_unique_structs:    {len(unique_structs)}", file=f)
-                print(
-                    f"  input_file_names:      {sorted(integrated_res_paths)}", file=f
-                )
-                print("", file=f)
-
-            energies = np.array([s[0].energy for s in unique_structs])
-            sort_idx = np.argsort(energies)
-            unique_str_sorted = [unique_structs[i] for i in sort_idx]
-
-            is_ghost_minima = [False for i in range(len(unique_structs))]
-
-            rss_result_all = log_all_unique_structures(
-                log_name + ".yaml",
-                unique_str_sorted,
-                is_ghost_minima,
-                pressure=pressure,
-            )
-
-            with open(f"json/{log_name}.json", "w") as f:
-                json.dump(rss_result_all, f)
-
-            if self.output_poscar:
-                self.generate_poscars(f"json/{log_name}.json", threshold=self.threshold)
-
-            print(log_name, "finished", flush=True)
-
-    def _parse_json_result(self):
-        paths_same_comp = defaultdict(list)
-        results_same_comp = defaultdict(dict)
-        for path_name in self.result_paths:
-            with open(path_name) as f:
-                loaded_dict = json.load(f)
-
-            target_elements = loaded_dict["elements"]
-            comp_ratio = tuple(loaded_dict["comp_ratio"])
-            _dicts = dict(zip(target_elements, comp_ratio))
-            comp_ratio_orderd = tuple(_dicts.get(el, 0) for el in self.elements)
-
-            paths_same_comp[comp_ratio_orderd].append(path_name)
-            results_same_comp[comp_ratio_orderd][path_name] = loaded_dict
-
-        return paths_same_comp, results_same_comp
