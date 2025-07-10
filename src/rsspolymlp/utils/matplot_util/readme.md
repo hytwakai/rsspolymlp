@@ -1,4 +1,4 @@
-# matplot_util
+# matplotlib utility
 
 ## Create a plot customized with unified settings
 

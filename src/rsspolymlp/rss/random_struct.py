@@ -2,7 +2,7 @@ import numpy as np
 from scipy.linalg import cholesky
 
 from rsspolymlp.common.property import PropUtil
-from rsspolymlp.utils.vasp_utils import write_poscar
+from rsspolymlp.utils.vasp_util.write_poscar import write_poscar
 
 
 class GenerateRandomStructure:

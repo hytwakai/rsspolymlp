@@ -120,4 +120,10 @@ Next, RSS results aggregated for each (`p`, `c`) condition are analyzed.
    plot-binary --elements Al Cu --threshold 30
    ```
 
-[Python API (RSS)](docs/rss.md)
+## Additional information
+
+ - [Python API (RSS)](docs/api_rss.md)
+   - Initial structure generation
+   - Global RSS with polynomial MLPs
+ - [matplotlib utility](src/rsspolymlp/utils/matplot_util/readme.md)
+ - [VASP calculation utility](src/rsspolymlp/utils/vasp_util/readme.md)
