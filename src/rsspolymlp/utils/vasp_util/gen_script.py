@@ -1,7 +1,7 @@
 import argparse
 
 
-def generate_sp_shell_script(run_vaspmpi: str, finish_path: str, fail_path: str) -> str:
+def generate_sp_shell_script(run_vaspmpi: str) -> str:
     """
     Generate a shell script for automated VASP execution and error recovery.
 
@@ -9,10 +9,6 @@ def generate_sp_shell_script(run_vaspmpi: str, finish_path: str, fail_path: str)
     ----------
     run_vaspmpi : str
         Command string to run VASP (e.g., "srun vasp_std > std.log").
-    finish_path : str
-        Filename to which successful cases are logged.
-    fail_path : str
-        Filename to which failed cases are logged.
 
     Returns
     -------
@@ -47,12 +43,23 @@ if [ "$nbands" -ne 0 ]; then
     {run_vaspmpi} > "$output"
 fi
 
+incar_file="INCAR"
 oszicar_file="OSZICAR"
-current_path=$(basename "$PWD")
-if grep -q "E0=" "$oszicar_file"; then
-    echo "$current_path" >> {finish_path}
+status_file="calc_status.txt"
+
+nelm=$(awk '/^\s*NELM\s*=/ {{print $3}}' "$incar_file")
+if [ -z "$nelm" ]; then
+    nelm=60
+fi
+
+n_steps=$(awk '/^[^ ]+:/ {{n++}} END {{print n}}' "$oszicar_file")
+
+if [ "$n_steps" -eq "$nelm" ]; then
+    echo "max_iteration" >> "$status_file"
+elif grep -q "E0=" "$oszicar_file"; then
+    echo "success" >> "$status_file"
 else
-    echo "$current_path" >> {fail_path}
+    echo "fail" >> "$status_file"
 fi
 
 grep "TITEL" ./POTCAR > ./POTCAR_compress
@@ -66,9 +73,7 @@ fi
     return script.strip()
 
 
-def generate_opt_shell_script(
-    run_vaspmpi: str, finish_path: str, fail_path: str
-) -> str:
+def generate_opt_shell_script(run_vaspmpi: str) -> str:
     """
     Generate a shell script for geometry optimization using VASP with iterative recovery.
 
@@ -162,11 +167,11 @@ while [ $counter -le 10 ]; do
     ((counter++))
 done
 
-current_path=$(basename "$PWD")
+status_file="calc_status.txt"
 if [ $relax_state -eq 1 ]; then
-    echo "$current_path" >> {finish_path}
+    echo "success" >> "$status_file"
 else
-    echo "$current_path" >> {fail_path}
+    echo "fail" >> "$status_file"
 fi
 """
     return script.strip()
@@ -187,18 +192,6 @@ if __name__ == "__main__":
         help="VASP execution command, e.g., 'srun vasp_std > std.log'",
     )
     parser.add_argument(
-        "--finish_path",
-        type=str,
-        default="success_list.txt",
-        help="Path to record successful directories",
-    )
-    parser.add_argument(
-        "--fail_path",
-        type=str,
-        default="fail_list.txt",
-        help="Path to record failed directories",
-    )
-    parser.add_argument(
         "--script_name",
         type=str,
         default="run_vasp.sh",
@@ -210,14 +203,10 @@ if __name__ == "__main__":
     if args.sp:
         script = generate_sp_shell_script(
             run_vaspmpi=args.run_vaspmpi,
-            finish_path=args.finish_path,
-            fail_path=args.fail_path,
         )
     if args.opt:
         script = generate_opt_shell_script(
             run_vaspmpi=args.run_vaspmpi,
-            finish_path=args.finish_path,
-            fail_path=args.fail_path,
         )
 
     with open(args.script_name, "w") as f:

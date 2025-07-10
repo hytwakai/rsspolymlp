@@ -17,8 +17,6 @@ def prepare_vasp_inputs(
     run_vaspmpi: str,
     mode: str = "sp",  # "opt" or "sp"
     script_name: str = "run_vasp.sh",
-    finish_path: str = "../finish_list.dat",
-    fail_path: str = "../fail_list.dat",
     ENCUT: float = 400,
     KSPACING: float = 0.09,
     PSTRESS: float = 0.0,
@@ -116,14 +114,10 @@ def prepare_vasp_inputs(
     if mode == "sp":
         script_str = generate_sp_shell_script(
             run_vaspmpi=run_vaspmpi,
-            finish_path=finish_path,
-            fail_path=fail_path,
         )
     elif mode == "opt":
         script_str = generate_opt_shell_script(
             run_vaspmpi=run_vaspmpi,
-            finish_path=finish_path,
-            fail_path=fail_path,
         )
     else:
         raise ValueError("Mode must be either `sp` or `opt`.")
