@@ -42,9 +42,9 @@ subprocess.run(["zsh", "run_vasp.sh"], check=True)
 ## Local geometry optimization
 ```python
 import subprocess
-
 from rsspolymlp.utils.vasp_util.api import prepare_vasp_inputs
 
+# Generate input files for a VASP geometry optimization
 prepare_vasp_inputs(
     mode="opt",  # Mode: "opt" for local geometry optimization
     poscar_path="POSCAR",

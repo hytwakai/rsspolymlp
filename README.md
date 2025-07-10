@@ -125,5 +125,8 @@ Next, RSS results aggregated for each (`p`, `c`) condition are analyzed.
  - [Python API (RSS)](docs/api_rss.md)
    - Initial structure generation
    - Global RSS with polynomial MLPs
- - [matplotlib utility](src/rsspolymlp/utils/matplot_util/readme.md)
+   - Unique structure identification and RSS summary generation
  - [VASP calculation utility](src/rsspolymlp/utils/vasp_util/readme.md)
+   - Single-point calculation
+   - Local geometry optimizaion
+ - [matplotlib utility](src/rsspolymlp/utils/matplot_util/readme.md)

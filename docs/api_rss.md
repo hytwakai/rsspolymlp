@@ -9,6 +9,9 @@ gen_str = GenerateRandomStructure(
     atom_counts=[4, 4],
     num_init_str=2000,
     least_distance=0.0,
+    min_volume=0,
+    max_volume=100,
+    output_dir="initial_struct",
 )
 gen_str.random_structure(min_volume=0.0, max_volume=100)
 ```
@@ -62,3 +65,17 @@ By specifying `--parallel_method srun`, a script named `multiprocess.sh` will be
 rss-parallel --parallel_method srun --pot polymlp.yaml --num_opt_str 1000
 srun -n $SLURM_CPUS_ON_NODE ./multiprocess.sh
 ```
+
+## Unique structure identification and RSS summary generation
+```python
+from rsspolymlp.rss.eliminate_duplicates import RSSResultAnalyzer
+
+analyzer = RSSResultAnalyzer()
+analyzer.run_rss_uniq_struct(
+    num_str=-1,
+    use_joblib=True,
+    num_process=-1,
+    backend="loky",
+)
+```
+
