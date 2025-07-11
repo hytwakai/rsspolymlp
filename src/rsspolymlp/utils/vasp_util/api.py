@@ -12,10 +12,10 @@ from rsspolymlp.utils.vasp_util.gen_script import (
 
 
 def prepare_vasp_inputs(
-    poscar_path: str,
-    potcar_path: str,
     run_vaspmpi: str,
     mode: str = "sp",  # "opt" or "sp"
+    poscar_path: str = "./POSCAR",
+    potcar_path: str = "./POTCAR",
     script_name: str = "run_vasp.sh",
     ENCUT: float = 400,
     KSPACING: float = 0.09,
@@ -107,8 +107,10 @@ def prepare_vasp_inputs(
         raise ValueError("Mode must be either `sp` or `opt`.")
 
     # Copy POSCAR and POTCAR files
-    shutil.copy(poscar_path, "./POSCAR")
-    shutil.copy(potcar_path, "./POTCAR")
+    if poscar_path not in ["POSCAR", "./POSCAR"]:
+        shutil.copy(poscar_path, "./POSCAR")
+    if potcar_path not in ["POTCAR", "./POTCAR"]:
+        shutil.copy(potcar_path, "./POTCAR")
 
     # Generate shell script
     if mode == "sp":

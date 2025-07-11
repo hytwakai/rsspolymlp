@@ -69,7 +69,7 @@ def struct_match(
                 continue
 
             axis_diff = st_1.axis - st_2.axis
-            max_axis_diff = np.max(np.sum(axis_diff**2, axis=1))
+            max_axis_diff = np.max(np.sqrt(np.sum(axis_diff**2, axis=1)))
             if max_axis_diff >= axis_tol:
                 continue
 

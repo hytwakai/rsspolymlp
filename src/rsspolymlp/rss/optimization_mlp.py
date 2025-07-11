@@ -104,7 +104,7 @@ class RandomStructureSearch:
             relax_cell=True,
             relax_volume=True,
             relax_positions=True,
-            with_sym=False,
+            with_sym=True,
             pressure=self.pressure,
             verbose=True,
         )
