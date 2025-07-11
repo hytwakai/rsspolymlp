@@ -54,8 +54,12 @@ class RSSResultSummarizer:
 
         if not self.parse_vasp:
             paths_same_comp, results_same_comp = self._parse_mlp_result()
+            axis_tol = 0.01
+            pos_tol = 0.01
         else:
             paths_same_comp, results_same_comp = self._parse_vasp_result()
+            axis_tol = 0.05
+            pos_tol = 0.03
 
         for comp_ratio, res_paths in paths_same_comp.items():
             self.num_opt_struct = 0
@@ -76,7 +80,12 @@ class RSSResultSummarizer:
             res_paths, integrated_res_paths = self.initialize_uniq_struct(
                 yaml_name, res_paths
             )
-            self.sort_in_single_comp(res_paths, results_same_comp[comp_ratio])
+            self.sort_in_single_comp(
+                res_paths,
+                results_same_comp[comp_ratio],
+                axis_tol=axis_tol,
+                pos_tol=pos_tol,
+            )
 
             time_finish = time() - time_start
 
@@ -143,7 +152,11 @@ class RSSResultSummarizer:
 
             time_start = time()
             self.sort_in_single_comp(
-                res_paths, results_same_comp[comp_ratio], keep_unique=True
+                res_paths,
+                results_same_comp[comp_ratio],
+                keep_unique=True,
+                axis_tol=0.1,
+                pos_tol=0.03,
             )
             time_finish = time() - time_start
 
@@ -268,7 +281,14 @@ class RSSResultSummarizer:
 
         return paths_same_comp, results_same_comp
 
-    def sort_in_single_comp(self, result_paths, rss_result_dict, keep_unique=False):
+    def sort_in_single_comp(
+        self,
+        result_paths,
+        rss_result_dict,
+        keep_unique=False,
+        axis_tol=0.01,
+        pos_tol=0.01,
+    ):
         rss_results = []
         for res_path in result_paths:
             loaded_dict = rss_result_dict[res_path]
@@ -296,6 +316,8 @@ class RSSResultSummarizer:
             self.analyzer.identify_duplicate_struct(
                 unique_struct=unique_struct,
                 keep_unique=keep_unique,
+                axis_tol=axis_tol,
+                pos_tol=pos_tol,
             )
 
     def initialize_uniq_struct(self, yaml_name, result_paths):

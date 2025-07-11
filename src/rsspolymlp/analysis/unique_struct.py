@@ -94,10 +94,27 @@ class UniqueStructureAnalyzer:
         if other_properties is None:
             other_properties = {}
 
-        for idx, ndstr in enumerate(self.unique_str):
-            if use_energy_spg_check:
-                if abs(ndstr.energy - _energy) < energy_diff and any(
-                    spg in _spg_list for spg in ndstr.spg_list
+        for idx, _ndstr in enumerate(self.unique_str):
+            targets = self.unique_str_keep[idx] if keep_unique else [_ndstr]
+
+            for ndstr in targets:
+                if use_energy_spg_check:
+                    same_energy = abs(ndstr.energy - _energy) < energy_diff
+                    shared_spg = any(spg in _spg_list for spg in ndstr.spg_list)
+
+                    if same_energy and shared_spg:
+                        is_unique = False
+                        if self._extract_spg_count(_spg_list) > self._extract_spg_count(
+                            ndstr.spg_list
+                        ):
+                            is_change_struct = True
+                        break
+
+                if struct_match(
+                    ndstr.irrep_struct_set,
+                    _irrep_struct_set,
+                    axis_tol=axis_tol,
+                    pos_tol=pos_tol,
                 ):
                     is_unique = False
                     if self._extract_spg_count(_spg_list) > self._extract_spg_count(
@@ -106,17 +123,7 @@ class UniqueStructureAnalyzer:
                         is_change_struct = True
                     break
 
-            if struct_match(
-                ndstr.irrep_struct_set,
-                _irrep_struct_set,
-                axis_tol=axis_tol,
-                pos_tol=pos_tol,
-            ):
-                is_unique = False
-                if self._extract_spg_count(_spg_list) > self._extract_spg_count(
-                    ndstr.spg_list
-                ):
-                    is_change_struct = True
+            if not is_unique:
                 break
 
         if not is_unique:
