@@ -1,11 +1,11 @@
 import shutil
 from pathlib import Path
 
-from myutils.vasp_util.gen_incar import (
+from rsspolymlp.utils.vasp_util.gen_incar import (
     generate_optimization_incar,
     generate_single_point_incar,
 )
-from myutils.vasp_util.gen_script import (
+from rsspolymlp.utils.vasp_util.gen_script import (
     generate_opt_shell_script,
     generate_sp_shell_script,
 )

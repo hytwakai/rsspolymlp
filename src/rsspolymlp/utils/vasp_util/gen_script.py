@@ -45,7 +45,7 @@ fi
 
 incar_file="INCAR"
 oszicar_file="OSZICAR"
-status_file="calc_status.txt"
+status_file="calc_status_sp.txt"
 
 nelm=$(awk '/^\s*NELM\s*=/ {{print $3}}' "$incar_file")
 if [ -z "$nelm" ]; then
@@ -167,7 +167,7 @@ while [ $counter -le 10 ]; do
     ((counter++))
 done
 
-status_file="calc_status.txt"
+status_file="calc_status_opt.txt"
 if [ $relax_state -eq 1 ]; then
     echo "success" >> "$status_file"
 else
