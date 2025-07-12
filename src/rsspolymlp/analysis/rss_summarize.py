@@ -296,6 +296,7 @@ class RSSResultSummarizer:
             if not self.parse_vasp:
                 for res in rss_res:
                     res["structure"] = polymlp_struct_from_dict(res["structure"])
+                    res["struct_no"] = None
 
             pressure = loaded_dict.get("pressure")
             for res in rss_res:
