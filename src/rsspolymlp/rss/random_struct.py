@@ -94,7 +94,7 @@ class GenerateRandomStructure:
                 distance_sets = np.array(
                     [
                         PropUtil(lat.T, coo.T).least_distance
-                        for lat, coo in zip(valid_l_matrices, random_atomic_position)
+                        for lat, coo in zip(valid_l_matrices, valid_positions)
                     ]
                 )
                 valid_l_matrices = valid_l_matrices[distance_sets > self.least_distance]
