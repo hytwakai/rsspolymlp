@@ -9,10 +9,8 @@ import numpy as np
 from sklearn.cluster import KMeans
 
 from pypolymlp.core.interface_vasp import Vasprun
+from pypolymlp.core.units import EVtoGPa
 from rsspolymlp.common.atomic_energy import atomic_energy
-
-EV = 1.602176634e-19  # [J]
-EVAngstromToGPa = EV * 1e21
 
 
 def detect_ghost_minima(energies: np.array, distances: np.array):
@@ -173,9 +171,11 @@ def detect_actual_ghost_minima(dft_path):
         if not vasprun_get:
             diff_all.append(
                 {
-                    "diff": "null",
-                    "dft_value": "null",
-                    "mlp_value": "null",
+                    "energy_diff": "null",
+                    "stress_diff": "null",
+                    "dft_energy": "null",
+                    "mlp_energy": "null",
+                    "dft_stress": "null",
                     "res": res,
                 }
             )
@@ -186,19 +186,24 @@ def detect_actual_ghost_minima(dft_path):
         for element in structure.elements:
             energy_dft -= atomic_energy(element)
         energy_dft /= len(structure.elements)
+        vol_per_atom = structure.volume / len(structure.elements)
 
         # Subtract pressure term from MLP enthalpy
         mlp_energy = res["energy"]
-        mlp_energy -= (
-            pressure * structure.volume / (EVAngstromToGPa * len(structure.elements))
-        )
+        mlp_energy -= pressure * vol_per_atom / EVtoGPa
 
-        diff = mlp_energy - energy_dft
+        stress_dft = [(vaspobj.stress / 10).tolist()[i][i] for i in range(3)]
+        press_diff = [pressure - stress_dft[i] for i in range(3)]
+        stress_diff = np.max(np.abs(press_diff)) * vol_per_atom / EVtoGPa
+
+        e_diff = mlp_energy - energy_dft
         diff_all.append(
             {
-                "diff": diff,
-                "dft_value": energy_dft,
-                "mlp_value": mlp_energy,
+                "energy_diff": e_diff,
+                "stress_diff": stress_diff,
+                "dft_energy": energy_dft,
+                "mlp_energy": mlp_energy,
+                "dft_stress": stress_dft,
                 "res": res,
             }
         )
@@ -210,13 +215,16 @@ def detect_actual_ghost_minima(dft_path):
         print("ghost_minima:", file=f)
         for diff in diff_all:
             poscar = diff["res"]["ghost_minima_poscar"]
-            delta = diff["diff"]
+            delta_e = diff["energy_diff"]
+            delta_s = diff["stress_diff"]
 
             print(f"  - structure: {poscar}", file=f)
-            if not delta == "null":
-                print(f"    energy_diff_meV_per_atom: {delta*1000:.3f}", file=f)
-                ghost_threshold = -0.1  # unit: eV/atom
-                if delta < ghost_threshold:
+            if not delta_e == "null":
+                print(f"    energy_diff_meV_per_atom: {delta_e*1000:.3f}", file=f)
+                print(f"    stress_diff_meV_per_atom: {delta_s*1000:.3f}", file=f)
+                e_threshold = -0.1  # unit: eV/atom
+                s_threshold = 0.5
+                if delta_e < e_threshold or delta_s > s_threshold:
                     assessment = "Marked as ghost minimum"
                     n_true_ghost_minima += 1
                 else:
