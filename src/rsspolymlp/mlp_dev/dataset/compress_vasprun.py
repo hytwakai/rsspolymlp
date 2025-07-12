@@ -26,6 +26,26 @@ def max_iteration_reached(vasp_path: str) -> bool:
     return nelm is not None and iteration == nelm
 
 
+def check_convergence(
+    vasp_paths: list[str],
+    vasprun_status={"fail": 0, "fail_iteration": 0, "parse": 0, "success": 0},
+):
+    valid_paths = []
+    for vasp_path in vasp_paths:
+        if not os.path.isfile(f"{vasp_path}/OSZICAR"):
+            vasprun_status["fail"] += 1
+            continue
+        if "E0=" not in open(f"{vasp_path}/OSZICAR").read():
+            vasprun_status["fail"] += 1
+            continue
+        if max_iteration_reached(vasp_path):
+            vasprun_status["fail_iteration"] += 1
+            continue
+        valid_paths.append(vasp_path)
+
+    return valid_paths, vasprun_status
+
+
 def compress(vasprun_path, output_dir: str = "dft_dataset"):
     cwd_path = os.getcwd()
     if os.path.isfile(f"{output_dir}/{'.'.join(vasprun_path.split('/'))}"):
@@ -83,19 +103,7 @@ if __name__ == "__main__":
 
     vasp_paths = args.path
 
-    vasprun_status = {"fail": 0, "fail_iteration": 0, "parse": 0, "success": 0}
-    valid_paths = []
-    for vasp_path in vasp_paths:
-        if not os.path.isfile(f"{vasp_path}/OSZICAR"):
-            vasprun_status["fail"] += 1
-            continue
-        if "E0=" not in open(f"{vasp_path}/OSZICAR").read():
-            vasprun_status["fail"] += 1
-            continue
-        if max_iteration_reached(vasp_path):
-            vasprun_status["fail_iteration"] += 1
-            continue
-        valid_paths.append(vasp_path)
+    valid_paths, vasprun_status = check_convergence(vasp_paths=vasp_paths)
 
     judge_list = Parallel(n_jobs=args.num_process)(
         delayed(compress)(vasp_path + "/vasprun.xml", args.output_dir)

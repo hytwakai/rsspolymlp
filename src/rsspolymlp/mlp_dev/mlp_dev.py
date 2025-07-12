@@ -19,10 +19,10 @@ def prepare_polymlp_input_file(
     Build or extend a polymlp input file.
 
     The function relies on specific keywords in the *data_path string* to determine:
-        - "/ws_large_force":
+        - "large_force":
             Dataset containing structures with some large forces;
             a small weight is assigned.
-        - "/wo_force":
+        - "wo_force":
             Dataset containing structures with extremely large forces
             (e.g., due to close atomic positions); force training is disabled.
         - otherwise:
@@ -51,9 +51,9 @@ def prepare_polymlp_input_file(
 
         # Write training and test data
         for data_path in training_data_paths:
-            if "/ws_large_force" in data_path:
+            if "large_force" in data_path:
                 f.write(f"train_data {data_path}/* True {w_large_force}\n")
-            elif "/wo_force" in data_path:
+            elif "wo_force" in data_path:
                 f.write(f"train_data {data_path}/* {include_wo_force} {w_wo_force}\n")
             else:
                 f.write(f"train_data {data_path}/* True 1.0\n")
@@ -61,9 +61,9 @@ def prepare_polymlp_input_file(
         for data_path in test_data_paths:
             if not os.path.isdir(data_path):
                 continue
-            if "/ws_large_force" in data_path:
+            if "large_force" in data_path:
                 f.write(f"test_data {data_path}/* True {w_large_force}\n")
-            elif "/wo_force" in data_path:
+            elif "wo_force" in data_path:
                 f.write(f"test_data {data_path}/* {include_wo_force} {w_wo_force}\n")
             else:
                 f.write(f"test_data {data_path}/* True 1.0\n")
