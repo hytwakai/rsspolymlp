@@ -81,12 +81,6 @@ def generate_opt_shell_script(run_vaspmpi: str) -> str:
     ----------
     run_vaspmpi : str
         Command string to run VASP.
-    stdout_name : str
-        Name of stdout file (e.g., "std.log").
-    finish_path : str
-        Path to append successful case names.
-    fail_path : str
-        Path to append failed case names.
 
     Returns
     -------
