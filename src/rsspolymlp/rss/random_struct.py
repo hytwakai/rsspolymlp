@@ -12,7 +12,8 @@ class GenerateRandomStructure:
         self,
         element_list,
         atom_counts,
-        max_str: int = 5000,
+        min_volume: float = 0,
+        max_volume: float = 100,
         least_distance: float = 0.0,
         pre_str_count: int = 0,
     ):
@@ -25,8 +26,10 @@ class GenerateRandomStructure:
             List of element symbols.
         atom_counts : list
             List of the number of atoms for each element.
-        max_str : int, optional
-            Maximum number of structures to generate (default: 5000).
+        min_volume : float, optional
+            Minimum volume of initial structure (A^3/atom)
+        max_volume : float, optional
+            Maximum volume of initial structure (A^3/atom)
         least_distance : float, optional
             Minimum allowed atomic distance in unit of angstrom (default: 0.0).
         pre_str_count : int, optional
@@ -35,19 +38,25 @@ class GenerateRandomStructure:
 
         self.element_list = element_list
         self.atom_counts = atom_counts
-        self.max_str = max_str
+        self.min_volume = min_volume
+        self.max_volume = max_volume
         self.least_distance = least_distance
         self.str_count = pre_str_count
 
-    def random_structure(self, min_volume=0, max_volume=100):
+    def random_structure(self, max_init_struct: int = 5000):
         """
         Generate random structures while ensuring minimum interatomic distance constraints.
+
+        Parameters
+        ----------
+        max_init_struct : int, optional
+            Maximum number of structures to generate (default: 5000).
         """
         atom_num = sum(self.atom_counts)
 
         # Define initial structure constraints
-        vol_constraint_max = max_volume * atom_num  # A^3
-        vol_constraint_min = min_volume * atom_num  # A^3
+        vol_constraint_max = self.max_volume * atom_num  # A^3
+        vol_constraint_min = self.min_volume * atom_num  # A^3
         axis_constraint = ((atom_num ** (1 / 3)) * 8) ** 2
 
         iteration = 1
@@ -116,6 +125,6 @@ class GenerateRandomStructure:
                     elements,
                     f"initial_struct/POSCAR_{self.str_count}",
                 )
-                if self.str_count == self.max_str:
+                if self.str_count == max_init_struct:
                     return
             iteration += 1

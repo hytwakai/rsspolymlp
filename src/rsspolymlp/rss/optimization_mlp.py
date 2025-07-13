@@ -17,15 +17,15 @@ class RandomStructureSearch:
         pot="polymlp.yaml",
         pressure=0.0,
         solver_method="CG",
-        maxiter=100,
-        num_opt_str=1000,
+        c_maxiter=100,
+        n_opt_str=1000,
         not_stop_rss=False,
     ):
         self.pot = pot
         self.pressure = pressure
         self.solver_method = solver_method
-        self.maxiter = maxiter
-        self.num_opt_str = num_opt_str
+        self.c_maxiter = c_maxiter
+        self.n_opt_str = n_opt_str
         self.not_stop_rss = not_stop_rss
         self._stop_rss = False
         os.makedirs("log", exist_ok=True)
@@ -115,7 +115,7 @@ class RandomStructureSearch:
         maxiter = 1000
         for c_count in range(3):
             if iteration == 0 and c_count <= 1 or iteration == 1 and c_count == 0:
-                maxiter = self.maxiter
+                maxiter = self.c_maxiter
                 continue
 
             try:
@@ -253,7 +253,7 @@ class RandomStructureSearch:
             return
         with open("rss_result/success.dat") as f:
             success_str = sum(1 for _ in f)
-        residual_str = self.num_opt_str - success_str
+        residual_str = self.n_opt_str - success_str
         if residual_str < 0:
             self._stop_rss = True
         if len(glob.glob("initial_struct/*")) == len(glob.glob("log/*")):

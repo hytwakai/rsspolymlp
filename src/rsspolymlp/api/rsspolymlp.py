@@ -8,6 +8,12 @@ import time
 from joblib import Parallel, delayed
 from joblib.externals.loky import get_reusable_executor
 
+from rsspolymlp.analysis.ghost_minima import (
+    detect_actual_ghost_minima,
+    ghost_minima_candidates,
+)
+from rsspolymlp.analysis.phase_analysis import ConvexHullAnalyzer
+from rsspolymlp.analysis.rss_summarize import RSSResultSummarizer
 from rsspolymlp.rss.eliminate_duplicates import RSSResultAnalyzer
 from rsspolymlp.rss.optimization_mlp import RandomStructureSearch
 from rsspolymlp.rss.random_struct import GenerateRandomStructure
@@ -17,30 +23,31 @@ def rss_init_struct(
     elements,
     atom_counts,
     num_init_str=5000,
-    least_distance=0.0,
     min_volume=0,
     max_volume=100,
-    output_dir="initial_struct",
+    least_distance=0.0,
 ):
-    os.makedirs(output_dir, exist_ok=True)
-    pre_str_count = len(glob.glob(os.path.join(output_dir, "*")))
+    os.makedirs("initial_struct", exist_ok=True)
+    pre_str_count = len(glob.glob("initial_struct/*"))
+
     if num_init_str > pre_str_count:
         gen_str = GenerateRandomStructure(
-            elements,
-            atom_counts,
-            num_init_str,
+            element_list=elements,
+            atom_counts=atom_counts,
+            min_volume=min_volume,
+            max_volume=max_volume,
             least_distance=least_distance,
             pre_str_count=pre_str_count,
         )
-        gen_str.random_structure(min_volume=min_volume, max_volume=max_volume)
+        gen_str.random_structure(max_init_struct=num_init_str)
 
 
-def rss_parallel(
+def rss_run_parallel(
     pot="polymlp.yaml",
     pressure=0.0,
     solver_method="CG",
-    maxiter=100,
-    num_opt_str=1000,
+    c_maxiter=100,
+    n_opt_str=1000,
     not_stop_rss=False,
     parallel_method="joblib",
     num_process=-1,
@@ -56,7 +63,7 @@ def rss_parallel(
 
     with open("rss_result/success.dat") as f:
         success_set = [line.strip() for line in f]
-    if len(success_set) >= num_opt_str:
+    if len(success_set) >= n_opt_str:
         print("Target number of optimized structures reached. Exiting.")
         return
 
@@ -70,12 +77,15 @@ def rss_parallel(
         p for p in poscar_path_all if os.path.basename(p) not in finished_set
     ]
 
+    if len(poscar_path_all) == 0:
+        return
+
     rssobj = RandomStructureSearch(
         pot=pot,
         pressure=pressure,
         solver_method=solver_method,
-        maxiter=maxiter,
-        num_opt_str=num_opt_str,
+        c_maxiter=c_maxiter,
+        n_opt_str=n_opt_str,
         not_stop_rss=not_stop_rss,
     )
     if num_process == -1:
@@ -106,10 +116,10 @@ def rss_parallel(
                 for i in range(num_process):
                     run_ = (
                         f"rss-single-srun --pot {' '.join(pot)} "
-                        f"--num_opt_str {num_opt_str} "
+                        f"--n_opt_str {n_opt_str} "
                         f"--pressure {pressure} "
                         f"--solver_method {solver_method} "
-                        f"--maxiter {maxiter} "
+                        f"--c_maxiter {c_maxiter} "
                     )
                     if not_stop_rss:
                         run_ += " --not_stop_rss"
@@ -119,12 +129,12 @@ def rss_parallel(
             subprocess.run(["chmod", "+x", "./multiprocess.sh"], check=True)
 
 
-def rss_single_srun(
+def rss_run_single(
     pot="polymlp.yaml",
     pressure=0.0,
     solver_method="CG",
-    maxiter=100,
-    num_opt_str=1000,
+    c_maxiter=100,
+    n_opt_str=1000,
     not_stop_rss=False,
 ):
     def acquire_lock():
@@ -144,8 +154,8 @@ def rss_single_srun(
         pot=pot,
         pressure=pressure,
         solver_method=solver_method,
-        maxiter=maxiter,
-        num_opt_str=num_opt_str,
+        c_maxiter=c_maxiter,
+        n_opt_str=n_opt_str,
         not_stop_rss=not_stop_rss,
     )
 
@@ -174,7 +184,7 @@ def rss_single_srun(
 
         with open("rss_result/success.dat") as f:
             success_str = sum(1 for _ in f)
-        residual_str = num_opt_str - success_str
+        residual_str = n_opt_str - success_str
         if residual_str <= 0:
             print("Reached the target number of optimized structures.")
             break
@@ -202,3 +212,122 @@ def rss_uniq_struct(
         num_process=num_process,
         backend=backend,
     )
+
+
+def rsspolymlp(
+    elements,
+    atom_counts,
+    pot="polymlp.yaml",
+    pressure=0.0,
+    n_opt_str=1000,
+    max_init_str=None,
+    min_volume=0,
+    max_volume=100,
+    least_distance=0.0,
+    solver_method="CG",
+    not_stop_rss=False,
+    backend="loky",
+    output_dir="./",
+):
+    if not output_dir == "./":
+        os.makedirs(output_dir, exist_ok=True)
+        os.chdir(output_dir)
+
+    if max_init_str is None and n_opt_str is None:
+        raise ValueError
+    elif max_init_str is None:
+        max_init_str = n_opt_str * 10
+    elif n_opt_str is None:
+        n_opt_str = max_init_str
+
+    n_init_str = 0
+
+    while True:
+        n_init_str += n_opt_str
+        if n_init_str > max_init_str:
+            print(
+                "All randomly generated initial structures have been processed. Stopping."
+            )
+            break
+
+        rss_init_struct(
+            elements=elements,
+            atom_counts=atom_counts,
+            num_init_str=n_init_str,
+            min_volume=min_volume,
+            max_volume=max_volume,
+            least_distance=least_distance,
+            output_dir=output_dir,
+        )
+
+        rss_run_parallel(
+            pot=pot,
+            pressure=pressure,
+            solver_method=solver_method,
+            n_opt_str=n_opt_str,
+            not_stop_rss=not_stop_rss,
+            backend=backend,
+        )
+
+        with open("rss_result/success.dat") as f:
+            success_set = [line.strip() for line in f]
+        if len(success_set) >= n_opt_str:
+            print("Target number of optimized structures reached. Exiting.")
+            break
+
+    rss_uniq_struct()
+
+
+def rss_summarize(
+    elements,
+    result_paths,
+    use_joblib=True,
+    num_process=1,
+    backend="loky",
+    output_poscar: bool = False,
+    threshold: float = None,
+    parse_vasp: bool = False,
+    summarize_p: bool = False,
+):
+    analyzer = RSSResultSummarizer(
+        elements,
+        result_paths,
+        use_joblib,
+        num_process,
+        backend,
+        output_poscar,
+        threshold,
+        parse_vasp,
+    )
+    if not summarize_p:
+        analyzer.run_summarize()
+    else:
+        analyzer.run_summarize_p()
+
+
+def rss_ghost_minima_cands(result_paths):
+    dir_path = os.path.dirname(result_paths[0])
+    os.makedirs(f"{dir_path}/../ghost_minima/ghost_minima_candidates", exist_ok=True)
+    os.chdir(f"{dir_path}/../")
+    ghost_minima_candidates(result_paths)
+
+
+def rss_ghost_minima_validate(dft_dir):
+    detect_actual_ghost_minima(dft_dir)
+
+
+def rss_phase_analysis(
+    elements, result_paths, ghost_minima_file=None, parse_vasp=False, thresholds=None
+):
+    ch_analyzer = ConvexHullAnalyzer(
+        elements=elements,
+        result_paths=result_paths,
+        ghost_minima_file=ghost_minima_file,
+        parse_vasp=parse_vasp,
+    )
+    ch_analyzer.run_calc()
+
+    if thresholds is not None:
+        threshold_list = thresholds
+        for threshold in threshold_list:
+            ch_analyzer.get_struct_near_ch(threshold)
