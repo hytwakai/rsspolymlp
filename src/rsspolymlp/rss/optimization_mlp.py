@@ -71,10 +71,12 @@ class RandomStructureSearch:
 
                 minobj = self.minimize(unitcell, iteration, c1_set, c2_set)
                 if minobj is None:
+                    self.log_computation_time()
                     return
                 self.minobj = minobj
 
                 if not self.write_refine_structure(self.opt_poscar):
+                    self.log_computation_time()
                     return
 
                 if self.check_convergence(energy_keep):
@@ -86,12 +88,17 @@ class RandomStructureSearch:
 
                 if iteration == max_iteration - 1:
                     print("Maximum number of relaxation iterations has been exceeded")
+                    self.log_computation_time()
+                    return
 
             if not self._stop_rss:
                 self.print_final_structure_details()
+
                 judge = self.analyze_space_group(self.opt_poscar)
                 if judge is False:
+                    self.log_computation_time()
                     return
+
                 self.log_computation_time()
                 with open("rss_result/success.dat", "a") as f:
                     print(self.poscar_name, file=f)
@@ -126,14 +133,15 @@ class RandomStructureSearch:
                     c1=c1_set[c_count],
                     c2=c2_set[c_count],
                 )
+
                 energy_per_atom = minobj._energy / len(minobj.structure.elements)
                 if energy_per_atom < -50:
                     print("Final function value (eV/atom):", energy_per_atom)
                     print(
                         "Geometry optimization failed: Huge negative or zero energy value."
                     )
-                    self.log_computation_time()
                     return None
+
                 return minobj
 
             except ValueError:
@@ -145,8 +153,8 @@ class RandomStructureSearch:
                     print(
                         "Geometry optimization failed: Huge negative or zero energy value."
                     )
-                    self.log_computation_time()
                     return None
+
                 print("Change [c1, c2] to", c1_set[c_count + 1], c2_set[c_count + 1])
                 maxiter = 100
 
@@ -155,7 +163,6 @@ class RandomStructureSearch:
         self.minobj.write_poscar(filename=self.opt_poscar)
         if not wait_for_file_lines(self.opt_poscar):
             print("Reading file failed.")
-            self.log_computation_time()
             return False
 
         symprec_list = [1e-5, 1e-4, 1e-3, 1e-2, 1e-1]
@@ -170,16 +177,15 @@ class RandomStructureSearch:
                 print("TypeError: Change symprec to", sp * 10)
             except IndexError:
                 print("IndexError: Change symprec to", sp * 10)
+
         if not refine_success:
             # Failed structure refinement for all tested symmetry tolerances
             print("Refining cell failed.")
-            self.log_computation_time()
             return False
         else:
             self.minobj.write_poscar(filename=self.opt_poscar)
             if not wait_for_file_lines(self.opt_poscar):
                 print("Reading file failed.")
-                self.log_computation_time()
                 return False
             return True
 
@@ -187,10 +193,11 @@ class RandomStructureSearch:
         """Check if the energy difference is below the threshold."""
         energy_per_atom = self.minobj.energy / len(self.minobj.structure.elements)
         print("Energy (eV/atom):", energy_per_atom)
+
         if energy_keep is not None:
             energy_convergence = energy_per_atom - energy_keep
             print("Energy difference from the previous iteration:", energy_convergence)
-            if abs(energy_convergence) < 1e-7:
+            if abs(energy_convergence) < 1e-8:
                 print("Final function value (eV/atom):", energy_per_atom)
                 return True
         return False
@@ -208,10 +215,11 @@ class RandomStructureSearch:
                 continue
             except IndexError:
                 continue
+
         if spg_sets == []:
             print("Analyzing space group failed.")
-            self.log_computation_time()
             return False
+
         print("Space group set:")
         print(spg_sets)
         return True
