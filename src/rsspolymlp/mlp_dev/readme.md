@@ -1,5 +1,5 @@
 ```shell
-python mlp_dev.py --input_path model_candidates/single/polymlp-0001 --elements Li 
+python polymlp_dev.py --input_path model_candidates/single/polymlp-0001 --elements Li 
 --train_data dft_dataset_divided/train/* --test_data dft_dataset_divided/test/*
 ```
 

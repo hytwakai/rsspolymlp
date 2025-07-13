@@ -5,11 +5,11 @@ from rsspolymlp.api.rsspolymlp import (
     rss_ghost_minima_validate,
     rss_init_struct,
     rss_phase_analysis,
+    rss_polymlp,
     rss_run_parallel,
     rss_run_single,
     rss_summarize,
     rss_uniq_struct,
-    rsspolymlp,
 )
 
 
@@ -179,12 +179,6 @@ def run():
         default=None,
         help="Cutoff radius used in the MLP model (optional)",
     )
-    parser.add_argument(
-        "--pressure",
-        type=float,
-        default=None,
-        help="Pressure settings (in GPa) (optional)",
-    )
 
     # Target paths for rsspolymlp postprocessing
     parser.add_argument(
@@ -244,11 +238,6 @@ def run():
         default=None,
         help="Threshold values for energy above the convex hull in meV/atom",
     )
-    parser.add_argument(
-        "--parse_vasp",
-        action="store_true",
-        help="If set, parse VASP output directories instead of RSS log files",
-    )
 
     args = parser.parse_args()
 
@@ -289,14 +278,13 @@ def run():
         rss_uniq_struct(
             num_str=args.num_str,
             cutoff=args.cutoff,
-            pressure=args.pressure,
             use_joblib=not args.not_use_joblib,
             num_process=args.num_process,
             backend=args.backend,
         )
 
     if args.rss_full:
-        rsspolymlp(
+        rss_polymlp(
             elements=args.elements,
             atom_counts=args.atom_counts,
             pot=args.pot,

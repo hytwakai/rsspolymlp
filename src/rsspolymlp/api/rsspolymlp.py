@@ -195,7 +195,6 @@ def rss_run_single(
 def rss_uniq_struct(
     num_str=-1,
     cutoff=None,
-    pressure=None,
     use_joblib=True,
     num_process=-1,
     backend="loky",
@@ -203,8 +202,6 @@ def rss_uniq_struct(
     analyzer = RSSResultAnalyzer()
     if cutoff is not None:
         analyzer.cutoff = cutoff
-    if pressure is not None:
-        analyzer.pressure = pressure
 
     analyzer.run_rss_uniq_struct(
         num_str=num_str,
@@ -214,7 +211,7 @@ def rss_uniq_struct(
     )
 
 
-def rsspolymlp(
+def rss_polymlp(
     elements,
     atom_counts,
     pot="polymlp.yaml",
