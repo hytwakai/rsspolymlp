@@ -3,16 +3,18 @@ import os
 import numpy as np
 
 
-def parse_mlp_property(mlp_paths: list[str]):
+def parse_mlp_property(
+    mlp_paths: list[str],
+    error_path: str = "polymlp_error.yaml",
+    rmse_path: str = "test/close_minima",
+):
     cwd_path = os.getcwd()
     res_dict = {"cost": [], "rmse": [], "mlp_name": []}
 
     for mlp_path in mlp_paths:
         os.chdir(mlp_path)
 
-        if not os.path.isfile("polymlp_cost.yaml") or not os.path.isfile(
-            args.error_path
-        ):
+        if not os.path.isfile("polymlp_cost.yaml") or not os.path.isfile(error_path):
             print(mlp_path, "failed")
             os.chdir(cwd_path)
             continue
@@ -22,10 +24,10 @@ def parse_mlp_property(mlp_paths: list[str]):
         res_dict["cost"].append(
             next(float(line.split()[-1]) for line in lines if "single_core:" in line)
         )
-        with open(args.error_path) as f:
+        with open(error_path) as f:
             lines = [line.strip() for line in f]
         for i, line in enumerate(lines):
-            if args.rmse_path in line:
+            if rmse_path in line:
                 res_dict["rmse"].append(
                     [float(lines[i + 1].split()[-1]), float(lines[i + 2].split()[-1])]
                 )
