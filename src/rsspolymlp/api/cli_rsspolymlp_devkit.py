@@ -1,6 +1,6 @@
 import argparse
 
-from rsspolymlp.api.rsspolymlp_utils import (
+from rsspolymlp.api.rsspolymlp_devkit import (
     compress_vasprun,
     divide_dft_dataset,
     estimate_cost,
