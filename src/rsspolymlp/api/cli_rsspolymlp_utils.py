@@ -1,6 +1,13 @@
 import argparse
 
-from rsspolymlp.api.rsspolymlp_utils import estimate_cost, pareto_opt_mlp, polymlp_dev
+from rsspolymlp.api.rsspolymlp_utils import (
+    compress_vasprun,
+    divide_dft_dataset,
+    estimate_cost,
+    mlp_dataset,
+    pareto_opt_mlp,
+    polymlp_dev,
+)
 
 
 def run():
@@ -20,33 +27,48 @@ def run():
         action="store_true",
         help="Mode: Pareto-optimal MLP detection",
     )
+    parser.add_argument(
+        "--gen_data",
+        action="store_true",
+        help="Mode: MLP dataset generation",
+    )
+    parser.add_argument(
+        "--compress_data",
+        action="store_true",
+        help="Mode: Compress vasprun.xml files and check convergence",
+    )
+    parser.add_argument(
+        "--divide_data",
+        action="store_true",
+        help="Mode: DFT dataset division",
+    )
 
     # --mlp_dev mode
     parser.add_argument(
         "--input_path",
         type=str,
-        required=True,
+        default=None,
         help="Directory path containing polymlp*.in files.",
     )
     parser.add_argument(
         "--elements",
         type=str,
         nargs="+",
-        required=True,
+        default=None,
         help="List of chemical element symbols.",
     )
     parser.add_argument(
         "--train_data",
         type=str,
         nargs="+",
-        required=True,
+        default=None,
         help="List of paths containing training datasets.",
     )
     parser.add_argument(
         "--test_data",
         type=str,
         nargs="+",
-        required=True,
+        default=None,
         help="List of paths containing test datasets.",
     )
     parser.add_argument(
@@ -77,14 +99,16 @@ def run():
 
     # Target paths containing polynomial MLP infomation
     parser.add_argument(
-        "--path",
+        "--paths",
         type=str,
         nargs="+",
-        required=True,
+        default=None,
         help=(
             "Specify target directories based on the mode:\n"
-            "  --calc_cost  : Contains polymlp.yaml or polymlp.in\n"
+            "  --calc_cost : Contains polymlp.yaml or polymlp.in\n"
             "  --pareto_opt : Contains polymlp_error.yaml and polymlp_cost.yaml\n"
+            "  --compress_data : Contains a vasprun.xml file\n"
+            "  --divide_data : Contains vasprun.xml files\n"
         ),
     )
 
@@ -108,6 +132,73 @@ def run():
         default="test/close_minima",
         help="A part of the path name of the dataset used to compute the energy RMSE "
         "for identifying Pareto-optimal MLPs.",
+    )
+
+    # --gen_data mode
+    parser.add_argument(
+        "--poscars",
+        type=str,
+        nargs="+",
+        default=None,
+        help="Input POSCAR file(s) for structure generation",
+    )
+    parser.add_argument(
+        "--per_volume",
+        type=float,
+        default=1.0,
+        help="Volume scaling factor for generated structures",
+    )
+    parser.add_argument(
+        "--disp_max",
+        type=float,
+        default=40,
+        help="Maximum displacement ratio for structure generation",
+    )
+    parser.add_argument(
+        "--disp_grid",
+        type=float,
+        default=2,
+        help="Displacement ratio interval (step size)",
+    )
+    parser.add_argument(
+        "--natom_lb",
+        type=int,
+        default=30,
+        help="Minimum number of atoms in generated structure",
+    )
+    parser.add_argument(
+        "--natom_ub",
+        type=int,
+        default=150,
+        help="Maximum number of atoms in generated structure",
+    )
+    parser.add_argument(
+        "--str_name",
+        type=int,
+        default=-1,
+        help="Index for extracting structure name from POSCAR path",
+    )
+
+    # --compress_data mode
+    parser.add_argument(
+        "--output_dir",
+        type=str,
+        default="dft_dataset",
+        help="Output directory path.",
+    )
+    parser.add_argument(
+        "--num_process",
+        type=int,
+        default=4,
+        help="Number of processes to use with joblib.",
+    )
+
+    # --divide_data mode
+    parser.add_argument(
+        "--threshold_close_minima",
+        type=float,
+        default=1.0,
+        help="Force threshold for filtering structures classified as close_minima.",
     )
 
     args = parser.parse_args()
@@ -135,4 +226,27 @@ def run():
             mlp_paths=args.paths,
             error_path=args.error_path,
             rmse_path=args.rmse_path,
+        )
+
+    if args.gen_data:
+        mlp_dataset(
+            poscars=args.poscars,
+            per_volume=args.per_volume,
+            disp_max=args.disp_max,
+            disp_grid=args.disp_grid,
+            natom_lb=args.natom_lb,
+            natom_ub=args.natom_ub,
+            str_name=args.str_name,
+        )
+
+    if args.compress_data:
+        compress_vasprun(
+            vasp_paths=args.paths,
+            output_dir=args.output_dir,
+            num_process=args.num_process,
+        )
+
+    if args.divide_data:
+        divide_dft_dataset(
+            target_dirs=args.paths, threshold_close_minima=args.threshold_close_minima
         )

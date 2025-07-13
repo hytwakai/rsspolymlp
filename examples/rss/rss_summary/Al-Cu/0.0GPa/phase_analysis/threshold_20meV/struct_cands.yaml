@@ -4,7 +4,7 @@ summary:
   n_structs_multi:        31
 
 near_ch_structures:
-  - composition: (1.0, 0.0)
+  - composition: [1.0, 0.0]
     structures:
       - struct_tag: POSCAR_Al1_No1
         poscar:     ../../../rss_mlp/Al-Cu/0.0GPa/8_0/opt_struct/POSCAR_1
@@ -34,13 +34,13 @@ near_ch_structures:
         poscar:     ../../../rss_mlp/Al-Cu/0.0GPa/8_0/opt_struct/POSCAR_27
         delta_F_ch: 0.015704
         F_value:    0.015704248928969
-  - composition: (0.6666666667, 0.3333333333)
+  - composition: [0.6666666667, 0.3333333333]
     structures:
       - struct_tag: POSCAR_Al2Cu1_No1
         poscar:     ../../../rss_mlp/Al-Cu/0.0GPa/2_1/opt_struct/POSCAR_7
         delta_F_ch: 0.000000
         F_value:    -0.176260354948643
-  - composition: (0.4285714286, 0.5714285714)
+  - composition: [0.4285714286, 0.5714285714]
     structures:
       - struct_tag: POSCAR_Al3Cu4_No1
         poscar:     ../../../rss_mlp/Al-Cu/0.0GPa/3_4/opt_struct/POSCAR_64
@@ -50,13 +50,13 @@ near_ch_structures:
         poscar:     ../../../rss_mlp/Al-Cu/0.0GPa/3_4/opt_struct/POSCAR_71
         delta_F_ch: 0.018785
         F_value:    -0.181628610706755
-  - composition: (0.4, 0.6)
+  - composition: [0.4, 0.6]
     structures:
       - struct_tag: POSCAR_Al2Cu3_No1
         poscar:     ../../../rss_mlp/Al-Cu/0.0GPa/2_3/opt_struct/POSCAR_25
         delta_F_ch: 0.011234
         F_value:    -0.192077772367243
-  - composition: (0.375, 0.625)
+  - composition: [0.375, 0.625]
     structures:
       - struct_tag: POSCAR_Al3Cu5_No1
         poscar:     ../../../rss_mlp/Al-Cu/0.0GPa/3_5/opt_struct/POSCAR_189
@@ -70,7 +70,7 @@ near_ch_structures:
         poscar:     ../../../rss_mlp/Al-Cu/0.0GPa/3_5/opt_struct/POSCAR_86
         delta_F_ch: 0.015901
         F_value:    -0.189946633631172
-  - composition: (0.3333333333, 0.6666666667)
+  - composition: [0.3333333333, 0.6666666667]
     structures:
       - struct_tag: POSCAR_Al1Cu2_No1
         poscar:     ../../../rss_mlp/Al-Cu/0.0GPa/2_4/opt_struct/POSCAR_84
@@ -92,13 +92,13 @@ near_ch_structures:
         poscar:     ../../../rss_mlp/Al-Cu/0.0GPa/2_4/opt_struct/POSCAR_60
         delta_F_ch: 0.015119
         F_value:    -0.194955861941440
-  - composition: (0.2857142857, 0.7142857143)
+  - composition: [0.2857142857, 0.7142857143]
     structures:
       - struct_tag: POSCAR_Al2Cu5_No1
         poscar:     ../../../rss_mlp/Al-Cu/0.0GPa/2_5/opt_struct/POSCAR_7
         delta_F_ch: 0.019823
         F_value:    -0.182645215057450
-  - composition: (0.25, 0.75)
+  - composition: [0.25, 0.75]
     structures:
       - struct_tag: POSCAR_Al1Cu3_No1
         poscar:     ../../../rss_mlp/Al-Cu/0.0GPa/2_6/opt_struct/POSCAR_4
@@ -108,13 +108,13 @@ near_ch_structures:
         poscar:     ../../../rss_mlp/Al-Cu/0.0GPa/1_3/opt_struct/POSCAR_9
         delta_F_ch: 0.011669
         F_value:    -0.185094518350076
-  - composition: (0.2, 0.8)
+  - composition: [0.2, 0.8]
     structures:
       - struct_tag: POSCAR_Al1Cu4_No1
         poscar:     ../../../rss_mlp/Al-Cu/0.0GPa/1_4/opt_struct/POSCAR_3
         delta_F_ch: 0.006968
         F_value:    -0.150442964821535
-  - composition: (0.1666666667, 0.8333333333)
+  - composition: [0.1666666667, 0.8333333333]
     structures:
       - struct_tag: POSCAR_Al1Cu5_No1
         poscar:     ../../../rss_mlp/Al-Cu/0.0GPa/1_5/opt_struct/POSCAR_188
@@ -136,7 +136,7 @@ near_ch_structures:
         poscar:     ../../../rss_mlp/Al-Cu/0.0GPa/1_5/opt_struct/POSCAR_59
         delta_F_ch: 0.009826
         F_value:    -0.121349559185355
-  - composition: (0.1428571429, 0.8571428571)
+  - composition: [0.1428571429, 0.8571428571]
     structures:
       - struct_tag: POSCAR_Al1Cu6_No1
         poscar:     ../../../rss_mlp/Al-Cu/0.0GPa/1_6/opt_struct/POSCAR_8
@@ -146,7 +146,7 @@ near_ch_structures:
         poscar:     ../../../rss_mlp/Al-Cu/0.0GPa/1_6/opt_struct/POSCAR_9
         delta_F_ch: 0.010593
         F_value:    -0.101843748383422
-  - composition: (0.125, 0.875)
+  - composition: [0.125, 0.875]
     structures:
       - struct_tag: POSCAR_Al1Cu7_No1
         poscar:     ../../../rss_mlp/Al-Cu/0.0GPa/1_7/opt_struct/POSCAR_28
@@ -180,7 +180,7 @@ near_ch_structures:
         poscar:     ../../../rss_mlp/Al-Cu/0.0GPa/1_7/opt_struct/POSCAR_178
         delta_F_ch: 0.009790
         F_value:    -0.088592206690560
-  - composition: (0.0, 1.0)
+  - composition: [0.0, 1.0]
     structures:
       - struct_tag: POSCAR_Cu1_No7
         poscar:     ../../../rss_mlp/Al-Cu/0.0GPa/0_5/opt_struct/POSCAR_2

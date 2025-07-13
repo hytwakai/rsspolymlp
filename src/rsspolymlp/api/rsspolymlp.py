@@ -254,7 +254,6 @@ def rss_polymlp(
             min_volume=min_volume,
             max_volume=max_volume,
             least_distance=least_distance,
-            output_dir=output_dir,
         )
 
         rss_run_parallel(
@@ -279,7 +278,7 @@ def rss_summarize(
     elements,
     result_paths,
     use_joblib=True,
-    num_process=1,
+    num_process=-1,
     backend="loky",
     output_poscar: bool = False,
     threshold: float = None,

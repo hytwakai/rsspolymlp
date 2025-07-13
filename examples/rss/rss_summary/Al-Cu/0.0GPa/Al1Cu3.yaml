@@ -1,5 +1,5 @@
 general_information:
-  sorting_time_sec:      0.9
+  sorting_time_sec:      0.92
   pressure_GPa:          0.0
   num_optimized_structs: 85
   num_unique_structs:    81

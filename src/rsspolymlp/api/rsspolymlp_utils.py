@@ -3,8 +3,12 @@ import os
 import subprocess
 
 import numpy as np
+from joblib import Parallel, delayed
 
 from pypolymlp.utils.count_time import PolymlpCost
+from rsspolymlp.mlp_dev.dataset.compress_vasprun import check_convergence, compress
+from rsspolymlp.mlp_dev.dataset.divide_dataset import divide_dataset, divide_train_test
+from rsspolymlp.mlp_dev.dataset.gen_mlp_dataset import gen_mlp_data
 from rsspolymlp.mlp_dev.estimate_cost import make_polymlp_yaml
 from rsspolymlp.mlp_dev.pareto_opt_mlp import pareto_front, parse_mlp_property
 from rsspolymlp.mlp_dev.polymlp_dev import prepare_polymlp_input_file
@@ -102,3 +106,97 @@ def pareto_opt_mlp(
             print(f"    cost:        {res_dict['cost'][idx]}", file=f)
             print(f"    rmse_energy: {res_dict['rmse'][idx][0]}", file=f)
             print(f"    rmse_force:  {res_dict['rmse'][idx][1]}", file=f)
+
+
+def mlp_dataset(
+    poscars=list[str],
+    per_volume: float = 1.0,
+    disp_max: float = 40,
+    disp_grid: float = 2,
+    natom_lb: int = 30,
+    natom_ub: int = 150,
+    str_name: int = -1,
+):
+    with open("struct_size.yaml", "w"):
+        pass
+
+    for poscar in poscars:
+        gen_mlp_data(
+            poscar=poscar,
+            per_volume=per_volume,
+            disp_max=disp_max,
+            disp_grid=disp_grid,
+            natom_lb=natom_lb,
+            natom_ub=natom_ub,
+            str_name=str_name,
+        )
+
+
+def compress_vasprun(
+    vasp_paths: list[str], output_dir: str = "dft_dataset", num_process: int = 4
+):
+    valid_paths, vasprun_status = check_convergence(vasp_paths=vasp_paths)
+
+    judge_list = Parallel(n_jobs=num_process)(
+        delayed(compress)(vasp_path + "/vasprun.xml", output_dir)
+        for vasp_path in valid_paths
+    )
+    vasprun_status["success"] += sum(judge_list)
+    vasprun_status["parse"] += len(judge_list) - sum(judge_list)
+
+    with open("dataset_status.yaml", "a") as f:
+        print(f"{os.path.dirname(vasp_paths[0])}:", file=f)
+        print(f" - input:             {len(vasp_paths)}", file=f)
+        print(f"   success:           {vasprun_status['success']}", file=f)
+        print(f"   failed_calclation: {vasprun_status['fail']}", file=f)
+        print(f"   failed_iteration:  {vasprun_status['fail_iteration']}", file=f)
+        print(f"   failed_parse:      {vasprun_status['parse']}", file=f)
+
+    print(f"{os.path.dirname(vasp_paths[0])}:")
+    print(f" - input:             {len(vasp_paths)} structure")
+    print(f"   success:           {vasprun_status['success']} structure")
+    print(f"   failed calclation: {vasprun_status['fail']} structure")
+    print(f"   failed iteration:  {vasprun_status['fail_iteration']} structure")
+    print(f"   failed parse:      {vasprun_status['parse']} structure")
+
+
+def divide_dft_dataset(target_dirs: str, threshold_close_minima: float = 1.0):
+    vasprun_paths = []
+    for target_dir in target_dirs:
+        vasprun_paths.extend(sorted(glob.glob(target_dir + "/*")))
+
+    threshold = threshold_close_minima
+    vasprun_dict = divide_dataset(
+        vasprun_paths=vasprun_paths, threshold_close_minima=threshold
+    )
+
+    with open("dataset.yaml", "w") as f:
+        print("arguments:", file=f)
+        print("  path:", target_dir, file=f)
+        print("  threshold_close_minima:", threshold, file=f)
+        print("", file=f)
+
+    output_dir = "dft_dataset_divided"
+    os.makedirs(output_dir, exist_ok=True)
+    os.chdir(output_dir)
+
+    divide_ratio = 0.1
+    for data_name, vasprun_list in vasprun_dict.items():
+        if len(vasprun_list) == 0:
+            continue
+
+        train_data, test_data = divide_train_test(
+            data_name=data_name, vasprun_list=vasprun_list, divide_ratio=divide_ratio
+        )
+        print(data_name)
+        print("  - train_data:", len(train_data))
+        print("  - test_data:", len(test_data))
+
+        with open("dataset.yaml", "a") as f:
+            print(f"{data_name}:", file=f)
+            print("  train:", file=f)
+            for p in train_data:
+                print(f"    - {p}", file=f)
+            print("  test:", file=f)
+            for p in test_data:
+                print(f"    - {p}", file=f)

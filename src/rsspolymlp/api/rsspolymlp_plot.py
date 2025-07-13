@@ -28,14 +28,14 @@ def plot_binary(elements, threshold=None):
 
     plotter.set_visuality(n_color=4, n_line=4, n_marker=1, color_type="grad")
 
-    phase_res = load_plot_data(threshold)
+    phase_res = load_plot_data(threshold=threshold)
     plotter.ax_plot(
         phase_res["comp_ch"][:, 1],
         phase_res["fe_ch"],
         plot_type="closed",
         label=None,
         plot_size=0.7,
-        line_size=1,
+        line_size=0.7,
         zorder=2,
     )
 

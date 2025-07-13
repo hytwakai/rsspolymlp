@@ -25,7 +25,7 @@ def run():
         "--paths",
         type=str,
         nargs="+",
-        required=True,
+        default=None,
         help="Directory paths containing polymlp_error.yaml and polymlp_cost.yaml.",
     )
     parser.add_argument(

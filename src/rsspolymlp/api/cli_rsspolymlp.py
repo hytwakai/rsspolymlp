@@ -256,8 +256,8 @@ def run():
             pot=args.pot,
             pressure=args.pressure,
             solver_method=args.solver_method,
-            maxiter=args.maxiter,
-            num_opt_str=args.num_opt_str,
+            c_maxiter=args.c_maxiter,
+            n_opt_str=args.n_opt_str,
             not_stop_rss=args.not_stop_rss,
             parallel_method=args.parallel_method,
             num_process=args.num_process,
@@ -269,8 +269,8 @@ def run():
             pot=args.pot,
             pressure=args.pressure,
             solver_method=args.solver_method,
-            maxiter=args.maxiter,
-            num_opt_str=args.num_opt_str,
+            c_maxiter=args.c_maxiter,
+            n_opt_str=args.n_opt_str,
             not_stop_rss=args.not_stop_rss,
         )
 
@@ -290,7 +290,7 @@ def run():
             pot=args.pot,
             pressure=args.pressure,
             n_opt_str=args.n_opt_str,
-            max_init_str=args.max_init_structure,
+            max_init_str=args.max_init_str,
             min_volume=args.min_volume,
             max_volume=args.max_volume,
             least_distance=args.least_distance,
@@ -314,14 +314,14 @@ def run():
 
     if args.ghost_minima:
         if args.compare_dft:
-            rss_ghost_minima_validate(result_paths=args.paths)
+            rss_ghost_minima_validate(dft_dir=args.paths)
         else:
-            rss_ghost_minima_cands(dft_dir=args.paths)
+            rss_ghost_minima_cands(result_paths=args.paths)
 
     if args.phase_analysis:
         rss_phase_analysis(
             elements=args.elements,
-            result_paths=args.result_paths,
+            result_paths=args.paths,
             ghost_minima_file=args.ghost_minima_file,
             parse_vasp=args.parse_vasp,
             thresholds=args.thresholds,

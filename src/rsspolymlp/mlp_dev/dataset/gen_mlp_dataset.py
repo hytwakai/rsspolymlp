@@ -15,6 +15,8 @@ def gen_mlp_data(
     natom_ub=150,
     str_name=-1,
 ):
+    os.makedirs("poscar", exist_ok=True)
+
     try:
         polymlp_st = Poscar(poscar).structure
     except IndexError:
@@ -90,7 +92,6 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
-    os.makedirs("poscar", exist_ok=True)
     with open("struct_size.yaml", "w"):
         pass
 

@@ -1,8 +1,8 @@
 import glob
 import os
 
-from rsspolymlp.api.api_plot import plot_binary
-from rsspolymlp.api.api_rss_postprocess import (
+from rsspolymlp.api.rsspolymlp_plot import plot_binary
+from rsspolymlp.api.rsspolymlp import (
     rss_ghost_minima_cands,
     rss_ghost_minima_validate,
     rss_phase_analysis,
