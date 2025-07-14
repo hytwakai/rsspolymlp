@@ -59,11 +59,16 @@ pip install rsspolymlp
  - [Workflow of RSS with polynomial MLPs](docs/rsspolymlp.md)
    - Initial structure generation
    - Global RSS with polynomial MLPs
-   - Unique structure identification and RSS summary generation
+   - Unique structure identification and RSS result summarization
    - Ghost minimum structure elimination
    - Phase stability analysis
- - [Python API (RSS)](docs/api_rsspolymlp.md)
- - [VASP calculation utility](src/rsspolymlp/utils/vasp_util/readme.md)
+ - [Development kit for polynomial MLPs](docs/rsspolymlp_devkit.md)
+   - MLP dataset generation
+   - DFT dataset division
+   - Polynomial MLP development
+   - Pareto-optimal MLP detection
+ - [Python API for RSS](docs/api_rsspolymlp.md)
+ - [VASP calculation utilities](src/rsspolymlp/utils/vasp_util/readme.md)
    - Single-point calculation
    - Local geometry optimizaion
- - [matplotlib utility](src/rsspolymlp/utils/matplot_util/readme.md)
+ - [Matplotlib utilities](src/rsspolymlp/utils/matplot_util/readme.md)
