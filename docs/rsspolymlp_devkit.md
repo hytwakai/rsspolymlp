@@ -1,4 +1,4 @@
-# Development Kit for Polynomial MLPs
+# Development kit for polynomial MLPs
 
 The command-line tool `rsspolymlp-devkit` provides utilities for developing polynomial MLPs.
 
