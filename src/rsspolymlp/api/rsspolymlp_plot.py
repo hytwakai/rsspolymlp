@@ -82,7 +82,7 @@ def plot_binary(elements, threshold=None):
 def pareto_opt_mlp(
     mlp_paths: list[str],
     error_path: str = "polymlp_error.yaml",
-    rmse_path: str = "test/close_minima",
+    rmse_path: str = "test/minima-close",
     include_force: bool = False,
     rmse_max: float = 30,
 ):

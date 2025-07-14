@@ -72,22 +72,32 @@ def run():
         help="List of paths containing test datasets.",
     )
     parser.add_argument(
-        "--w_large_force",
+        "--w_large_f",
         type=float,
         default=1.0,
         help="Weight to assign to datasets with some large forces.",
     )
     parser.add_argument(
-        "--w_wo_force",
+        "--w_vlarge_f",
         type=float,
         default=1.0,
         help="Weight to assign to datasets with some very large forces.",
     )
     parser.add_argument(
-        "--include_wo_force",
-        type=bool,
-        default=False,
-        help="",
+        "--w_vlarge_s",
+        type=float,
+        default=1.0,
+        help="Weight to assign to datasets with some very large stress tensor.",
+    )
+    parser.add_argument(
+        "--include_vlarge_f",
+        action="store_true",
+        help="Include force entries in the force-very-large dataset.",
+    )
+    parser.add_argument(
+        "--include_vlarge_s",
+        action="store_true",
+        help="Include stress tensor entries in the stress-very-large dataset.",
     )
     parser.add_argument(
         "--alpha_param",
@@ -129,7 +139,7 @@ def run():
     parser.add_argument(
         "--rmse_path",
         type=str,
-        default="test/close_minima",
+        default="test/minima-close",
         help="A part of the path name of the dataset used to compute the energy RMSE "
         "for identifying Pareto-optimal MLPs.",
     )
@@ -183,7 +193,7 @@ def run():
     parser.add_argument(
         "--output_dir",
         type=str,
-        default="dft_dataset",
+        default="compress_dft_data",
         help="Output directory path.",
     )
     parser.add_argument(
@@ -195,10 +205,28 @@ def run():
 
     # --divide_data mode
     parser.add_argument(
+        "--threshold_vlarge_s",
+        type=float,
+        default=300.0,
+        help="Stress threshold (GPa) for stress-very-large structures.",
+    )
+    parser.add_argument(
+        "--threshold_vlarge_f",
+        type=float,
+        default=100.0,
+        help="Force threshold (eV/ang.) for force-very-large structures.",
+    )
+    parser.add_argument(
+        "--threshold_large_f",
+        type=float,
+        default=10.0,
+        help="Force threshold (eV/ang.) for force-large structures.",
+    )
+    parser.add_argument(
         "--threshold_close_minima",
         type=float,
         default=1.0,
-        help="Force threshold for filtering structures classified as close_minima.",
+        help="Force threshold (eV/ang.) for minima-close structures.",
     )
 
     args = parser.parse_args()
@@ -207,11 +235,13 @@ def run():
         polymlp_dev(
             input_path=args.input_path,
             elements=args.elements,
-            train_fata=args.train_data,
+            train_data=args.train_data,
             test_data=args.test_data,
-            w_large_force=args.w_large_force,
-            w_wo_force=args.w_wo_force,
-            include_wo_force=args.include_wo_force,
+            weight_large_force=args.w_large_f,
+            weight_vlarge_force=args.w_vlarge_f,
+            weight_vlarge_stress=args.w_vlarge_s,
+            include_vlarge_force=args.include_vlarge_f,
+            include_vlarge_stress=args.include_vlarge_s,
             alpha_param=args.alpha_param,
         )
 
@@ -248,5 +278,9 @@ def run():
 
     if args.divide_data:
         divide_dft_dataset(
-            target_dirs=args.paths, threshold_close_minima=args.threshold_close_minima
+            target_dirs=args.paths,
+            threshold_vlarge_s=args.threshold_vlarge_s,
+            threshold_vlarge_f=args.threshold_vlarge_f,
+            threshold_large_f=args.threshold_large_f,
+            threshold_close_minima=args.threshold_close_minima,
         )

@@ -10,24 +10,44 @@ def prepare_polymlp_input_file(
     element_list: list[str],
     training_data_paths: list[str],
     test_data_paths: list[str],
-    w_large_force: float = 1.0,
-    w_wo_force: float = 1.0,
-    include_wo_force: bool = False,
+    weight_large_force: float = 1.0,
+    weight_vlarge_force: float = 1.0,
+    weight_vlarge_stress: float = 1.0,
+    include_vlarge_force: bool = True,
+    include_vlarge_stress: bool = False,
     alpha_param: list[int] = None,
 ):
     """
-    Build or extend a polymlp input file.
+    Generate or update a polymlp input file for model training.
 
-    The function relies on specific keywords in the *data_path string* to determine:
-        - "large_force":
-            Dataset containing structures with some large forces;
-            a small weight is assigned.
-        - "wo_force":
-            Dataset containing structures with extremely large forces
-            (e.g., due to close atomic positions); force training is disabled.
-        - otherwise:
-            Other dataset includes forces and stresses; default weight is used.
+    This function uses keywords in the dataset path names to determine weights:
+        - "force-large":
+            Indicates datasets containing some structures with moderately large forces
+            (default threshold: ~10 eV/Å). The weight specified by `weight_large_force`
+            is applied (default: 1.0).
+        - "force-very-large":
+            Indicates datasets with some structures exhibiting extremely large forces
+            (default threshold: ~100 eV/Å), typically due to very short interatomic distances.
+            The weight specified by `weight_vlarge_force` is applied (default: 1.0).
+        - "stress-very-large":
+            Indicates datasets with extremely large stresses (default threshold: ~300 GPa),
+            which often coincide with many large forces.
+            Force training is disabled for these datasets.
+        - Others:
+            Treated as standard datasets with typical force and stress values.
+            Default weights are applied.
+
+    Parameters:
+        input_path (str): Directory where the polymlp input files will be written.
+        elements (list[str]): List of atomic element symbols.
+        train_data_paths (list[str]): Paths to training datasets.
+        test_data_paths (list[str]): Paths to test datasets.
+        weight_large_force (float): Weight assigned to "force-large" datasets.
+        weight_vlarge_force (float): Weight assigned to "force-very-large" datasets.
+        include_vlarge_force (bool): Whether to include force entries in "force-very-large".
+        alpha_params (list[int]): List of three integers for specifying regularization strength.
     """
+
     # Copy polymlp input files and append element info
     for src in glob.glob(input_path + "/polymlp*"):
         dst = os.path.basename(src)
@@ -51,20 +71,32 @@ def prepare_polymlp_input_file(
 
         # Write training and test data
         for data_path in training_data_paths:
-            if "large_force" in data_path:
-                f.write(f"train_data {data_path}/* True {w_large_force}\n")
-            elif "wo_force" in data_path:
-                f.write(f"train_data {data_path}/* {include_wo_force} {w_wo_force}\n")
+            if "force-large" in data_path:
+                f.write(f"train_data {data_path}/* True {weight_large_force}\n")
+            elif "force-very-large" in data_path:
+                f.write(
+                    f"train_data {data_path}/* {include_vlarge_force} {weight_vlarge_force}\n"
+                )
+            elif "stress-very-large" in data_path:
+                f.write(
+                    f"train_data {data_path}/* {include_vlarge_stress} {weight_vlarge_stress}\n"
+                )
             else:
                 f.write(f"train_data {data_path}/* True 1.0\n")
         f.write("\n")
         for data_path in test_data_paths:
             if not os.path.isdir(data_path):
                 continue
-            if "large_force" in data_path:
-                f.write(f"test_data {data_path}/* True {w_large_force}\n")
-            elif "wo_force" in data_path:
-                f.write(f"test_data {data_path}/* {include_wo_force} {w_wo_force}\n")
+            if "force-large" in data_path:
+                f.write(f"test_data {data_path}/* True {weight_large_force}\n")
+            elif "force-very-large" in data_path:
+                f.write(
+                    f"test_data {data_path}/* {include_vlarge_force} {weight_vlarge_force}\n"
+                )
+            elif "stress-very-large" in data_path:
+                f.write(
+                    f"test_data {data_path}/* {include_vlarge_stress} {weight_vlarge_stress}\n"
+                )
             else:
                 f.write(f"test_data {data_path}/* True 1.0\n")
 
@@ -78,79 +110,3 @@ def prepare_polymlp_input_file(
         )
         with open(main_input, "w") as f:
             f.write(content)
-
-
-if __name__ == "__main__":
-
-    import argparse
-    import subprocess
-
-    parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "--input_path",
-        type=str,
-        required=True,
-        help="Directory path containing polymlp*.in files.",
-    )
-    parser.add_argument(
-        "--elements",
-        type=str,
-        nargs="+",
-        required=True,
-        help="List of chemical element symbols.",
-    )
-    parser.add_argument(
-        "--train_data",
-        type=str,
-        nargs="+",
-        required=True,
-        help="List of paths containing training datasets.",
-    )
-    parser.add_argument(
-        "--test_data",
-        type=str,
-        nargs="+",
-        required=True,
-        help="List of paths containing test datasets.",
-    )
-    parser.add_argument(
-        "--w_large_force",
-        type=float,
-        default=1.0,
-        help="Weight to assign to datasets with some large forces.",
-    )
-    parser.add_argument(
-        "--w_wo_force",
-        type=float,
-        default=1.0,
-        help="Weight to assign to datasets with some very large forces.",
-    )
-    parser.add_argument(
-        "--include_wo_force",
-        type=bool,
-        default=False,
-        help="",
-    )
-    parser.add_argument(
-        "--alpha_param",
-        type=int,
-        nargs=3,
-        default=[-4, 3, 8],
-        help="Three integers specifying the reg_alpha_params values to replace (default: -4 3 8).",
-    )
-    args = parser.parse_args()
-
-    prepare_polymlp_input_file(
-        args.input_path,
-        args.elements,
-        args.train_data,
-        args.test_data,
-        args.w_large_force,
-        args.w_wo_force,
-        args.include_wo_force,
-        args.alpha_param,
-    )
-
-    input_files = sorted(glob.glob("polymlp*.in"))
-    cmd = ["pypolymlp", "-i"] + input_files
-    subprocess.run(cmd, check=True)

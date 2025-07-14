@@ -46,7 +46,7 @@ def check_convergence(
     return valid_paths, vasprun_status
 
 
-def compress(vasprun_path, output_dir: str = "dft_dataset"):
+def compress(vasprun_path, output_dir: str = "compress_dft_data"):
     cwd_path = os.getcwd()
     if os.path.isfile(f"{output_dir}/{'.'.join(vasprun_path.split('/'))}"):
         return True
@@ -71,58 +71,3 @@ def compress(vasprun_path, output_dir: str = "dft_dataset"):
 
     print(vasprun_path)
     return True
-
-
-if __name__ == "__main__":
-
-    import argparse
-
-    from joblib import Parallel, delayed
-
-    parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "--path",
-        type=str,
-        nargs="+",
-        required=True,
-        help="Directory paths containing vasp results.",
-    )
-    parser.add_argument(
-        "--output_dir",
-        type=str,
-        default="dft_dataset",
-        help="Output directory path.",
-    )
-    parser.add_argument(
-        "--num_process",
-        type=int,
-        default=4,
-        help="Number of processes to use with joblib.",
-    )
-    args = parser.parse_args()
-
-    vasp_paths = args.path
-
-    valid_paths, vasprun_status = check_convergence(vasp_paths=vasp_paths)
-
-    judge_list = Parallel(n_jobs=args.num_process)(
-        delayed(compress)(vasp_path + "/vasprun.xml", args.output_dir)
-        for vasp_path in valid_paths
-    )
-    vasprun_status["success"] += sum(judge_list)
-    vasprun_status["parse"] += len(judge_list) - sum(judge_list)
-
-    with open("dataset_status.yaml", "a") as f:
-        print(f"{os.path.dirname(vasp_paths[0])}:", file=f)
-        print(f" - input:             {len(vasp_paths)}", file=f)
-        print(f"   success:           {vasprun_status['success']}", file=f)
-        print(f"   failed_calclation: {vasprun_status['fail']}", file=f)
-        print(f"   failed_iteration:  {vasprun_status['fail_iteration']}", file=f)
-        print(f"   failed_parse:      {vasprun_status['parse']}", file=f)
-
-    print(f"{os.path.dirname(vasp_paths[0])}:")
-    print(f" - input:             {len(vasp_paths)} structure")
-    print(f"   success:           {vasprun_status['success']} structure")
-    print(f"   failed calclation: {vasprun_status['fail']} structure")
-    print(f"   failed iteration:  {vasprun_status['fail_iteration']} structure")
-    print(f"   failed parse:      {vasprun_status['parse']} structure")

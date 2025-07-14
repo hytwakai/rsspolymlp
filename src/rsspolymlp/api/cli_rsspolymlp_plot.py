@@ -17,7 +17,7 @@ def run():
     )
 
     # --binary mode
-    parser.add_argument("--elements", nargs="+", type=str, required=True)
+    parser.add_argument("--elements", nargs="+", type=str, default=None)
     parser.add_argument("--threshold", type=float, default=None)
 
     # --pareto_opt mode
@@ -37,7 +37,7 @@ def run():
     parser.add_argument(
         "--rmse_path",
         type=str,
-        default="test/close_minima",
+        default="test/minima-close",
         help="A part of the path name of the dataset used to compute the energy RMSE "
         "for identifying Pareto-optimal MLPs.",
     )

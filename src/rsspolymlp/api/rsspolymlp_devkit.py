@@ -19,9 +19,11 @@ def polymlp_dev(
     elements: list[str],
     train_data: list[str],
     test_data: list[str],
-    w_large_force: float = 1.0,
-    w_wo_force: float = 1.0,
-    include_wo_force: bool = False,
+    weight_large_force: float = 1.0,
+    weight_vlarge_force: float = 1.0,
+    weight_vlarge_stress: float = 1.0,
+    include_vlarge_force: bool = True,
+    include_vlarge_stress: bool = False,
     alpha_param: list[int] = None,
 ):
     prepare_polymlp_input_file(
@@ -29,9 +31,11 @@ def polymlp_dev(
         element_list=elements,
         training_data_paths=train_data,
         test_data_paths=test_data,
-        w_large_force=w_large_force,
-        w_wo_force=w_wo_force,
-        include_wo_force=include_wo_force,
+        weight_large_force=weight_large_force,
+        weight_vlarge_force=weight_vlarge_force,
+        weight_vlarge_stress=weight_vlarge_stress,
+        include_vlarge_force=include_vlarge_force,
+        include_vlarge_stress=include_vlarge_stress,
         alpha_param=alpha_param,
     )
 
@@ -60,7 +64,7 @@ def estimate_cost(mlp_paths: str, param_input: bool = False):
 def pareto_opt_mlp(
     mlp_paths: list[str],
     error_path: str = "polymlp_error.yaml",
-    rmse_path: str = "test/close_minima",
+    rmse_path: str = "test/minima-close",
 ):
 
     res_dict = parse_mlp_property(mlp_paths, error_path=error_path, rmse_path=rmse_path)
@@ -133,7 +137,7 @@ def mlp_dataset(
 
 
 def compress_vasprun(
-    vasp_paths: list[str], output_dir: str = "dft_dataset", num_process: int = 4
+    vasp_paths: list[str], output_dir: str = "compress_dft_data", num_process: int = 4
 ):
     valid_paths, vasprun_status = check_convergence(vasp_paths=vasp_paths)
 
@@ -160,25 +164,39 @@ def compress_vasprun(
     print(f"   failed parse:      {vasprun_status['parse']} structure")
 
 
-def divide_dft_dataset(target_dirs: str, threshold_close_minima: float = 1.0):
+def divide_dft_dataset(
+    target_dirs: str,
+    threshold_vlarge_s: float = 300.0,
+    threshold_vlarge_f: float = 100.0,
+    threshold_large_f: float = 10.0,
+    threshold_close_minima: float = 1.0,
+):
     vasprun_paths = []
     for target_dir in target_dirs:
         vasprun_paths.extend(sorted(glob.glob(target_dir + "/*")))
 
-    threshold = threshold_close_minima
     vasprun_dict = divide_dataset(
-        vasprun_paths=vasprun_paths, threshold_close_minima=threshold
+        vasprun_paths=vasprun_paths,
+        threshold_vlarge_s=threshold_vlarge_s,
+        threshold_vlarge_f=threshold_vlarge_f,
+        threshold_large_f=threshold_large_f,
+        threshold_close_minima=threshold_close_minima,
     )
 
-    with open("dataset.yaml", "w") as f:
+    output_dir = "dft_dataset"
+    os.makedirs(output_dir, exist_ok=True)
+
+    with open(f"{output_dir}/dataset.yaml", "w") as f:
         print("arguments:", file=f)
         print("  path:", target_dir, file=f)
-        print("  threshold_close_minima:", threshold, file=f)
+        print("  threshold_vlarge_s:", threshold_vlarge_s, file=f)
+        print("  threshold_vlarge_f:", threshold_vlarge_f, file=f)
+        print("  threshold_large_f:", threshold_large_f, file=f)
+        print("  threshold_close_minima:", threshold_close_minima, file=f)
         print("", file=f)
 
-    output_dir = "dft_dataset_divided"
-    os.makedirs(output_dir, exist_ok=True)
-    os.chdir(output_dir)
+    with open(f"{output_dir}/n_data.yaml", "w") as f:
+        pass
 
     divide_ratio = 0.1
     for data_name, vasprun_list in vasprun_dict.items():
@@ -186,13 +204,18 @@ def divide_dft_dataset(target_dirs: str, threshold_close_minima: float = 1.0):
             continue
 
         train_data, test_data = divide_train_test(
-            data_name=data_name, vasprun_list=vasprun_list, divide_ratio=divide_ratio
+            data_name=data_name,
+            vasprun_list=vasprun_list,
+            divide_ratio=divide_ratio,
+            output_dir=output_dir,
         )
-        print(data_name)
-        print("  - train_data:", len(train_data))
-        print("  - test_data:", len(test_data))
 
-        with open("dataset.yaml", "a") as f:
+        with open(f"{output_dir}/n_data.yaml", "a") as f:
+            print(f"{data_name}:", file=f)
+            print("  - train_data:", len(train_data), file=f)
+            print("  - test_data:", len(test_data), file=f)
+
+        with open(f"{output_dir}/dataset.yaml", "a") as f:
             print(f"{data_name}:", file=f)
             print("  train:", file=f)
             for p in train_data:
