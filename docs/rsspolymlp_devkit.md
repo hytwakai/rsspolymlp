@@ -4,10 +4,7 @@ The command-line tool `rsspolymlp-devkit` provides utilities for developing poly
 
 It supports structure generation, DFT dataset classification, MLP input preparation, and model selection based on Pareto-optimality.
 
-
-## Available Modes
-
-### 1. MLP dataset generation (`--gen_data`)
+## MLP dataset generation (`--gen_data`)
 
 Generates displecement structures from given POSCAR files to be used as training data for MLPs.
 
@@ -25,9 +22,7 @@ rsspolymlp-devkit --gen_data --poscars POSCAR1 POSCAR2 \
 * `--natom_lb`, `--natom_ub`: Minimum and maximum number of atoms in generated structures
 * `--str_name`: Index of the POSCAR filename to extract structure names
 
----
-
-### 2. DFT dataset division (`--divide_data`)
+## DFT dataset division (`--divide_data`)
 
 Classifies DFT results based on the magnitude of force and stress components.
 Datasets are categorized as `minima-close`, `force-normal`, `force-large`, `force-very-large`, or `stress-very-large`.
@@ -43,9 +38,7 @@ rsspolymlp-devkit --divide_data --paths ./<vaspruns_dir>
 * `--threshold_large_f`: Force threshold for `force-large` (default: 10.0)
 * `--threshold_close_minima`: Force threshold for `minima-close` (default: 1.0)
 
----
-
-### 3. Polynomial MLP development (`--mlp_dev`)
+## Polynomial MLP development (`--mlp_dev`)
 
 Creates MLP input files with specified training/testing datasets and custom weights for data containing large forces or stresses.
 
@@ -63,9 +56,7 @@ rsspolymlp-devkit --mlp_dev --input_path ./polymlp-0001 --elements Al Cu \
 * `--include_vlarge_f`, `--include_vlarge_s`: Include data from very large force/stress cases in training
 * `--alpha_param`: Regularization parameter range, given as three integers (e.g., `-4 3 8`)
 
----
-
-### 4. Pareto-optimal MLP detection (`--pareto_opt`)
+## Pareto-optimal MLP detection (`--pareto_opt`)
 
 Identifies MLP models that lie on the Pareto front with respect to energy RMSE and computational cost.
 
@@ -78,9 +69,7 @@ rsspolymlp-devkit --pareto_opt --paths ./polymlp-* --rmse_path test/minima-close
 * `--error_path`: Path to the YAML file containing RMSE values (default: `polymlp_error.yaml`)
 * `--rmse_path`: Subset of the dataset used to compute energy RMSE (e.g., `test/minima-close`)
 
----
-
-### 5. Cost estimation (`--calc_cost`)
+## Cost estimation (`--calc_cost`)
 
 Estimates the computational cost (e.g., training or inference time) for each MLP model.
 
@@ -90,9 +79,7 @@ rsspolymlp-devkit --calc_cost --paths ./polymlp-*
 
 Use `--param_input` to read cost estimates from `polymlp.in` files instead of `polymlp.yaml` files.
 
----
-
-### 6. Compressing DFT data (`--compress_data`)
+## Compressing DFT data (`--compress_data`)
 
 Compresses `vasprun.xml` files and checks whether each VASP calculation has converged.
 
