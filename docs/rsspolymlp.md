@@ -1,71 +1,90 @@
 # Workflow of RSS with polynomial MLPs
 
-### Overview
+## Overview
+
 <img src="./workflow.png" alt="workflow" width="60%" />
 
-### The command-line interface of `rsspolymlp`
+## Command-Line Interface: `rsspolymlp`
 
-First, RSS using the polynomial MLP is independently performed for each condition defined by pressure (`p`), composition (`c`), and number of atoms (`n`).
+### Steps 1–3: Perform RSS for each condition defined by pressure (`p`), composition (`c`), and number of atoms (`n`)
 
-1. Generating initial random structures
-   
-   ```shell
-   rsspolymlp --init_struct --elements Al Cu --atom_counts 4 4 --n_init_str 2000
-   ```
+#### 1. Generate initial random structures
 
-2. Performing parallel geometry optimization using the polynomial MLP
-   
-   ```shell
-   rsspolymlp --rss_parallel --pot polymlp.yaml --pressure 0.0 --n_opt_str 1000
-   ```
+```shell
+rsspolymlp --init_struct --elements Al Cu --atom_counts 4 4 --n_init_str 2000
+```
 
-3. Eliminating duplicate structures
-   
-   This step processes the optimized structures. It includes:
+#### 2. Perform parallel geometry optimization using the polynomial MLP
 
-   * Parsing optimization logs, filtering out failed or unconverged cases, and generating detailed computational summaries.
-   * Removing duplicate structures and extracting unique optimized structures.
+```shell
+rsspolymlp --rss_parallel --pot polymlp.yaml --pressure 0.0 --n_opt_str 1000
+```
 
-   ```shell
-   rsspolymlp --uniq_struct
-   ```
+**Note:**
+Parallel execution uses `joblib` by default. Alternatively, you can specify `--parallel_method srun` for execution with `srun`, which is more suitable for high-performance computing environments.
+In this case, a script named `multiprocess.sh` will be automatically generated and can be executed as follows:
 
-These 3 steps can also be performed in a single command using the `--rss_full` option:
+```bash
+rsspolymlp --rss_parallel --parallel_method srun --pot polymlp.yaml --pressure 0.0 --n_opt_str 1000
+srun -n $SLURM_CPUS_ON_NODE ./multiprocess.sh
+```
+
+#### 3. Eliminate duplicate structures
+
+This step processes the optimized structures by:
+
+* Parsing optimization logs, filtering out failed or unconverged cases, and generating computational summaries
+* Removing duplicates and extracting unique optimized structures
+
+```shell
+rsspolymlp --uniq_struct
+```
+
+#### Run Steps 1–3 all at once
+
+These three steps can also be performed with a single command using the `--rss_full` option:
+
 ```shell
 rsspolymlp --rss_full --elements Al Cu --atom_counts 4 4 --pot polymlp.yaml --pressure 0.0 --n_opt_str 1000
 ```
 
-Next, RSS results aggregated for each (`p`, `c`) condition are analyzed.
+---
 
-4. Identifying unique structures across atom numbers `n`
+### Steps 4–6: Analyze RSS results aggregated for each (`p`, `c`) condition
 
-   ```shell
-   rsspolymlp --summarize --elements Al Cu --paths <rss_directory>/*
-   # <rss_directory>: parent directory of RSS runs at the same pressure
-   ```
+#### 4. Identify unique structures across atom numbers `n`
 
-5. Eliminating ghost minimum structures
-   
-   Identifying and filtering out ghost minimum structures based on nearest-neighbor distance are performed.
+```shell
+rsspolymlp --summarize --elements Al Cu --paths <rss_directory>/*
+# <rss_directory>: parent directory containing RSS runs at the same pressure
+```
 
-   ```shell
-   rsspolymlp --ghost_minima --paths <summary_dir>/json/*
-   rsspolymlp --ghost_minima --compare_dft --paths <summary_dir>/ghost_minima_dft
-   # <summary_dir>: output directory from rss-summarize, storing RSS results
-   ```
+#### 5. Eliminate ghost minima
 
-6. Phase stability analysis
+Ghost minimum structures are identified and filtered based on nearest-neighbor distances.
 
-   This step computes the relative or formation energies of structures obtained from the RSS and outputs the global minimum structures. It also identifies metastable structures near the convex hull based on a energy threshold (e.g., 30 meV/atom).
+```shell
+rsspolymlp --ghost_minima --paths <summary_dir>/json/*
+rsspolymlp --ghost_minima --compare_dft --paths <summary_dir>/ghost_minima_dft
+# <summary_dir>: output directory from rss-summarize, storing aggregated RSS results
+```
 
-   ```shell
-   rsspolymlp --phase_analysis --elements Al Cu --paths <summary_dir>/json/* 
-   --thresholds 10 30 50 --ghost_minima_file <summary_dir>/ghost_minima/ghost_minima_detection.yaml
-   ```
+#### 6. Perform phase stability analysis
 
-7. (Optional) Plotting RSS results (e.g., `rsspolymlp-plot --binary`)
-   
-   The energy distribution of structures obtained through this RSS workflow is visualized.
-   ```shell
-   rsspolymlp-plot --binary --elements Al Cu --threshold 30
-   ```
+This step computes relative or formation energies of the RSS-obtained structures, extracts global minima, and identifies metastable structures near the convex hull within a specified energy threshold (e.g., 30 meV/atom).
+
+```shell
+rsspolymlp --phase_analysis --elements Al Cu --paths <summary_dir>/json/* \
+  --thresholds 10 30 50 \
+  --ghost_minima_file <summary_dir>/ghost_minima/ghost_minima_detection.yaml
+```
+
+---
+
+#### 7. (Optional) Visualize RSS Results
+
+Visualize the energy distribution of structures obtained via the RSS workflow:
+
+```shell
+rsspolymlp-plot --binary --elements Al Cu --threshold 30
+```

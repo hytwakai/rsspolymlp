@@ -27,19 +27,14 @@ def rss_init_struct(
     max_volume=100,
     least_distance=0.0,
 ):
-    os.makedirs("initial_struct", exist_ok=True)
-    pre_str_count = len(glob.glob("initial_struct/*"))
-
-    if n_init_str > pre_str_count:
-        gen_str = GenerateRandomStructure(
-            element_list=elements,
-            atom_counts=atom_counts,
-            min_volume=min_volume,
-            max_volume=max_volume,
-            least_distance=least_distance,
-            pre_str_count=pre_str_count,
-        )
-        gen_str.random_structure(max_init_struct=n_init_str)
+    gen_str = GenerateRandomStructure(
+        element_list=elements,
+        atom_counts=atom_counts,
+        min_volume=min_volume,
+        max_volume=max_volume,
+        least_distance=least_distance,
+    )
+    gen_str.random_structure(max_init_struct=n_init_str)
 
 
 def rss_run_parallel(

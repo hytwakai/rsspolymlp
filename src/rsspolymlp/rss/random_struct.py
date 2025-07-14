@@ -1,3 +1,6 @@
+import glob
+import os
+
 import numpy as np
 from scipy.linalg import cholesky
 
@@ -15,7 +18,6 @@ class GenerateRandomStructure:
         min_volume: float = 0,
         max_volume: float = 100,
         least_distance: float = 0.0,
-        pre_str_count: int = 0,
     ):
         """
         Initialize the structure generation parameters.
@@ -32,8 +34,6 @@ class GenerateRandomStructure:
             Maximum volume of initial structure (A^3/atom)
         least_distance : float, optional
             Minimum allowed atomic distance in unit of angstrom (default: 0.0).
-        pre_str_count : int, optional
-            Initial structure count.
         """
 
         self.element_list = element_list
@@ -41,7 +41,14 @@ class GenerateRandomStructure:
         self.min_volume = min_volume
         self.max_volume = max_volume
         self.least_distance = least_distance
-        self.str_count = pre_str_count
+
+        self.num_atom = sum(self.atom_counts)
+        self.elements = []
+        for i, el in enumerate(self.element_list):
+            for h in range(self.atom_counts[i]):
+                self.elements.append(el)
+
+        os.makedirs("initial_struct", exist_ok=True)
 
     def random_structure(self, max_init_struct: int = 5000):
         """
@@ -52,12 +59,14 @@ class GenerateRandomStructure:
         max_init_struct : int, optional
             Maximum number of structures to generate (default: 5000).
         """
-        atom_num = sum(self.atom_counts)
+        str_count = len(glob.glob("initial_struct/*"))
+        if str_count >= max_init_struct:
+            return
 
         # Define initial structure constraints
-        vol_constraint_max = self.max_volume * atom_num  # A^3
-        vol_constraint_min = self.min_volume * atom_num  # A^3
-        axis_constraint = ((atom_num ** (1 / 3)) * 8) ** 2
+        vol_constraint_max = self.max_volume * self.num_atom  # A^3
+        vol_constraint_min = self.min_volume * self.num_atom  # A^3
+        axis_constraint = ((self.num_atom ** (1 / 3)) * 8) ** 2
 
         iteration = 1
         num_samples = 2000
@@ -89,7 +98,7 @@ class GenerateRandomStructure:
             ]
             fixed_position = np.zeros([valid_l_matrices.shape[0], 3, 1])
             random_atomic_position = np.random.rand(
-                valid_l_matrices.shape[0], 3, (atom_num - 1)
+                valid_l_matrices.shape[0], 3, (self.num_atom - 1)
             )
             valid_positions = np.concatenate(
                 [fixed_position, random_atomic_position], axis=2
@@ -113,18 +122,14 @@ class GenerateRandomStructure:
                 )
 
             # Save valid structures
-            elements = []
-            for i, el in enumerate(self.element_list):
-                for h in range(self.atom_counts[i]):
-                    elements.append(el)
             for axis, positions in zip(valid_l_matrices, valid_positions):
-                self.str_count += 1
+                if str_count >= max_init_struct:
+                    return
+                str_count += 1
                 write_poscar(
                     axis,
                     positions,
-                    elements,
-                    f"initial_struct/POSCAR_{self.str_count}",
+                    self.elements,
+                    f"initial_struct/POSCAR_{str_count}",
                 )
-                if self.str_count == max_init_struct:
-                    return
             iteration += 1
