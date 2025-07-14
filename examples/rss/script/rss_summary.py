@@ -17,20 +17,20 @@ for pressure in pressure_set:
     os.makedirs(dir_path, exist_ok=True)
     os.chdir(dir_path)
 
-    print("- rss-summarize start")
+    print("- summarize start")
     result_paths = sorted(glob.glob(f"../../../rss_mlp/Al-Cu/{pressure}GPa/*"))
     rss_summarize(
         elements=["Al", "Cu"],
         result_paths=result_paths,
         use_joblib=True,
     )
-    print("- rss-summarize finished")
+    print("- summarize finished")
 
-    print("- rss-ghost-minima")
+    print("- ghost-minima")
     rss_ghost_minima_cands(glob.glob("./json/*"))
     rss_ghost_minima_validate("./ghost_minima_dft")
 
-    print("- rss-phase-analysis")
+    print("- phase-analysis")
     rss_phase_analysis(
         elements=["Al", "Cu"],
         result_paths=glob.glob("./json/*"),

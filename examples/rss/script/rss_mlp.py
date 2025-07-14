@@ -16,7 +16,7 @@ for pressure in pressure_set:
             os.makedirs(dir_path, exist_ok=True)
             os.chdir(dir_path)
 
-            print("- rss-init-struct")
+            print("- init-struct")
             rss_init_struct(
                 elements=["Al", "Cu"],
                 atom_counts=[i, j],
@@ -31,7 +31,7 @@ for pressure in pressure_set:
                 n_opt_str=200,
             )
 
-            print("- rss-uniq-struct")
+            print("- uniq-struct")
             rss_uniq_struct()
 
             os.chdir(base_dir)
