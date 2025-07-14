@@ -1,7 +1,7 @@
 # Workflow of RSS with polynomial MLPs
 
 ### Overview
-<img src="./workflow.png" alt="workflow" width="70%" />
+<img src="./workflow.png" alt="workflow" width="60%" />
 
 ### The command-line interface of `rsspolymlp`
 
@@ -10,13 +10,13 @@ First, RSS using the polynomial MLP is independently performed for each conditio
 1. Generating initial random structures
    
    ```shell
-   rsspolymlp --init_struct --elements Al Cu --atom_counts 4 4 --num_init_str 2000
+   rsspolymlp --init_struct --elements Al Cu --atom_counts 4 4 --n_init_str 2000
    ```
 
 2. Performing parallel geometry optimization using the polynomial MLP
    
    ```shell
-   rsspolymlp --rss_parallel --pot polymlp.yaml --pressure 0.0 --num_opt_str 1000
+   rsspolymlp --rss_parallel --pot polymlp.yaml --pressure 0.0 --n_opt_str 1000
    ```
 
 3. Eliminating duplicate structures
@@ -29,6 +29,11 @@ First, RSS using the polynomial MLP is independently performed for each conditio
    ```shell
    rsspolymlp --uniq_struct
    ```
+
+These 3 steps can also be performed in a single command using the `--rss_full` option:
+```shell
+rsspolymlp --rss_full --elements Al Cu --atom_counts 4 4 --pot polymlp.yaml --pressure 0.0 --n_opt_str 1000
+```
 
 Next, RSS results aggregated for each (`p`, `c`) condition are analyzed.
 

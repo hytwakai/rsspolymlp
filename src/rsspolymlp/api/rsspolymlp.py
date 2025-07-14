@@ -22,7 +22,7 @@ from rsspolymlp.rss.random_struct import GenerateRandomStructure
 def rss_init_struct(
     elements,
     atom_counts,
-    num_init_str=5000,
+    n_init_str=5000,
     min_volume=0,
     max_volume=100,
     least_distance=0.0,
@@ -30,7 +30,7 @@ def rss_init_struct(
     os.makedirs("initial_struct", exist_ok=True)
     pre_str_count = len(glob.glob("initial_struct/*"))
 
-    if num_init_str > pre_str_count:
+    if n_init_str > pre_str_count:
         gen_str = GenerateRandomStructure(
             element_list=elements,
             atom_counts=atom_counts,
@@ -39,7 +39,7 @@ def rss_init_struct(
             least_distance=least_distance,
             pre_str_count=pre_str_count,
         )
-        gen_str.random_structure(max_init_struct=num_init_str)
+        gen_str.random_structure(max_init_struct=n_init_str)
 
 
 def rss_run_parallel(
@@ -250,7 +250,7 @@ def rss_polymlp(
         rss_init_struct(
             elements=elements,
             atom_counts=atom_counts,
-            num_init_str=n_init_str,
+            n_init_str=n_init_str,
             min_volume=min_volume,
             max_volume=max_volume,
             least_distance=least_distance,

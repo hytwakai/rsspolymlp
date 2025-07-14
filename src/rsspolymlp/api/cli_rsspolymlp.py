@@ -77,7 +77,7 @@ def run():
         help="Number of atoms for each element",
     )
     parser.add_argument(
-        "--num_init_str",
+        "--n_init_str",
         type=int,
         default=5000,
         help="Number of randomly generated initial structures",
@@ -245,7 +245,7 @@ def run():
         rss_init_struct(
             elements=args.elements,
             atom_counts=args.atom_counts,
-            num_init_str=args.num_init_str,
+            n_init_str=args.n_init_str,
             least_distance=args.least_distance,
             min_volume=args.min_volume,
             max_volume=args.max_volume,
