@@ -52,7 +52,7 @@ rsspolymlp --rss_full --elements Al Cu --atom_counts 4 4 --pot polymlp.yaml --pr
 
 ### Steps 4–6: Analyze RSS results aggregated for each (`p`, `c`) condition
 
-#### 4. Identify unique structures across atom numbers `n`
+#### 4. Identify unique structures across atom counts `n`
 
 ```shell
 rsspolymlp --summarize --elements Al Cu --paths <rss_directory>/*

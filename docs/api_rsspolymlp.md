@@ -66,3 +66,64 @@ analyzer.run_rss_uniq_struct(
 )
 ```
 
+## Identification of unique structures across atom counts `n` or pressures `p`
+```python
+from rsspolymlp.analysis.rss_summarize import RSSResultSummarizer
+
+analyzer = RSSResultSummarizer(
+    elements,
+    result_paths,
+    use_joblib,
+    num_process,
+    backend,
+    output_poscar,
+    threshold,
+    parse_vasp,
+)
+
+summarize_p = False
+if not summarize_p:
+    # Identify unique structures across atom numbers `n`
+    analyzer.run_summarize()
+else:
+    # Identify unique structures across pressures `p`
+    analyzer.run_summarize_p()
+```
+
+## Elimination of ghost minima
+To identify ghost minimum structure candidates:
+```python
+import glob
+from rsspolymlp.analysis.ghost_minima import ghost_minima_candidates
+
+result_paths = glob.glob("./json/*")
+dir_path = os.path.dirname(result_paths[0])
+os.makedirs(f"{dir_path}/../ghost_minima/ghost_minima_candidates", exist_ok=True)
+os.chdir(f"{dir_path}/../")
+
+ghost_minima_candidates(result_paths=result_paths)
+```
+
+After performing DFT calculations for the ghost minimum structure candidates:
+```python
+import glob
+from rsspolymlp.analysis.ghost_minima import detect_actual_ghost_minima
+
+detect_actual_ghost_minima(dft_dir="./ghost_minima_dft")
+```
+
+## Phase stability analysis
+```python
+from rsspolymlp.analysis.phase_analysis import ConvexHullAnalyzer
+
+ch_analyzer = ConvexHullAnalyzer(
+    elements=["Al", "Cu"],
+    result_paths="./json/*",
+    ghost_minima_file="./ghost_minima/ghost_minima_detection.yaml",
+)
+ch_analyzer.run_calc()
+
+threshold_list = [10, 30, 50]
+for threshold in threshold_list:
+    ch_analyzer.get_struct_near_ch(threshold)
+```
