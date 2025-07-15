@@ -119,7 +119,7 @@ from rsspolymlp.analysis.phase_analysis import ConvexHullAnalyzer
 ch_analyzer = ConvexHullAnalyzer(
     elements=["Al", "Cu"],
     result_paths="./json/*",
-    ghost_minima_file="./ghost_minima/ghost_minima_detection.yaml",
+    ghost_minima_file="./ghost_minima/ghost_minima_detection.yaml", # or None
 )
 ch_analyzer.run_calc()
 
