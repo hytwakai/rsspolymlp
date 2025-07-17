@@ -110,7 +110,8 @@ def rss_run_parallel(
                 print("case $SLURM_PROCID in", file=f)
                 for i in range(num_process):
                     run_ = (
-                        f"rss-single-srun --pot {' '.join(pot)} "
+                        f"rsspolymlp --rss_single "
+                        f"--pot {' '.join(pot)} "
                         f"--n_opt_str {n_opt_str} "
                         f"--pressure {pressure} "
                         f"--solver_method {solver_method} "
