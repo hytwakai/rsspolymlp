@@ -108,6 +108,7 @@ class EOSFit:
             self.pressure_lb / pressure_ub: pressure bounds
         """
         if n_grid is None:
+            # Pressure grid is set with ~0.01 GPa resolution.
             pressures, _ = self._get_pressure_and_gibbs_from_volumes(
                 [min(volume_range), max(volume_range)]
             )
