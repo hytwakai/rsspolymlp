@@ -44,7 +44,7 @@ class EOSFit:
         self._volume_range = (
             volume_range
             if volume_range is not None
-            else [np.min(self._volumes) * 0.95, np.max(self._volumes) * 1.05]
+            else [np.min(self._volumes) * 0.99, np.max(self._volumes) * 1.01]
         )
 
         if init_parameter is None:
@@ -87,6 +87,8 @@ class EOSFit:
         else:
             self.parameters = result[0]
 
+        print(f"RMSE of EOS fit (energy): {self.rmse*1000:.6f} meV")
+
     @property
     def rmse(self) -> float:
         """Return RMSE between fitted EOS and input energy data."""
@@ -97,14 +99,21 @@ class EOSFit:
         return np.sqrt(np.mean(error**2))
 
     def interpolate_gibbs_from_pressure(
-        self, volume_range: list[float], n_grid: int = 1000
+        self, volume_range: list[float], n_grid: int = None
     ):
         """
         Precompute interpolation function for G(P) using volume range.
         Stores:
             self.g_interp: interpolator
-            self.pressure_lb / pressure_ub: bounds for safety
+            self.pressure_lb / pressure_ub: pressure bounds
         """
+        if n_grid is None:
+            pressures, _ = self._get_pressure_and_gibbs_from_volumes(
+                [min(volume_range), max(volume_range)]
+            )
+            pressure_range = abs(pressures[1] - pressures[0])
+            n_grid = int(round(pressure_range * 100))
+
         volumes = np.linspace(min(volume_range), max(volume_range), n_grid)
         pressures, gibbs_energies = self._get_pressure_and_gibbs_from_volumes(volumes)
 
