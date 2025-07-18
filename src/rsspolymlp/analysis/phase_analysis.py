@@ -118,7 +118,7 @@ class ConvexHullAnalyzer:
             for comp, path, energy in zip(
                 self.hull_compositions, self.hull_paths, self.hull_energies
             ):
-                f.write(f"  - composition: {comp}\n")
+                f.write(f"  - composition: {comp.tolist()}\n")
                 f.write(f"    structure:   {path}\n")
                 f.write(f"    formation_e: {energy}\n")
 
