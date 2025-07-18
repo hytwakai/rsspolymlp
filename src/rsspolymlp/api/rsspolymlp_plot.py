@@ -8,7 +8,7 @@ from rsspolymlp.utils.matplot_util.custom_plt import CustomPlt
 from rsspolymlp.utils.matplot_util.make_plot import MakePlot
 
 
-def plot_binary(elements, threshold=None):
+def plot_binary(threshold=None):
     custom_template = CustomPlt(
         label_size=8,
         label_pad=3.0,
@@ -30,8 +30,8 @@ def plot_binary(elements, threshold=None):
 
     phase_res = load_plot_data(threshold=threshold)
     plotter.ax_plot(
-        phase_res["comp_ch"][:, 1],
-        phase_res["fe_ch"],
+        phase_res["hull_comp"][:, 1],
+        phase_res["hull_e"],
         plot_type="closed",
         label=None,
         plot_size=0.7,
@@ -39,7 +39,7 @@ def plot_binary(elements, threshold=None):
         zorder=2,
     )
 
-    for key, _dict in phase_res["rss_result_fe"].items():
+    for key, _dict in phase_res["composition_data"].items():
         plotter.set_visuality(n_color=3, n_line=0, n_marker=0, color_type="grad")
         if threshold is not None:
             _energies = phase_res["not_near_ch"][key]["formation_e"]
@@ -61,7 +61,8 @@ def plot_binary(elements, threshold=None):
                 _comps, _energies, plot_type="open", label=None, plot_size=0.4
             )
 
-    fe_min = np.min(phase_res["fe_ch"])
+    elements = phase_res["elements"]
+    fe_min = np.min(phase_res["hull_e"])
     plotter.finalize_ax(
         xlabel=rf"$x$ in {elements[0]}$_{{1-x}}${elements[1]}$_{{x}}$",
         ylabel="Formation energy (eV/atom)",

@@ -37,8 +37,10 @@ class EOSFit:
         Fit an equation of state (EOS) to energy-volume data and
         enable Gibbs energy interpolation at arbitrary pressures.
         """
-        self._energies = np.array(energies)
-        self._volumes = np.array(volumes)
+        sort_idx = np.argsort(-np.array(volumes))
+        self._energies = np.array(energies)[sort_idx]
+        self._volumes = np.array(volumes)[sort_idx]
+
         self._eos = vinet
         self.parameters = None
         self._volume_range = (

@@ -33,11 +33,11 @@ for pressure in pressure_set:
     print("- phase-analysis")
     rss_phase_analysis(
         elements=["Al", "Cu"],
-        result_paths=glob.glob("./json/*"),
+        input_paths=glob.glob("./json/*"),
         ghost_minima_file="ghost_minima/ghost_minima_detection.yaml",
         thresholds=[10, 20, 30, 40, 50],
     )
     print("- plot-binary")
-    plot_binary(elements=["Al", "Cu"], threshold=30)
+    plot_binary(threshold=30)
 
     os.chdir(base_dir)

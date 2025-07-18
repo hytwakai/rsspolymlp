@@ -66,10 +66,10 @@ pip install rsspolymlp
    - MLP dataset generation
    - DFT dataset division
    - Polynomial MLP development
-   - Pareto-optimal MLP detection
+   - Pareto-optimal MLP selection
  - Python API
    - [RSS workflow](docs/api_rsspolymlp.md)
    - [VASP calculation utilities](src/rsspolymlp/utils/vasp_util/readme.md)
      - Single-point calculation
-     - Local geometry optimizaion
+     - Local geometry optimization
    - [Matplotlib utilities](src/rsspolymlp/utils/matplot_util/readme.md)

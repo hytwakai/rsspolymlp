@@ -321,7 +321,7 @@ def run():
     if args.phase_analysis:
         rss_phase_analysis(
             elements=args.elements,
-            result_paths=args.paths,
+            input_paths=args.paths,
             ghost_minima_file=args.ghost_minima_file,
             parse_vasp=args.parse_vasp,
             thresholds=args.thresholds,

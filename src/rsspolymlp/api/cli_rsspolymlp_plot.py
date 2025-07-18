@@ -17,7 +17,6 @@ def run():
     )
 
     # --binary mode
-    parser.add_argument("--elements", nargs="+", type=str, default=None)
     parser.add_argument("--threshold", type=float, default=None)
 
     # --pareto_opt mode
@@ -56,7 +55,7 @@ def run():
     args = parser.parse_args()
 
     if args.binary:
-        plot_binary(args.elements, threshold=args.threshold)
+        plot_binary(threshold=args.threshold)
 
     if args.pareto_opt:
         pareto_opt_mlp(

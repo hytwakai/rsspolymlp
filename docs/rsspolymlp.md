@@ -86,5 +86,5 @@ rsspolymlp --phase_analysis --elements Al Cu --paths <summary_dir>/json/* \
 Visualize the energy distribution of structures obtained via the RSS workflow:
 
 ```shell
-rsspolymlp-plot --binary --elements Al Cu --threshold 30
+rsspolymlp-plot --binary --threshold 30
 ```

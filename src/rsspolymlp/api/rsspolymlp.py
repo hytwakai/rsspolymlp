@@ -309,17 +309,16 @@ def rss_ghost_minima_validate(dft_dir):
 
 
 def rss_phase_analysis(
-    elements, result_paths, ghost_minima_file=None, parse_vasp=False, thresholds=None
+    elements, input_paths, ghost_minima_file=None, parse_vasp=False, thresholds=None
 ):
-    ch_analyzer = ConvexHullAnalyzer(
-        elements=elements,
-        result_paths=result_paths,
+    ch_analyzer = ConvexHullAnalyzer(elements=elements)
+    ch_analyzer.parse_results(
+        input_paths=input_paths,
         ghost_minima_file=ghost_minima_file,
         parse_vasp=parse_vasp,
     )
-    ch_analyzer.run_calc()
+    ch_analyzer.run_analysis()
 
     if thresholds is not None:
-        threshold_list = thresholds
-        for threshold in threshold_list:
-            ch_analyzer.get_struct_near_ch(threshold)
+        for threshold in thresholds:
+            ch_analyzer.get_structures_near_hull(threshold)

@@ -68,17 +68,23 @@ analyzer.run_rss_uniq_struct(
 
 ## Identification of unique structures across atom counts `n` or pressures `p`
 ```python
+import glob
+import os
 from rsspolymlp.analysis.rss_summarize import RSSResultSummarizer
 
+os.makedirs("rss_summary", exist_ok=True)
+os.chdir("rss_summary")
+
+target_paths = glob.glob("../rss_mlp/Al-Cu/0.0GPa/*")
 analyzer = RSSResultSummarizer(
-    elements,
-    result_paths,
-    use_joblib,
-    num_process,
-    backend,
-    output_poscar,
-    threshold,
-    parse_vasp,
+    elements=["Al", "Cu"],
+    result_paths=paths,
+    use_joblib=True,
+    num_process=-1,
+    backend="loky,
+    output_poscar=False,
+    threshold=None,
+    parse_vasp=False,
 )
 
 summarize_p = False
@@ -116,14 +122,15 @@ detect_actual_ghost_minima(dft_dir="./ghost_minima_dft")
 ```python
 from rsspolymlp.analysis.phase_analysis import ConvexHullAnalyzer
 
-ch_analyzer = ConvexHullAnalyzer(
-    elements=["Al", "Cu"],
-    result_paths="./json/*",
-    ghost_minima_file="./ghost_minima/ghost_minima_detection.yaml", # or None
+ch_analyzer = ConvexHullAnalyzer(elements=["Al", "Cu"])
+ch_analyzer.parse_results(
+    input_paths="./json/*",
+    ghost_minima_file="./ghost_minima/ghost_minima_detection.yaml",
+    # or None
 )
-ch_analyzer.run_calc()
+ch_analyzer.run_analysis()
 
 threshold_list = [10, 30, 50]
 for threshold in threshold_list:
-    ch_analyzer.get_struct_near_ch(threshold)
+    ch_analyzer.get_structures_near_hull(threshold)
 ```

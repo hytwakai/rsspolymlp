@@ -12,67 +12,218 @@ from rsspolymlp.common.composition import compute_composition
 
 
 class ConvexHullAnalyzer:
+    """Analyze phase stability via the convex hull of formation energies."""
 
-    def __init__(
-        self, elements, result_paths, ghost_minima_file=None, parse_vasp=False
-    ):
+    def __init__(self, elements: np.ndarray = []):
+        self.elements = np.array(elements)
+        # Initialize per-composition storage
+        self._composition_data = {}
+        # Convex hull object
+        self.hull = None
+        # Results for global minima on the hull
+        self.hull_energies = None
+        self.hull_compositions = None
+        self.hull_paths = None
 
-        self.elements = elements
-        self.result_paths = result_paths
-        self.ghost_minima_file = ghost_minima_file
-        self.parse_vasp = parse_vasp
-        self.rss_result_fe = {}
-        self.ch_obj = None
-        self.fe_ch = None
-        self.comp_ch = None
-        self.poscar_ch = None
+    @property
+    def composition_data(self):
+        return self._composition_data
 
-        if not self.parse_vasp:
-            dir_path = os.path.dirname(self.result_paths[0])
-            os.makedirs(f"{dir_path}/../phase_analysis/data", exist_ok=True)
-            os.chdir(f"{dir_path}/../")
+    @composition_data.setter
+    def composition_data(self, data):
+        """
+        composition_data maps each composition ratio (tuple) to a dict with keys:
+            'energy': np.ndarray of energies,
+            'input_path': np.ndarray of file paths,
+            'struct_tag': np.ndarray of structure tags.
+        """
+        if not isinstance(data, dict):
+            raise TypeError("composition_data must be a dictionary.")
+
+        for k, v in data.items():
+            if not isinstance(k, tuple):
+                raise ValueError(f"Key {k} must be a tuple.")
+            if not isinstance(v, dict):
+                raise ValueError(f"Value for key {k} must be a dictionary.")
+            if not all(key in v for key in ["energy", "input_path", "struct_tag"]):
+                raise ValueError(f"Missing required keys in value for {k}.")
+
+        self._composition_data = data
+
+    def run_analysis(self):
+        """Compute formation energies, build convex hull, and evaluate energies above hull."""
+        if len(self.elements) == 0:
+            raise ValueError("elements is none. Please set elements.")
+        if not self._composition_data:
+            raise ValueError("composition_data is empty. Please set results first.")
+        self.compute_formation_energies()
+        self.compute_convex_hull()
+        self.compute_fe_above_ch()
+
+    def compute_formation_energies(self):
+        """Compute formation energy for each structure relative to pure elements."""
+        # Sort compositions for reproducible output
+        comps = np.array(list(self._composition_data.keys()))
+        order = np.lexsort(comps.T)
+        sorted_keys = [tuple(comps[i].tolist()) for i in order]
+        self._composition_data = {k: self._composition_data[k] for k in sorted_keys}
+
+        # Reference energies from pure elements (where any ratio == 1)
+        pure = comps[np.any(comps == 1, axis=1)]
+        pure_sorted = sorted(pure, key=lambda x: np.argmax(x))
+        ref_energies = [
+            np.min(self._composition_data[tuple(r)]["energy"]) for r in pure_sorted
+        ]
+        ref_energies = np.array(ref_energies)
+
+        # Calculate and store formation energies
+        for ratio, data in self._composition_data.items():
+            formation = data["energy"] - np.dot(ref_energies, np.array(ratio))
+            data["formation_e"] = formation
+
+        # Save JSON and elements
+        os.makedirs("phase_analysis/data", exist_ok=True)
+        serial = {
+            str(r): {k: v.tolist() for k, v in d.items()}
+            for r, d in self._composition_data.items()
+        }
+        with open("phase_analysis/data/composition_data.json", "w") as f:
+            json.dump(serial, f)
+        np.save("phase_analysis/data/elements.npy", self.elements)
+
+    def compute_convex_hull(self):
+        """Build the convex hull and extract vertex compositions and energies."""
+        comps, min_e, paths = [], [], []
+        for ratio, data in self._composition_data.items():
+            comps.append(ratio)
+            idx = np.argmin(data["formation_e"])
+            min_e.append(data["formation_e"][idx])
+            paths.append(data["input_path"][idx])
+
+        comp_arr = np.array(comps)
+        e_arr = np.array(min_e).reshape(-1, 1)
+        points = np.hstack([comp_arr[:, 1:], e_arr])
+        self.hull = ConvexHull(points)
+
+        verts = np.unique(self.hull.simplices)
+        e_hull = e_arr[verts].flatten()
+        mask = e_hull <= 1e-10
+        self.hull_energies = e_hull[mask]
+        self.hull_compositions = comp_arr[verts][mask]
+        self.hull_paths = np.array(paths)[verts][mask]
+
+        # Write global minima YAML
+        with open("phase_analysis/global_minima.yaml", "w") as f:
+            f.write("global_minima:\n")
+            for comp, path, energy in zip(
+                self.hull_compositions, self.hull_paths, self.hull_energies
+            ):
+                f.write(f"  - composition: {comp}\n")
+                f.write(f"    structure:   {path}\n")
+                f.write(f"    formation_e: {energy}\n")
+
+        # Save NumPy arrays
+        os.makedirs("phase_analysis/data", exist_ok=True)
+        np.save("phase_analysis/data/hull_e.npy", self.hull_energies)
+        np.save("phase_analysis/data/hull_comp.npy", self.hull_compositions)
+
+    def compute_fe_above_ch(self):
+        """Compute each structure's energy above the convex hull."""
+        for ratio, data in self._composition_data.items():
+            data["fe_above_ch"] = data["formation_e"] - self._evaluate_hull(ratio)
+
+    def _evaluate_hull(self, ratio):
+        """Evaluate the hull plane to get reference energy at a given ratio."""
+        ratio = np.array(ratio)
+        if np.any(ratio == 1):
+            return 0.0
+        best = -np.inf
+        for eq in self.hull.equations:
+            num = -(np.dot(eq[:-2], ratio[1:]) + eq[-1])
+            val = num / eq[-2]
+            if best < val < -1e-8:
+                best = val
+        return best
+
+    def get_structures_near_hull(self, threshold_meV):
+        """Return structures within threshold (meV/atom) above hull."""
+        near, far = {}, {}
+        for ratio, data in self._composition_data.items():
+            mask = data["fe_above_ch"] < (threshold_meV / 1000)
+            near[ratio] = {
+                "struct_tag": data["struct_tag"][mask],
+                "input_path": data["input_path"][mask],
+                "fe_above_ch": data["fe_above_ch"][mask],
+                "formation_e": data["formation_e"][mask],
+            }
+            far[ratio] = {
+                "struct_tag": data["struct_tag"][~mask],
+                "input_path": data["input_path"][~mask],
+                "fe_above_ch": data["fe_above_ch"][~mask],
+                "formation_e": data["formation_e"][~mask],
+            }
+
+        element_count = 0
+        multi_count = 0
+        for key, res in near.items():
+            if len(res["formation_e"]) == 0:
+                continue
+            if np.any(np.array(key) == 1):
+                element_count += len(res["formation_e"])
+            else:
+                multi_count += len(res["formation_e"])
+
+        thre = float(threshold_meV)
+        os.makedirs(f"phase_analysis/threshold_{thre}meV", exist_ok=True)
+        with open(f"phase_analysis/threshold_{thre}meV/struct_cands.yaml", "w") as f:
+            print("summary:", file=f)
+            print(f"  threshold_meV_per_atom: {thre}", file=f)
+            print(f"  n_structs_single:       {element_count}", file=f)
+            print(f"  n_structs_multi:        {multi_count}", file=f)
+            print("", file=f)
+
+            print("near_ch_structures:", file=f)
+            for key, res in near.items():
+                if len(res["formation_e"]) == 0:
+                    continue
+                print(f"  - composition: {list(key)}", file=f)
+                print("    structures:", file=f)
+                for i in range(len(res["formation_e"])):
+                    print(f"      - struct_tag: {res['struct_tag'][i]}", file=f)
+                    print(f"        input_path: {res['input_path'][i]}", file=f)
+                    print(f"        delta_F_ch: {res['fe_above_ch'][i]:.6f}", file=f)
+                    print(f"        F_value:    {res['formation_e'][i]:.15f}", file=f)
+
+        far_serial = {
+            str(r): {k: v.tolist() for k, v in d.items()} for r, d in far.items()
+        }
+        near_serial = {
+            str(r): {k: v.tolist() for k, v in d.items()} for r, d in near.items()
+        }
+        with open(f"phase_analysis/threshold_{thre}meV/not_near_ch.json", "w") as f:
+            json.dump(far_serial, f)
+        with open(f"phase_analysis/threshold_{thre}meV/near_ch.json", "w") as f:
+            json.dump(near_serial, f)
+
+        return near, far
+
+    def parse_results(self, input_paths, ghost_minima_file=None, parse_vasp=False):
+        """
+        Populate composition_data by parsing RSS JSON or VASP vasprun.xml outputs.
+        :param input_paths: List of RSS JSON files or VASP directories.
+        :param ghost_minima_file: YAML file listing ghost minima to exclude (RSS only).
+        :param parse_vasp: If True, parse VASP outputs; otherwise parse RSS JSON.
+        """
+        if parse_vasp:
+            self._parse_vasp_results(input_paths)
         else:
-            base_dir = os.path.basename(self.result_paths[0])
-            os.makedirs(f"{base_dir}/../phase_analysis/data", exist_ok=True)
-            os.chdir(f"{base_dir}/../")
+            self._parse_rss_results(input_paths, ghost_minima_file)
 
-    def run_calc(self):
-        self.calc_formation_e()
-        self.calc_convex_hull()
-        self.calc_fe_above_convex_hull()
-
-    def calc_formation_e(self):
-        if not self.parse_vasp:
-            self._parse_mlp_results()
-        else:
-            self._parse_vasp_results()
-
-        comps = np.array(list(self.rss_result_fe.keys()))
-        sort_idx = np.lexsort(comps.T)
-        sorted_keys = [list(self.rss_result_fe.keys())[i] for i in sort_idx]
-        self.rss_result_fe = {key: self.rss_result_fe[key] for key in sorted_keys}
-
-        e_ends = []
-        keys = np.array(list(self.rss_result_fe))
-        valid_keys = keys[np.any(keys == 1, axis=1)]
-        sorted_keys = sorted(valid_keys, key=lambda x: np.argmax(x))
-        for key in sorted_keys:
-            key_tuple = tuple(key)
-            energy = self.rss_result_fe[key_tuple]["formation_e"][0]
-            e_ends.append(energy)
-        e_ends = np.array(e_ends)
-
-        for key in self.rss_result_fe:
-            self.rss_result_fe[key]["formation_e"] -= np.dot(e_ends, np.array(key))
-
-        rss_result_fe_serial = self._convert_ndarray_to_json(self.rss_result_fe)
-        with open("phase_analysis/data/rss_result_fe.json", "w") as f:
-            json.dump(rss_result_fe_serial, f)
-
-    def _parse_mlp_results(self):
+    def _parse_rss_results(self, input_paths, ghost_minima_file=None):
+        """Internal: parse RSS JSON and filter ghost minima."""
         is_not_ghost_minima = []
-        if self.ghost_minima_file is not None:
-            with open(self.ghost_minima_file) as f:
+        if ghost_minima_file is not None:
+            with open(ghost_minima_file) as f:
                 ghost_minima_data = yaml.safe_load(f)
             if ghost_minima_data["ghost_minima"] is not None:
                 for entry in ghost_minima_data["ghost_minima"]:
@@ -81,7 +232,7 @@ class ConvexHullAnalyzer:
         is_not_ghost_minima_set = set(is_not_ghost_minima)
 
         n_changed = 0
-        for res_path in self.result_paths:
+        for res_path in input_paths:
             with open(res_path) as f:
                 loaded_dict = json.load(f)
 
@@ -100,12 +251,11 @@ class ConvexHullAnalyzer:
             logname = os.path.basename(res_path).split(".")[0]
             rss_results = loaded_dict["rss_results"]
             rss_results_array = {
-                "formation_e": np.array([r["energy"] for r in rss_results]),
-                "poscars": np.array([r["poscar"] for r in rss_results]),
+                "energy": np.array([r["energy"] for r in rss_results]),
+                "input_path": np.array([r["poscar"] for r in rss_results]),
                 "is_ghost_minima": np.array(
                     [r["is_ghost_minima"] for r in rss_results]
                 ),
-                "struct_no": np.array([r["struct_no"] for r in rss_results]),
                 "struct_tag": np.array(
                     [f"POSCAR_{logname}_No{r['struct_no']}" for r in rss_results]
                 ),
@@ -124,11 +274,12 @@ class ConvexHullAnalyzer:
                 key: rss_results_array[key][~rss_results_array["is_ghost_minima"]]
                 for key in rss_results_array
             }
-            self.rss_result_fe[comp_ratio_array] = rss_results_valid
+            self._composition_data[comp_ratio_array] = rss_results_valid
 
-    def _parse_vasp_results(self):
+    def _parse_vasp_results(self, input_paths):
+        """Internal: parse vasprun.xml files and map to composition_data."""
         dft_dict = defaultdict(list)
-        for dft_path in self.result_paths:
+        for dft_path in input_paths:
             vasprun_path = f"{dft_path}/vasprun.xml"
             try:
                 vaspobj = Vasprun(vasprun_path)
@@ -150,160 +301,23 @@ class ConvexHullAnalyzer:
             )
             dft_dict[comp_ratio].append(
                 {
-                    "formation_e": energy_dft,
-                    "poscars": vasprun_path,
+                    "energy": energy_dft,
+                    "input_path": vasprun_path,
                     "struct_tag": dft_path.split("/")[-1],
                 }
             )
 
         dft_dict_array = {}
         for comp_ratio, entries in dft_dict.items():
-            sorted_entries = sorted(entries, key=lambda x: x["formation_e"])
+            sorted_entries = sorted(entries, key=lambda x: x["energy"])
             dft_dict_array[comp_ratio] = {
-                "formation_e": np.array([entry["formation_e"] for entry in sorted_entries]),
-                "poscars": np.array([entry["poscars"] for entry in sorted_entries]),
-                "struct_tag": np.array([entry["struct_tag"] for entry in sorted_entries]),
+                "energy": np.array([entry["energy"] for entry in sorted_entries]),
+                "input_path": np.array(
+                    [entry["input_path"] for entry in sorted_entries]
+                ),
+                "struct_tag": np.array(
+                    [entry["struct_tag"] for entry in sorted_entries]
+                ),
             }
 
-        self.rss_result_fe = dft_dict_array
-
-    def calc_convex_hull(self):
-        rss_result_fe = self.rss_result_fe
-
-        comp_list, e_min_list, label_list = [], [], []
-        for key, dicts in rss_result_fe.items():
-            comp_list.append(key)
-            e_min_list.append(dicts["formation_e"][0])
-            label_list.append(dicts["poscars"][0])
-
-        comp_array = np.array(comp_list)
-        e_min_array = np.array(e_min_list).reshape(-1, 1)
-        label_array = np.array(label_list)
-
-        data_ch = np.hstack([comp_array[:, 1:], e_min_array])
-        self.ch_obj = ConvexHull(data_ch)
-
-        v_convex = np.unique(self.ch_obj.simplices)
-        _fe_ch = e_min_array[v_convex].astype(float)
-        mask = np.where(_fe_ch <= 1e-10)[0]
-
-        _comp_ch = comp_array[v_convex][mask]
-        sort_idx = np.lexsort(_comp_ch.T)
-
-        self.fe_ch = _fe_ch[mask][sort_idx]
-        self.comp_ch = _comp_ch[sort_idx]
-        self.poscar_ch = label_array[v_convex][mask][sort_idx]
-
-        with open("phase_analysis/global_minima.yaml", "w") as f:
-            print("global_minima:", file=f)
-            for i in range(len(self.comp_ch)):
-                print("  - composition:      ", self.comp_ch[i].tolist(), file=f)
-                print("    structure:        ", self.poscar_ch[i], file=f)
-                print("    formation_energy: ", self.fe_ch[i][0], file=f)
-
-        np.save("phase_analysis/data/fe_ch.npy", self.fe_ch)
-        np.save("phase_analysis/data/comp_ch.npy", self.comp_ch)
-
-    def calc_fe_above_convex_hull(self):
-        rss_result_fe = self.rss_result_fe
-        for key in rss_result_fe:
-            _ehull = self._calc_fe_convex_hull(key)
-            fe_above_ch = rss_result_fe[key]["formation_e"] - _ehull
-            rss_result_fe[key]["fe_above_ch"] = fe_above_ch
-
-    def _calc_fe_convex_hull(self, comp_ratio):
-        if np.any(np.array(comp_ratio) == 1):
-            return 0
-
-        ehull = -1e10
-        for eq in self.ch_obj.equations:
-            face_val_comp = -(np.dot(eq[:-2], comp_ratio[1:]) + eq[-1])
-            ehull_trial = face_val_comp / eq[-2]
-            if ehull_trial > ehull and ehull_trial < -1e-8:
-                ehull = ehull_trial
-
-        return ehull
-
-    def get_struct_near_ch(self, threshold):
-        near_ch = {}
-        not_near_ch = {}
-
-        res = self.rss_result_fe
-        for key in res:
-            is_near = res[key]["fe_above_ch"] < threshold / 1000
-            near_ch[key] = {
-                "struct_tag": None,
-                "poscars": None,
-                "fe_above_ch": None,
-                "formation_e": None,
-            }
-            near_ch[key]["struct_tag"] = res[key]["struct_tag"][is_near]
-            near_ch[key]["poscars"] = res[key]["poscars"][is_near]
-            near_ch[key]["fe_above_ch"] = res[key]["fe_above_ch"][is_near]
-            near_ch[key]["formation_e"] = res[key]["formation_e"][is_near]
-
-            is_not_near = res[key]["fe_above_ch"] >= threshold / 1000
-            not_near_ch[key] = {
-                "struct_tag": None,
-                "poscars": None,
-                "fe_above_ch": None,
-                "formation_e": None,
-            }
-            not_near_ch[key]["struct_tag"] = res[key]["struct_tag"][is_not_near]
-            not_near_ch[key]["poscars"] = res[key]["poscars"][is_not_near]
-            not_near_ch[key]["fe_above_ch"] = res[key]["fe_above_ch"][is_not_near]
-            not_near_ch[key]["formation_e"] = res[key]["formation_e"][is_not_near]
-
-        element_count = 0
-        multi_count = 0
-        for key, res in near_ch.items():
-            if len(res["formation_e"]) == 0:
-                continue
-            if np.any(np.array(key) == 1):
-                element_count += len(res["formation_e"])
-            else:
-                multi_count += len(res["formation_e"])
-
-        os.makedirs(f"phase_analysis/threshold_{threshold}meV", exist_ok=True)
-        with open(
-            f"phase_analysis/threshold_{threshold}meV/struct_cands.yaml", "w"
-        ) as f:
-            print("summary:", file=f)
-            print(f"  threshold_meV_per_atom: {threshold}", file=f)
-            print(f"  n_structs_single:       {element_count}", file=f)
-            print(f"  n_structs_multi:        {multi_count}", file=f)
-            print("", file=f)
-
-            print("near_ch_structures:", file=f)
-            for key, res in near_ch.items():
-                if len(res["formation_e"]) == 0:
-                    continue
-                print(f"  - composition: {list(key)}", file=f)
-                print("    structures:", file=f)
-                for i in range(len(res["formation_e"])):
-                    print(f"      - struct_tag: {res['struct_tag'][i]}", file=f)
-                    print(f"        poscar:     {res['poscars'][i]}", file=f)
-                    print(
-                        f"        delta_F_ch: {res['fe_above_ch'][i]:.6f}",
-                        file=f,
-                    )
-                    print(
-                        f"        F_value:    {res['formation_e'][i]:.15f}",
-                        file=f,
-                    )
-
-        not_near_ch = self._convert_ndarray_to_json(not_near_ch)
-        near_ch = self._convert_ndarray_to_json(near_ch)
-        with open(
-            f"phase_analysis/threshold_{threshold}meV/not_near_ch.json", "w"
-        ) as f:
-            json.dump(not_near_ch, f)
-        with open(f"phase_analysis/threshold_{threshold}meV/near_ch.json", "w") as f:
-            json.dump(near_ch, f)
-
-    def _convert_ndarray_to_json(self, data):
-        converted = {
-            str(k): {key: val.tolist() for key, val in v.items()}
-            for k, v in data.items()
-        }
-        return converted
+        self._composition_data = dft_dict_array
