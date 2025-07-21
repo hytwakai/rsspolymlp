@@ -356,20 +356,29 @@ class RSSResultSummarizer:
 
     def generate_poscars(self, json_path: str, threshold=None):
         logname = os.path.basename(json_path).split(".json")[0]
-        os.makedirs(f"poscars/{logname}", exist_ok=True)
+        if threshold is None:
+            dir_name = "poscars"
+        else:
+            dir_name = f"poscars_{threshold}"
+        os.makedirs(f"{dir_name}/{logname}", exist_ok=True)
 
         with open(json_path) as f:
             loaded_dict = json.load(f)
         rss_results = loaded_dict["rss_results"]
 
         e_min = None
+        struct_count = 0
         for res in rss_results:
             if not res.get("is_ghost_minima") and e_min is None:
                 e_min = res["energy"]
             if e_min is not None and threshold is not None:
                 diff = abs(e_min - res["energy"])
                 if diff * 1000 > threshold:
+                    if struct_count == 1:
+                        e_min = None
                     continue
 
-            dest = f"poscars/{logname}/POSCAR_{logname}_No{res['struct_no']}"
+            dest = f"{dir_name}/{logname}/POSCAR_{logname}_No{res['struct_no']}"
             shutil.copy(res["poscar"], dest)
+            struct_count += 1
+        print("Number of output POSCARs:", struct_count)
