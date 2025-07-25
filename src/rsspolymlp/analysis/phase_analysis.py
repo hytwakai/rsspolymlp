@@ -48,6 +48,15 @@ class ConvexHullAnalyzer:
             if not all(key in v for key in ["energy", "input_path", "struct_tag"]):
                 raise ValueError(f"Missing required keys in value for {k}.")
 
+            # Convert lists to np.ndarray if necessary
+            for key in ["energy", "input_path", "struct_tag"]:
+                if isinstance(v[key], list):
+                    v[key] = np.array(v[key])
+                elif not isinstance(v[key], np.ndarray):
+                    raise ValueError(
+                        f"Value of '{key}' for key {k} must be a list or ndarray."
+                    )
+
         self._composition_data = data
 
     def run_analysis(self):
