@@ -128,7 +128,7 @@ class RSSResultAnalyzer:
                     cutoff_i = model_dict["model"]["cutoff"]
                     if cutoff_i > max_cutoff:
                         max_cutoff = cutoff_i
-                self.cutoff = max_cutoff
+                self.cutoff = max_cutoff - 0.5
 
         polymlp_st = Poscar(poscar_name).structure
         objprop = PropUtil(polymlp_st.axis.T, polymlp_st.positions.T)

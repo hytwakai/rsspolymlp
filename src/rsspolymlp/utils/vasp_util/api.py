@@ -1,3 +1,4 @@
+import os
 import shutil
 from pathlib import Path
 
@@ -107,9 +108,9 @@ def prepare_vasp_inputs(
         raise ValueError("Mode must be either `sp` or `opt`.")
 
     # Copy POSCAR and POTCAR files
-    if poscar_path not in ["POSCAR", "./POSCAR"]:
+    if not (os.path.exists("./POSCAR") and os.path.samefile(poscar_path, "./POSCAR")):
         shutil.copy(poscar_path, "./POSCAR")
-    if potcar_path not in ["POTCAR", "./POTCAR"]:
+    if not (os.path.exists("./POTCAR") and os.path.samefile(potcar_path, "./POTCAR")):
         shutil.copy(potcar_path, "./POTCAR")
 
     # Generate shell script
