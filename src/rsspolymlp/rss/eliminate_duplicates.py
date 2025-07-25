@@ -257,6 +257,7 @@ class RSSResultAnalyzer:
             print(f"  max_rss_structures:       {max_init_str}", file=f)
             print(f"  num_initial_structures:   {finish_count}", file=f)
             print(f"  num_optimized_structures: {success_count}", file=f)
+            print(f"  num_unique_structures:    {len(unique_structs)}", file=f)
             print(f"  stopping_criterion:       {stop_mes}", file=f)
             print(f"  optimized_per_initial:    {prop_success}", file=f)
             print(f"  total_rss_time_sec:       {int(self.time_all)}", file=f)
