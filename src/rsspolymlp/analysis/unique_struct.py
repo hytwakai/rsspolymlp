@@ -337,43 +337,49 @@ def log_unique_structures(
     rss_results = []
     with open(file_name, "a") as f:
         print("unique_structures:", file=f)
-        for idx, _str in enumerate(unique_structs):
-            e_diff = round((_str.energy - energy_min) * 1000, 2)
-            print(f"  - struct_No: {_str.struct_no}", file=f)
-            print(f"    poscar_name: {_str.input_poscar}", file=f)
-            print(f"    energy_diff_meV_per_atom: {e_diff}", file=f)
-            print(f"    duplicates: {_str.dup_count}", file=f)
-            print(f"    enthalpy: {_str.energy}", file=f)
-            print(f"    axis: {_str.axis_abc}", file=f)
-            print(
-                f"    positions: {_str.original_structure.positions.T.tolist()}", file=f
-            )
-            print(f"    elements: {_str.original_structure.elements}", file=f)
-            print(f"    space_group: {_str.spg_list}", file=f)
 
-            info = [
-                f"{_str.n_atoms} atom",
-                f"distance {round(_str.least_distance, 3)} (Ang.)",
-                f"volume {round(_str.volume, 2)} (A^3/atom)",
-            ]
-            if unique_struct_iters is not None:
-                info.append(f"iteration {unique_struct_iters[idx]}")
-            print(f"    other_info: {' / '.join(info)}", file=f)
+        for is_ghost in [False, True]:
+            for idx, _str in enumerate(unique_structs):
+                if is_ghost_minima[idx] != is_ghost:
+                    continue
 
-            if is_ghost_minima[idx]:
-                print("    ghost_minima_flag: true", file=f)
+                e_diff = round((_str.energy - energy_min) * 1000, 2)
+                print(f"  - struct_No: {_str.struct_no}", file=f)
+                print(f"    poscar_name: {_str.input_poscar}", file=f)
+                print(f"    energy_diff_meV_per_atom: {e_diff}", file=f)
+                print(f"    duplicates: {_str.dup_count}", file=f)
+                print(f"    enthalpy: {_str.energy}", file=f)
+                print(f"    axis: {_str.axis_abc}", file=f)
+                print(
+                    f"    positions: {_str.original_structure.positions.T.tolist()}",
+                    file=f,
+                )
+                print(f"    elements: {_str.original_structure.elements}", file=f)
+                print(f"    space_group: {_str.spg_list}", file=f)
 
-            _res = {}
-            _res["poscar"] = _str.input_poscar
-            polymlp_st = _str.original_structure
-            polymlp_st_dict = polymlp_struct_to_dict(polymlp_st)
-            _res["structure"] = polymlp_st_dict
-            _res["energy"] = _str.energy
-            _res["pressure"] = pressure
-            _res["spg_list"] = _str.spg_list
-            _res["struct_no"] = _str.struct_no
-            _res["is_ghost_minima"] = bool(is_ghost_minima[idx])
-            rss_results.append(_res)
+                info = [
+                    f"{_str.n_atoms} atom",
+                    f"distance {round(_str.least_distance, 3)} (Ang.)",
+                    f"volume {round(_str.volume, 2)} (A^3/atom)",
+                ]
+                if unique_struct_iters is not None:
+                    info.append(f"iteration {unique_struct_iters[idx]}")
+                print(f"    other_info: {' / '.join(info)}", file=f)
+
+                if is_ghost_minima[idx]:
+                    print("    ghost_minima_flag: true", file=f)
+
+                rss_results.append(
+                    {
+                        "poscar": _str.input_poscar,
+                        "structure": polymlp_struct_to_dict(_str.original_structure),
+                        "energy": _str.energy,
+                        "pressure": pressure,
+                        "spg_list": _str.spg_list,
+                        "struct_no": _str.struct_no,
+                        "is_ghost_minima": bool(is_ghost_minima[idx]),
+                    }
+                )
 
     comp_res = compute_composition(unique_structs[0].original_structure.elements)
 

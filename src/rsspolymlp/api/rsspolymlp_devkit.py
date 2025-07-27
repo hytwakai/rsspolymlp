@@ -150,18 +150,18 @@ def compress_vasprun(
 
     with open("dataset_status.yaml", "a") as f:
         print(f"{os.path.dirname(vasp_paths[0])}:", file=f)
-        print(f" - input:             {len(vasp_paths)}", file=f)
-        print(f"   success:           {vasprun_status['success']}", file=f)
-        print(f"   failed_calclation: {vasprun_status['fail']}", file=f)
-        print(f"   failed_iteration:  {vasprun_status['fail_iteration']}", file=f)
-        print(f"   failed_parse:      {vasprun_status['parse']}", file=f)
+        print(f" - input:              {len(vasp_paths)}", file=f)
+        print(f"   success:            {vasprun_status['success']}", file=f)
+        print(f"   failed_calculation: {vasprun_status['fail']}", file=f)
+        print(f"   failed_iteration:   {vasprun_status['fail_iteration']}", file=f)
+        print(f"   failed_parse:       {vasprun_status['parse']}", file=f)
 
     print(f"{os.path.dirname(vasp_paths[0])}:")
-    print(f" - input:             {len(vasp_paths)} structure")
-    print(f"   success:           {vasprun_status['success']} structure")
-    print(f"   failed calclation: {vasprun_status['fail']} structure")
-    print(f"   failed iteration:  {vasprun_status['fail_iteration']} structure")
-    print(f"   failed parse:      {vasprun_status['parse']} structure")
+    print(f" - input:              {len(vasp_paths)} structure")
+    print(f"   success:            {vasprun_status['success']} structure")
+    print(f"   failed calculation: {vasprun_status['fail']} structure")
+    print(f"   failed iteration:   {vasprun_status['fail_iteration']} structure")
+    print(f"   failed parse:       {vasprun_status['parse']} structure")
 
 
 def divide_dft_dataset(
