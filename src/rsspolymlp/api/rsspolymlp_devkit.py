@@ -115,8 +115,8 @@ def pareto_opt_mlp(
 def mlp_dataset(
     poscars=list[str],
     per_volume: float = 1.0,
-    disp_max: float = 40,
-    disp_grid: float = 2,
+    disp_max: float = 30,
+    disp_grid: float = 1,
     natom_lb: int = 30,
     natom_ub: int = 150,
     str_name: int = -1,
@@ -170,6 +170,7 @@ def divide_dft_dataset(
     threshold_vlarge_f: float = 100.0,
     threshold_large_f: float = 10.0,
     threshold_close_minima: float = 1.0,
+    divide_ratio: float = 0.1,
 ):
     vasprun_paths = []
     for target_dir in target_dirs:
@@ -198,7 +199,6 @@ def divide_dft_dataset(
     with open(f"{output_dir}/n_data.yaml", "w") as f:
         pass
 
-    divide_ratio = 0.1
     for data_name, vasprun_list in vasprun_dict.items():
         if len(vasprun_list) == 0:
             continue

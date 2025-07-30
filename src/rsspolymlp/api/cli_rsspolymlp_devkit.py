@@ -161,13 +161,13 @@ def run():
     parser.add_argument(
         "--disp_max",
         type=float,
-        default=40,
+        default=30,
         help="Maximum displacement ratio for structure generation",
     )
     parser.add_argument(
         "--disp_grid",
         type=float,
-        default=2,
+        default=1,
         help="Displacement ratio interval (step size)",
     )
     parser.add_argument(
@@ -228,6 +228,12 @@ def run():
         default=1.0,
         help="Force threshold (eV/ang.) for minima-close structures.",
     )
+    parser.add_argument(
+        "--divide_ratio",
+        type=float,
+        default=0.1,
+        help="Ratio of the dataset to be used for testing (e.g., 0.1 for 10% test data).",
+    )
 
     args = parser.parse_args()
 
@@ -283,4 +289,5 @@ def run():
             threshold_vlarge_f=args.threshold_vlarge_f,
             threshold_large_f=args.threshold_large_f,
             threshold_close_minima=args.threshold_close_minima,
+            divide_ratio=args.divide_ratio,
         )

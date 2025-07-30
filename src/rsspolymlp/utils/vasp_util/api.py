@@ -1,6 +1,7 @@
 import os
 import shutil
 from pathlib import Path
+from typing import Union
 
 from rsspolymlp.utils.vasp_util.gen_incar import (
     generate_optimization_incar,
@@ -16,7 +17,7 @@ def prepare_vasp_inputs(
     run_vaspmpi: str,
     mode: str = "sp",  # "opt" or "sp"
     poscar_path: str = "./POSCAR",
-    potcar_path: str = "./POTCAR",
+    potcar_path: Union[str, list[str]] = "./POTCAR",
     script_name: str = "run_vasp.sh",
     ENCUT: float = 400,
     KSPACING: float = 0.09,
@@ -107,11 +108,25 @@ def prepare_vasp_inputs(
     else:
         raise ValueError("Mode must be either `sp` or `opt`.")
 
-    # Copy POSCAR and POTCAR files
-    if not (os.path.exists("./POSCAR") and os.path.samefile(poscar_path, "./POSCAR")):
-        shutil.copy(poscar_path, "./POSCAR")
-    if not (os.path.exists("./POTCAR") and os.path.samefile(potcar_path, "./POTCAR")):
-        shutil.copy(potcar_path, "./POTCAR")
+    # Copy POSCAR if necessary
+    poscar_src = Path(poscar_path)
+    poscar_dst = Path("POSCAR")
+    if not (poscar_dst.exists() and os.path.samefile(poscar_src, poscar_dst)):
+        shutil.copy(poscar_src, poscar_dst)
+
+    # Copy or concatenate POTCAR
+    potcar_dst = Path("POTCAR")
+    if isinstance(potcar_path, str):
+        potcar_src = Path(potcar_path)
+        if not (potcar_dst.exists() and os.path.samefile(potcar_src, potcar_dst)):
+            shutil.copy(potcar_src, potcar_dst)
+    elif isinstance(potcar_path, list):
+        if not potcar_path:
+            raise ValueError("potcar_path must be set")
+        with open(potcar_dst, "wb") as fout:
+            for pot_path in potcar_path:
+                with open(pot_path, "rb") as fin:
+                    shutil.copyfileobj(fin, fout)
 
     # Generate shell script
     if mode == "sp":

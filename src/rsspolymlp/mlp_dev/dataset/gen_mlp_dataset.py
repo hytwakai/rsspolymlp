@@ -11,8 +11,8 @@ from rsspolymlp.common.property import PropUtil
 def gen_mlp_data(
     poscar,
     per_volume=1.0,
-    disp_max=40,
-    disp_grid=2,
+    disp_max=30,
+    disp_grid=1,
     natom_lb=30,
     natom_ub=150,
     str_name=-1,
