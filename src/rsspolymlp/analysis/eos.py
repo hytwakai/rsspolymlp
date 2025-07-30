@@ -181,3 +181,58 @@ class EOSFit:
         _, predicted_gibbs = self.get_gibbs(pressures)
         error = np.array(predicted_gibbs) - np.array(reference_gibbs)
         return np.sqrt(np.mean(error**2))
+
+    def eos_plot(self, fig_name="EV_plot.png"):
+        from rsspolymlp.utils.matplot_util.custom_plt import CustomPlt
+        from rsspolymlp.utils.matplot_util.make_plot import MakePlot
+
+        custom_template = CustomPlt(
+            label_size=8,
+            label_pad=3.0,
+            xtick_size=7,
+            ytick_size=7,
+            xtick_pad=3.0,
+            ytick_pad=3.0,
+        )
+        plt = custom_template.get_custom_plt()
+        plotter = MakePlot(
+            plt=plt,
+            column_size=0.85,
+            height_ratio=0.95,
+        )
+        plotter.initialize_ax()
+        plotter.set_visuality(n_color=4, n_line=4, n_marker=0, color_type="grad")
+
+        volumes = np.linspace(min(self._volume_range), max(self._volume_range), 200)
+        energies = self.get_energy(volumes)
+
+        plotter.ax_plot(
+            volumes,
+            energies,
+            plot_type="closed",
+            label=None,
+            plot_size=0.0,
+            line_size=0.7,
+            zorder=1,
+        )
+        plotter.ax_scatter(
+            self._volumes,
+            self._energies,
+            plot_type="open",
+            label=None,
+            plot_size=0.7,
+            zorder=2,
+        )
+
+        plotter.finalize_ax(
+            xlabel=r"Volume ($\rm{\AA}^3$/atom)",
+            ylabel="Energy (eV/atom)",
+        )
+        plt.tight_layout()
+        plt.savefig(
+            fig_name,
+            bbox_inches="tight",
+            pad_inches=0.01,
+            dpi=400,
+        )
+        plt.close()
