@@ -4,6 +4,7 @@ import numpy as np
 
 from pypolymlp.core.interface_vasp import Poscar
 from pypolymlp.core.strgen import StructureGenerator
+from pypolymlp.utils.structure_utils import supercell_diagonal
 from pypolymlp.utils.vasp_utils import write_poscar_file
 from rsspolymlp.common.property import PropUtil
 
@@ -29,6 +30,13 @@ def gen_mlp_data(
     least_distance = objprop.least_distance
 
     strgen = StructureGenerator(polymlp_st, natom_lb=natom_lb, natom_ub=natom_ub)
+    if np.array(strgen._size).tolist() == [1, 1, 1]:
+        n_atoms = int(strgen._supercell.n_atoms[0])
+        if n_atoms * 8 <= natom_ub:
+            strgen._size = np.array([2, 2, 2])
+            strgen._supercell = supercell_diagonal(strgen.unitcell, strgen._size)
+            strgen._supercell.axis_inv = np.linalg.inv(strgen._supercell.axis)
+
     with open("struct_size.yaml", "a") as f:
         print("- name:          ", poscar, file=f)
         print("  supercell_size:", np.array(strgen._size).tolist(), file=f)
