@@ -232,7 +232,7 @@ def run():
         "--divide_ratio",
         type=float,
         default=0.1,
-        help="Ratio of the dataset to be used for testing (e.g., 0.1 for 10% test data).",
+        help="Ratio of the dataset to be used for testing (e.g., 0.1 for 10 percent test data).",
     )
 
     args = parser.parse_args()
