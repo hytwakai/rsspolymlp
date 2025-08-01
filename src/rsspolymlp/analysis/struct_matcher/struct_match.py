@@ -27,6 +27,7 @@ def struct_match(
     st_2_set: list[IrrepStructure],
     axis_tol: float = 0.01,
     pos_tol: float = 0.01,
+    verbose: bool = False,
 ) -> bool:
     """
     Determine whether two sets of IrrepStructure objects are structurally
@@ -59,6 +60,8 @@ def struct_match(
     """
 
     struct_match = False
+    axis_diff_list = []
+    pos_diff_list = []
     for st_1 in st_1_set:
         for st_2 in st_2_set:
             if (
@@ -70,14 +73,22 @@ def struct_match(
 
             axis_diff = st_1.axis - st_2.axis
             max_axis_diff = np.max(np.sqrt(np.sum(axis_diff**2, axis=1)))
+            axis_diff_list.append(max_axis_diff)
             if max_axis_diff >= axis_tol:
                 continue
 
             deltas = st_1.positions[:, None, :] - st_2.positions[None, :, :]
             deltas_flat = deltas.reshape(-1, deltas.shape[2])
-            max_pos_error = np.min(np.max(np.abs(deltas_flat), axis=1))
-            if max_pos_error < pos_tol:
+            max_pos_diff = np.min(np.max(np.abs(deltas_flat), axis=1))
+            if max_pos_diff < pos_tol:
                 struct_match = True
+            pos_diff_list.append(max_pos_diff)
+
+    if verbose:
+        print("axis_diff_list:")
+        print(f" - {axis_diff_list}")
+        print("pos_diff_list:")
+        print(f" - {pos_diff_list}")
 
     return struct_match
 

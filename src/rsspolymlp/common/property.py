@@ -79,7 +79,7 @@ class PropUtil:
 
         return distance_min
 
-    def analyze_space_group(self, elements):
+    def analyze_space_group(self, elements, symprec_set=[1e-5, 1e-4, 1e-3, 1e-2]):
         comp_res = compute_composition(elements)
         polymlp_st = PolymlpStructure(
             self.axis.T,
@@ -90,7 +90,7 @@ class PropUtil:
         )
 
         spg_sets = []
-        for tol in [1e-5, 1e-4, 1e-3, 1e-2]:
+        for tol in symprec_set:
             try:
                 sym = SymCell(st=polymlp_st, symprec=tol)
                 spg = sym.get_spacegroup()

@@ -31,6 +31,7 @@ class RSSResultSummarizer:
         use_joblib,
         num_process: int = -1,
         backend: str = "loky",
+        symprec_set: list[float] = [1e-5, 1e-4, 1e-3, 1e-2],
         output_poscar: bool = False,
         threshold: float = None,
         parse_vasp: bool = False,
@@ -40,6 +41,7 @@ class RSSResultSummarizer:
         self.use_joblib = use_joblib
         self.num_process = num_process
         self.backend = backend
+        self.symprec_set = symprec_set
         self.output_poscar = output_poscar
         self.threshold = threshold
         self.parse_vasp = parse_vasp
@@ -310,6 +312,7 @@ class RSSResultSummarizer:
             use_joblib=self.use_joblib,
             num_process=self.num_process,
             backend=self.backend,
+            symprec_set=self.symprec_set,
         )
         self.num_opt_struct += len(unique_structs)
 
@@ -346,6 +349,7 @@ class RSSResultSummarizer:
                 use_joblib=self.use_joblib,
                 num_process=self.num_process,
                 backend=self.backend,
+                symprec_set=self.symprec_set,
             )
             self.analyzer._initialize_unique_structs(unique_structs)
 

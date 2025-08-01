@@ -276,20 +276,22 @@ def rss_summarize(
     use_joblib=True,
     num_process=-1,
     backend="loky",
+    symprec_set: list[float] = [1e-5, 1e-4, 1e-3, 1e-2],
     output_poscar: bool = False,
     threshold: float = None,
     parse_vasp: bool = False,
     summarize_p: bool = False,
 ):
     analyzer = RSSResultSummarizer(
-        elements,
-        result_paths,
-        use_joblib,
-        num_process,
-        backend,
-        output_poscar,
-        threshold,
-        parse_vasp,
+        elements=elements,
+        result_paths=result_paths,
+        use_joblib=use_joblib,
+        num_process=num_process,
+        backend=backend,
+        symprec_set=symprec_set,
+        output_poscar=output_poscar,
+        threshold=threshold,
+        parse_vasp=parse_vasp,
     )
     if not summarize_p:
         analyzer.run_summarize()

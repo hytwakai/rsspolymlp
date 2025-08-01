@@ -82,6 +82,7 @@ analyzer = RSSResultSummarizer(
     use_joblib=True,
     num_process=-1,
     backend="loky,
+    symprec_set=[1e-5, 1e-4, 1e-3, 1e-2],
     output_poscar=False,
     threshold=None,
     parse_vasp=False,

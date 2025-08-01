@@ -74,7 +74,7 @@ class PymatUtil:
         self,
         pymat_st1,
         pymat_st2,
-        ltol=0.1,
+        ltol=0.2,
         stol=0.1,
         angle_tol=1,
         primitive_cell=True,

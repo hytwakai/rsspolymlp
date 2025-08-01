@@ -139,7 +139,7 @@ def run():
         help="If enabled, the search continues until all structures are processed.",
     )
 
-    # Options for enabling parallel execution
+    # Options for enabling parallel execution (--rss_parallel, --uniq_struct, --summarize mode)
     parser.add_argument(
         "--parallel_method",
         type=str,
@@ -194,6 +194,13 @@ def run():
     )
 
     # --summarize mode
+    parser.add_argument(
+        "--symprec_set",
+        nargs="*",
+        type=float,
+        default=[1e-5, 1e-4, 1e-3, 1e-2],
+        help="List of symmetry tolerances used to identify distinct primitive cells.",
+    )
     parser.add_argument(
         "--output_poscar",
         action="store_true",
@@ -306,6 +313,7 @@ def run():
             use_joblib=not args.not_use_joblib,
             num_process=args.num_process,
             backend=args.backend,
+            symprec_set=args.symprec_set,
             output_poscar=args.output_poscar,
             threshold=args.threshold,
             parse_vasp=args.parse_vasp,

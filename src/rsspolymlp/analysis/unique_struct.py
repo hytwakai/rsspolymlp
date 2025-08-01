@@ -104,9 +104,7 @@ class UniqueStructureAnalyzer:
 
                     if same_energy and shared_spg:
                         is_unique = False
-                        if self._extract_spg_count(_spg_list) > self._extract_spg_count(
-                            ndstr.spg_list
-                        ):
+                        if self._spg_count(_spg_list) > self._spg_count(ndstr.spg_list):
                             is_change_struct = True
                         break
 
@@ -117,8 +115,11 @@ class UniqueStructureAnalyzer:
                     pos_tol=pos_tol,
                 ):
                     is_unique = False
-                    if self._extract_spg_count(_spg_list) > self._extract_spg_count(
-                        ndstr.spg_list
+                    if self._spg_count(_spg_list) > self._spg_count(ndstr.spg_list) or (
+                        self._spg_count(_spg_list) == self._spg_count(ndstr.spg_list)
+                        and _energy is not None
+                        and ndstr.energy is not None
+                        and _energy < ndstr.energy
                     ):
                         is_change_struct = True
                     break
@@ -145,7 +146,7 @@ class UniqueStructureAnalyzer:
 
         return is_unique, is_change_struct
 
-    def _extract_spg_count(self, spg_list):
+    def _spg_count(self, spg_list):
         """Extract and sum space group counts from a list of space group strings."""
         return sum(
             int(re.search(r"\((\d+)\)", s).group(1))
@@ -257,7 +258,11 @@ def generate_unique_struct(
 
 
 def generate_unique_structs(
-    rss_results, use_joblib=True, num_process=-1, backend="loky"
+    rss_results,
+    use_joblib: bool = True,
+    num_process: int = -1,
+    backend: str = "loky",
+    symprec_set: list[float] = [1e-5, 1e-4, 1e-3, 1e-2],
 ) -> list[UniqueStructure]:
     """
     Generate a list of UniqueStructure objects from the given RSS results.
@@ -279,6 +284,8 @@ def generate_unique_structs(
         The number of parallel jobs. -1 means using all available processors.
     backend : str, default="loky"
         Backend used by joblib.
+    symprec_set : list of float, default=[1e-5, 1e-4, 1e-3, 1e-2]
+        Symmetry tolerances used to determine distinct primitive cells.
 
     Returns
     -------
@@ -294,6 +301,7 @@ def generate_unique_structs(
                 spg_list=res["spg_list"],
                 pressure=res.get("pressure", None),
                 struct_no=res.get("struct_no", None),
+                symprec_set=symprec_set,
             )
             for res in rss_results
         )
@@ -308,6 +316,7 @@ def generate_unique_structs(
                     spg_list=res["spg_list"],
                     pressure=res.get("pressure", None),
                     struct_no=res.get("struct_no", None),
+                    symprec_set=symprec_set,
                 )
             )
     unique_structs = [s for s in unique_structs if s is not None]
