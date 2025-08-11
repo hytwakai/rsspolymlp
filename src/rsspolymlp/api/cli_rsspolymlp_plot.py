@@ -1,6 +1,6 @@
 import argparse
 
-from rsspolymlp.api.rsspolymlp_plot import pareto_opt_mlp, plot_binary
+from rsspolymlp.api.rsspolymlp_plot import pareto_opt_mlp, plot_binary, plot_rss_error
 
 
 def run():
@@ -14,6 +14,11 @@ def run():
         "--pareto_opt",
         action="store_true",
         help="Mode: Preto-optimal MLPs",
+    )
+    parser.add_argument(
+        "--rss_error",
+        action="store_true",
+        help="Mode: RSS error",
     )
 
     # --binary mode
@@ -52,6 +57,45 @@ def run():
         help="Y axis maximum in the Pareto-optimal MLP plot",
     )
 
+    # --rss_error mode
+    parser.add_argument(
+        "--mlp_jsons",
+        type=str,
+        nargs="+",
+        default=None,
+        help="JSON file paths.",
+    )
+    parser.add_argument(
+        "--dft_dirs",
+        type=str,
+        nargs="+",
+        default=None,
+        help="Directories containing VASP calculation results.",
+    )
+    parser.add_argument(
+        "--stress_tensor",
+        action="store_true",
+        help="Including stress tensor.",
+    )
+    parser.add_argument(
+        "--e_low",
+        type=float,
+        default=-5,
+        help="Minimum energy value.",
+    )
+    parser.add_argument(
+        "--e_high",
+        type=float,
+        default=10,
+        help="Maximum energy value.",
+    )
+    parser.add_argument(
+        "--file_name",
+        type=str,
+        default="rss_error.png",
+        help="Output file name.",
+    )
+
     args = parser.parse_args()
 
     if args.binary:
@@ -64,4 +108,14 @@ def run():
             rmse_path=args.rmse_path,
             include_force=args.include_force,
             rmse_max=args.rmse_max,
+        )
+
+    if args.rss_error:
+        plot_rss_error(
+            mlp_jsons=args.mlp_jsons,
+            dft_dirs=args.dft_dirs,
+            stress_tensor=args.stress_tensor,
+            e_low=args.e_low,
+            e_high=args.e_high,
+            file_name=args.file_name,
         )

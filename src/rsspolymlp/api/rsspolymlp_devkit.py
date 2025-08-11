@@ -166,10 +166,11 @@ def compress_vasprun(
 
 def divide_dft_dataset(
     target_dirs: str,
-    threshold_vlarge_s: float = 300.0,
+    threshold_vlarge_s: float = 200.0,
     threshold_vlarge_f: float = 100.0,
     threshold_large_f: float = 10.0,
-    threshold_close_minima: float = 1.0,
+    threshold_close_minima_f: float = 3.0,
+    threshold_close_minima_e: float = 0.0,
     divide_ratio: float = 0.1,
 ):
     vasprun_paths = []
@@ -181,7 +182,8 @@ def divide_dft_dataset(
         threshold_vlarge_s=threshold_vlarge_s,
         threshold_vlarge_f=threshold_vlarge_f,
         threshold_large_f=threshold_large_f,
-        threshold_close_minima=threshold_close_minima,
+        threshold_close_minima_f=threshold_close_minima_f,
+        threshold_close_minima_e=threshold_close_minima_e,
     )
 
     output_dir = "dft_dataset"
@@ -193,7 +195,8 @@ def divide_dft_dataset(
         print("  threshold_vlarge_s:", threshold_vlarge_s, file=f)
         print("  threshold_vlarge_f:", threshold_vlarge_f, file=f)
         print("  threshold_large_f:", threshold_large_f, file=f)
-        print("  threshold_close_minima:", threshold_close_minima, file=f)
+        print("  threshold_close_minima_f:", threshold_close_minima_f, file=f)
+        print("  threshold_close_minima_e:", threshold_close_minima_e, file=f)
         print("", file=f)
 
     with open(f"{output_dir}/n_data.yaml", "w") as f:

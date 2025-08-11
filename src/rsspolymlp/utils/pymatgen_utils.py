@@ -4,7 +4,7 @@ from pymatgen.analysis.prototypes import AflowPrototypeMatcher
 from pymatgen.analysis.structure_matcher import StructureMatcher
 from pymatgen.core import Lattice
 from pymatgen.core.structure import Structure
-from pymatgen.io.cif import CifParser
+from pymatgen.io.cif import CifParser, CifWriter
 from pymatgen.io.vasp.inputs import Poscar
 from pymatgen.symmetry.analyzer import SpacegroupAnalyzer
 from rsspolymlp.common.property import PropUtil
@@ -28,19 +28,31 @@ class PymatUtil:
         """
         return Structure(lattice=lattice, species=species, coords=frac_coords)
 
-    def space_group(self, pymat_st, symprec_in=10**-5):
+    def polymlp_to_pymat_st(self, polymlp_st):
+        """
+        Parameters
+        ----------
+        polymlp_st: PolymlpStructure
+        """
+        return Structure(
+            lattice=polymlp_st.axis.T,
+            species=polymlp_st.elements,
+            coords=polymlp_st.positions.T,
+        )
+
+    def space_group(self, pymat_st, symprec=10**-5):
         """pymat_st : pymatgen.core.structure"""
-        finder = SpacegroupAnalyzer(pymat_st, symprec=symprec_in, angle_tolerance=-1.0)
+        finder = SpacegroupAnalyzer(pymat_st, symprec=symprec, angle_tolerance=-1.0)
         spac = finder.get_space_group_symbol()
         return spac
 
-    def refine_cell(self, pymat_st, symprec_in=10**-5):
-        finder = SpacegroupAnalyzer(pymat_st, symprec=symprec_in, angle_tolerance=-1.0)
+    def refine_cell(self, pymat_st, symprec=10**-5):
+        finder = SpacegroupAnalyzer(pymat_st, symprec=symprec, angle_tolerance=-1.0)
         pymat_st = finder.get_refined_structure()
         return pymat_st
 
-    def primitive_cell(self, pymat_st, symprec_in=10**-5):
-        finder = SpacegroupAnalyzer(pymat_st, symprec=symprec_in, angle_tolerance=-1.0)
+    def primitive_cell(self, pymat_st, symprec=10**-5):
+        finder = SpacegroupAnalyzer(pymat_st, symprec=symprec, angle_tolerance=-1.0)
         pymat_st = finder.get_primitive_standard_structure()
         return pymat_st
 
@@ -69,6 +81,10 @@ class PymatUtil:
         writer = Poscar(pymat_st).get_string(significant_figures=16)
         with open(file_name, "w") as f:
             print(writer, file=f)
+
+    def output_cif(self, pymat_st, file_name="structure.cif", symprec=1e-4):
+        w = CifWriter(pymat_st, symprec=symprec)
+        w.write_file(file_name)
 
     def match_str(
         self,

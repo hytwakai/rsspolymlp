@@ -207,7 +207,7 @@ def run():
     parser.add_argument(
         "--threshold_vlarge_s",
         type=float,
-        default=300.0,
+        default=200.0,
         help="Stress threshold (GPa) for stress-very-large structures.",
     )
     parser.add_argument(
@@ -223,10 +223,16 @@ def run():
         help="Force threshold (eV/ang.) for force-large structures.",
     )
     parser.add_argument(
-        "--threshold_close_minima",
+        "--threshold_close_f",
         type=float,
-        default=1.0,
-        help="Force threshold (eV/ang.) for minima-close structures.",
+        default=3.0,
+        help="Force threshold (eV/ang.) for minima-close-low and minima-close-large structures.",
+    )
+    parser.add_argument(
+        "--threshold_close_e",
+        type=float,
+        default=0.0,
+        help="Enrgy threshold (eV/atom) for minima-close-low structures.",
     )
     parser.add_argument(
         "--divide_ratio",
@@ -288,6 +294,7 @@ def run():
             threshold_vlarge_s=args.threshold_vlarge_s,
             threshold_vlarge_f=args.threshold_vlarge_f,
             threshold_large_f=args.threshold_large_f,
-            threshold_close_minima=args.threshold_close_minima,
+            threshold_close_minima_f=args.threshold_close_f,
+            threshold_close_minima_e=args.threshold_close_e,
             divide_ratio=args.divide_ratio,
         )

@@ -240,6 +240,8 @@ def generate_unique_struct(
         irrep_struct_set.append(irrep_struct)
 
     objprop = PropUtil(polymlp_st.axis.T, polymlp_st.positions.T)
+    if spg_list is None:
+        spg_list = objprop.analyze_space_group(polymlp_st.elements)
 
     return UniqueStructure(
         irrep_struct_set=irrep_struct_set,
@@ -405,6 +407,7 @@ def log_unique_structures(
 def log_all_unique_structures(
     file_name,
     unique_structs,
+    unique_structs_prop=None,
 ):
     rss_results = []
     with open(file_name, "a") as f:
@@ -443,6 +446,8 @@ def log_all_unique_structures(
                 _res["struct_no"] = f"{idx1 + 1}_{idx2+1}"
                 _res["is_ghost_minima"] = False
                 rss_results.append(_res)
+            if unique_structs_prop is not None:
+                print("    properties:", unique_structs_prop[idx1], file=f)
 
     comp_res = compute_composition(unique_structs[0][0].original_structure.elements)
 

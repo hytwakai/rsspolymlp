@@ -11,10 +11,11 @@ from rsspolymlp.common.atomic_energy import atomic_energy
 
 def divide_dataset(
     vasprun_paths: list[str],
-    threshold_vlarge_s: float = 300.0,  # in GPa
+    threshold_vlarge_s: float = 200.0,  # in GPa
     threshold_vlarge_f: float = 100.0,  # in eV/ang
     threshold_large_f: float = 10.0,
-    threshold_close_minima: float = 1.0,
+    threshold_close_minima_f: float = 3.0,
+    threshold_close_minima_e: float = 0.0,  # in eV/atom
 ):
     """
     Classify VASP calculation results into dataset categories based on force and stress magnitudes.
@@ -24,14 +25,16 @@ def divide_dataset(
             - "stress-very-large"
             - "force-very-large"
             - "force-large"
-            - "minima-close"
+            - "minima-close-high"
+            - "minima-close-low"
             - "force-normal"
     """
     vasprun_dict = {
         "stress-very-large": [],
         "force-very-large": [],
         "force-large": [],
-        "minima-close": [],
+        "minima-close-high": [],
+        "minima-close-low": [],
         "force-normal": [],
     }
 
@@ -68,8 +71,11 @@ def divide_dataset(
             continue
 
         # Structures with only small forces (close to local minima)
-        if np.all(np.abs(force) <= threshold_close_minima):
-            vasprun_dict["minima-close"].append(vasprun_path)
+        if np.all(np.abs(force) <= threshold_close_minima_f):
+            if energy_per_atom > threshold_close_minima_e:
+                vasprun_dict["minima-close-high"].append(vasprun_path)
+            else:
+                vasprun_dict["minima-close-low"].append(vasprun_path)
             continue
 
         # Structures with typical (normal) force and stress values

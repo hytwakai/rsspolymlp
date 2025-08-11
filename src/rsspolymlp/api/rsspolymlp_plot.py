@@ -1,8 +1,13 @@
+import glob
+import json
 import os
 
 import numpy as np
 
+from pypolymlp.core.interface_vasp import Vasprun
+from pypolymlp.core.units import EVtoGPa
 from rsspolymlp.analysis.load_plot_data import load_plot_data
+from rsspolymlp.common.atomic_energy import atomic_energy
 from rsspolymlp.mlp_dev.pareto_opt_mlp import pareto_front, parse_mlp_property
 from rsspolymlp.utils.matplot_util.custom_plt import CustomPlt
 from rsspolymlp.utils.matplot_util.make_plot import MakePlot
@@ -193,4 +198,127 @@ def pareto_opt_mlp(
         bbox_inches="tight",
         pad_inches=0.01,
         dpi=600,
+    )
+
+
+def plot_rss_error(
+    mlp_jsons: list[str],
+    dft_dirs: list[str],
+    stress_tensor: bool = False,
+    e_low: float = -5,
+    e_high: float = 10,
+    file_name: str = "rss_error.png",
+):
+    energies = []
+    poscar_name = []
+
+    for json_path in mlp_jsons:
+        logname = os.path.basename(json_path).split(".json")[0]
+        with open(json_path) as f:
+            loaded_dict = json.load(f)
+        rss_results = loaded_dict["rss_results"]
+        pressure = loaded_dict["pressure"]
+
+        for res in rss_results:
+            poscar_name.append(f"POSCAR_{logname}_No{res['struct_no']}")
+            mlp_energy = res["energy"]
+            if not stress_tensor:
+                st = res["structure"]
+                vol_per_atom = st["volume"] / len(st["elements"])
+                mlp_energy -= pressure * vol_per_atom / EVtoGPa
+
+            energies.append({"poscar_name": poscar_name, "mlp_energy": mlp_energy})
+
+    for dft_dir in dft_dirs:
+        base_dir = os.getcwd()
+        os.chdir(dft_dir)
+        os.makedirs("rss_error", exist_ok=True)
+
+        if stress_tensor and os.path.isfile("rss_error/enthalpy.npy"):
+            dft_result = np.load("rss_error/enthalpy.npy")
+        elif not stress_tensor and os.path.isfile("rss_error/energy.npy"):
+            dft_result = np.load("rss_error/energy.npy")
+        else:
+            dft_result = []
+            dir_glob = glob.glob(dft_dir + "/*")
+            for dft_path in dir_glob:
+                _poscar_name = dft_path.split("/")[-1]
+                if _poscar_name in set(poscar_name):
+                    vasprun = Vasprun(dft_path + "/vasprun.xml")
+                    dft_energy = vasprun.energy
+                    polymlp_st = vasprun.structure
+                    for element in polymlp_st.elements:
+                        dft_energy -= atomic_energy(element)
+                    dft_energy /= len(polymlp_st.elements)
+
+                    if stress_tensor:
+                        pressure = np.mean(
+                            [(vasprun.stress / 10).tolist()[i][i] for i in range(3)]
+                        )
+                        vol_per_atom = polymlp_st.volume / len(polymlp_st.elements)
+                        dft_energy += pressure * vol_per_atom / EVtoGPa
+                        np_file = "rss_error/enthalpy.npy"
+                    else:
+                        np_file = "rss_error/energy.npy"
+                    dft_result.append((_poscar_name, dft_energy))
+
+            np.save(np_file, np.array(dft_result))
+
+        for res in dft_result:
+            energies[poscar_name.index(res[0])]["dft_energy"] = float(res[1])
+        os.chdir(base_dir)
+
+    mlp_energy = []
+    dft_energy = []
+    for _dict in energies:
+        if "mlp_energy" in _dict and "dft_energy" in _dict:
+            mlp_energy.append(_dict["mlp_energy"])
+            dft_energy.append(_dict["dft_energy"])
+
+    custom_template = CustomPlt(
+        label_size=8,
+        label_pad=3.0,
+        legend_size=7,
+        xtick_size=7,
+        ytick_size=7,
+        xtick_pad=3.0,
+        ytick_pad=3.0,
+    )
+    plt = custom_template.get_custom_plt()
+    plotter = MakePlot(
+        plt=plt,
+        column_size=0.9,
+        height_ratio=1.0,
+    )
+    plotter.initialize_ax()
+
+    plotter.set_visuality(n_color=3, n_line=0, n_marker=0, color_type="grad")
+    plotter.ax_plot([-10, 10], [-10, 10], plot_type="open", label=None, plot_size=0.5)
+
+    plotter.set_visuality(n_color=4, n_line=4, n_marker=0, color_type="grad")
+    plotter.ax_scatter(
+        dft_energy,
+        mlp_energy,
+        plot_type="open",
+        label=None,
+        plot_size=0.9,
+        zorder=2,
+    )
+
+    plotter.finalize_ax(
+        xlabel="DFT energy (eV/atom)",
+        ylabel="MLP energy (eV/atom)",
+        x_limits=[e_low, e_high],
+        y_limits=[e_low, e_high],
+    )
+
+    ax = plotter.get_ax
+    ax.set_aspect("equal", adjustable="box")
+
+    plt.tight_layout()
+    plt.savefig(
+        file_name,
+        bbox_inches="tight",
+        pad_inches=0.01,
+        dpi=500,
     )
