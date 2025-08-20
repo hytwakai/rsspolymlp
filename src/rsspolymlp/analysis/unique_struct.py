@@ -273,8 +273,9 @@ def generate_unique_structs(
     ----------
     rss_results : list of dict
         A list of dictionaries, where each dictionary contains a single structure information.
-        Each dictionary must include the following keys:
-            - "poscar": structure in POSCAR format (str or Poscar object)
+        Each dictionary must include "poscar" keys:
+            - "poscar": path of POSCAR format file
+        Optional keys:
             - "structure": PolymlpStructure object
             - "energy": total energy (float)
             - "spg_list": list of space group symbols identified under multiple tolerances
@@ -298,9 +299,9 @@ def generate_unique_structs(
         unique_structs = joblib.Parallel(n_jobs=num_process, backend=backend)(
             joblib.delayed(generate_unique_struct)(
                 poscar_name=res["poscar"],
-                polymlp_st=res["structure"],
-                energy=res["energy"],
-                spg_list=res["spg_list"],
+                polymlp_st=res.get("strcture", None),
+                energy=res.get("energy", None),
+                spg_list=res.get("spg_list", None),
                 pressure=res.get("pressure", None),
                 struct_no=res.get("struct_no", None),
                 symprec_set=symprec_set,
@@ -313,9 +314,9 @@ def generate_unique_structs(
             unique_structs.append(
                 generate_unique_struct(
                     poscar_name=res["poscar"],
-                    polymlp_st=res["structure"],
-                    energy=res["energy"],
-                    spg_list=res["spg_list"],
+                    polymlp_st=res.get("strcture", None),
+                    energy=res.get("energy", None),
+                    spg_list=res.get("spg_list", None),
                     pressure=res.get("pressure", None),
                     struct_no=res.get("struct_no", None),
                     symprec_set=symprec_set,
@@ -326,12 +327,19 @@ def generate_unique_structs(
 
 
 def log_unique_structures(
-    file_name,
-    unique_structs,
-    is_ghost_minima,
+    file_name: str,
+    unique_structs: list[UniqueStructure],
+    is_ghost_minima=None,
     pressure=None,
     unique_struct_iters=None,
 ):
+    if is_ghost_minima is None:
+        is_ghost_minima = np.full_like(unique_structs, False, dtype=bool)
+    for i in range(len(unique_structs)):
+        if not is_ghost_minima[i]:
+            energy_min = unique_structs[i].energy
+            break
+
     struct_num_max = max(
         (_s.struct_no for _s in unique_structs if _s.struct_no is not None), default=0
     )
@@ -339,11 +347,6 @@ def log_unique_structures(
         if _s.struct_no is None:
             struct_num_max += 1
             _s.struct_no = struct_num_max
-
-    for i in range(len(unique_structs)):
-        if not is_ghost_minima[i]:
-            energy_min = unique_structs[i].energy
-            break
 
     rss_results = []
     with open(file_name, "a") as f:
@@ -353,11 +356,11 @@ def log_unique_structures(
             for idx, _str in enumerate(unique_structs):
                 if is_ghost_minima[idx] != is_ghost:
                     continue
-
-                e_diff = round((_str.energy - energy_min) * 1000, 2)
                 print(f"  - struct_No: {_str.struct_no}", file=f)
                 print(f"    poscar_name: {_str.input_poscar}", file=f)
-                print(f"    energy_diff_meV_per_atom: {e_diff}", file=f)
+                if energy_min is not None:
+                    e_diff = round((_str.energy - energy_min) * 1000, 2)
+                    print(f"    energy_diff_meV_per_atom: {e_diff}", file=f)
                 print(f"    duplicates: {_str.dup_count}", file=f)
                 print(f"    enthalpy: {_str.energy}", file=f)
                 print(f"    axis: {_str.axis_abc}", file=f)

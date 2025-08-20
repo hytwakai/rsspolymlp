@@ -28,7 +28,7 @@ class RSSResultSummarizer:
         self,
         elements,
         result_paths,
-        use_joblib,
+        use_joblib: bool = True,
         num_process: int = -1,
         backend: str = "loky",
         symprec_set: list[float] = [1e-5, 1e-4, 1e-3, 1e-2],
@@ -121,7 +121,7 @@ class RSSResultSummarizer:
                         print(log_name, file=f)
                         print(np.round(ghost_minima_info[1], 3), file=f)
             else:
-                is_ghost_minima = np.full(energies.shape, False, dtype=bool)
+                is_ghost_minima = None
 
             rss_result_all = log_unique_structures(
                 log_name + ".yaml",

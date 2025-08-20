@@ -302,7 +302,7 @@ class RSSResultAnalyzer:
                 energies[sort_idx], distances[sort_idx]
             )
         else:
-            is_ghost_minima = np.full_like(energies, False, dtype=bool)
+            is_ghost_minima = None
 
         rss_result_all = log_unique_structures(
             file_name, unique_str_sorted, is_ghost_minima, self.pressure, iters_sorted

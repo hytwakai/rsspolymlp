@@ -66,7 +66,7 @@ class PymatUtil:
         pymat_st = Structure.from_file(file)
         return pymat_st
 
-    def input_cif(self, file, site_tolerance=1e-4):
+    def input_cif(self, file, site_tolerance=1e-4, primitive=True):
         """
         Parameters
         ----------
@@ -74,7 +74,7 @@ class PymatUtil:
         Returns pymatgen.core.structure
         """
         parser = CifParser(file, site_tolerance=site_tolerance)
-        pymat_st = parser.parse_structures(primitive=True)[0]
+        pymat_st = parser.parse_structures(primitive=primitive)[0]
         return pymat_st
 
     def output_poscar(self, pymat_st, file_name="./POSCAR"):
