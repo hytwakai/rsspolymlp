@@ -72,6 +72,12 @@ def run():
         help="List of paths containing test datasets.",
     )
     parser.add_argument(
+        "--w_high_e",
+        type=float,
+        default=0.1,
+        help="Weight to assign to datasets with relatively high energies.",
+    )
+    parser.add_argument(
         "--w_large_f",
         type=float,
         default=1.0,
@@ -205,16 +211,22 @@ def run():
 
     # --divide_data mode
     parser.add_argument(
+        "--threshold_e_high",
+        type=float,
+        default=0.0,
+        help="Enrgy threshold (eV/atom) for -ehigh structures.",
+    )
+    parser.add_argument(
         "--threshold_vlarge_s",
         type=float,
         default=200.0,
-        help="Stress threshold (GPa) for stress-very-large structures.",
+        help="Stress threshold (GPa) for stress-vlarge structures.",
     )
     parser.add_argument(
         "--threshold_vlarge_f",
         type=float,
         default=100.0,
-        help="Force threshold (eV/ang.) for force-very-large structures.",
+        help="Force threshold (eV/ang.) for force-vlarge structures.",
     )
     parser.add_argument(
         "--threshold_large_f",
@@ -226,13 +238,7 @@ def run():
         "--threshold_close_f",
         type=float,
         default=3.0,
-        help="Force threshold (eV/ang.) for minima-close-low and minima-close-large structures.",
-    )
-    parser.add_argument(
-        "--threshold_close_e",
-        type=float,
-        default=0.0,
-        help="Enrgy threshold (eV/atom) for minima-close-low structures.",
+        help="Force threshold (eV/ang.) for minima-close structures.",
     )
     parser.add_argument(
         "--divide_ratio",
@@ -249,6 +255,7 @@ def run():
             elements=args.elements,
             train_data=args.train_data,
             test_data=args.test_data,
+            weight_e_high=args.w_high_e,
             weight_large_force=args.w_large_f,
             weight_vlarge_force=args.w_vlarge_f,
             weight_vlarge_stress=args.w_vlarge_s,
@@ -291,10 +298,10 @@ def run():
     if args.divide_data:
         divide_dft_dataset(
             target_dirs=args.paths,
+            threshold_e_high=args.threshold_e_high,
             threshold_vlarge_s=args.threshold_vlarge_s,
             threshold_vlarge_f=args.threshold_vlarge_f,
             threshold_large_f=args.threshold_large_f,
             threshold_close_minima_f=args.threshold_close_f,
-            threshold_close_minima_e=args.threshold_close_e,
             divide_ratio=args.divide_ratio,
         )

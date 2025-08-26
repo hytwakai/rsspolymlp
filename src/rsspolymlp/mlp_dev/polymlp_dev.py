@@ -10,6 +10,7 @@ def prepare_polymlp_input_file(
     element_list: list[str],
     training_data_paths: list[str],
     test_data_paths: list[str],
+    weight_e_high: float = 0.1,
     weight_large_force: float = 1.0,
     weight_vlarge_force: float = 1.0,
     weight_vlarge_stress: float = 1.0,
@@ -21,15 +22,19 @@ def prepare_polymlp_input_file(
     Generate or update a polymlp input file for model training.
 
     This function uses keywords in the dataset path names to determine weights:
+        - "-ehigh":
+            Indicates datasets containing structures with relatively high energies.
+            The weight specified by `weight_e_high` is applied, and it may be combined
+            with other weight multipliers if applicable.
         - "force-large":
             Indicates datasets containing some structures with moderately large forces
             (default threshold: ~10 eV/Å). The weight specified by `weight_large_force`
             is applied (default: 1.0).
-        - "force-very-large":
+        - "force-vlarge":
             Indicates datasets with some structures exhibiting extremely large forces
             (default threshold: ~100 eV/Å), typically due to very short interatomic distances.
             The weight specified by `weight_vlarge_force` is applied (default: 1.0).
-        - "stress-very-large":
+        - "stress-vlarge":
             Indicates datasets with extremely large stresses (default threshold: ~300 GPa),
             which often coincide with many large forces.
             Force training is disabled for these datasets.
@@ -69,36 +74,42 @@ def prepare_polymlp_input_file(
             + "\n\n"
         )
 
-        # Write training and test data
+        # Write training data
         for data_path in training_data_paths:
-            if "force-large" in data_path:
-                f.write(f"train_data {data_path}/* True {weight_large_force}\n")
-            elif "force-very-large" in data_path:
-                f.write(
-                    f"train_data {data_path}/* {include_vlarge_force} {weight_vlarge_force}\n"
-                )
-            elif "stress-very-large" in data_path:
-                f.write(
-                    f"train_data {data_path}/* {include_vlarge_stress} {weight_vlarge_stress}\n"
-                )
+            f_include = True
+            if "-ehigh" in data_path:
+                all_weight = weight_e_high
             else:
-                f.write(f"train_data {data_path}/* True 1.0\n")
+                all_weight = 1.0
+            if "force-large" in data_path:
+                all_weight *= weight_large_force
+            elif "force-vlarge" in data_path:
+                f_include = include_vlarge_force
+                all_weight *= weight_vlarge_force
+            elif "stress-vlarge" in data_path:
+                f_include = include_vlarge_stress
+                all_weight *= weight_vlarge_stress
+            f.write(f"train_data {data_path}/* {f_include} {all_weight}\n")
         f.write("\n")
+
+        # Write test data
         for data_path in test_data_paths:
             if not os.path.isdir(data_path):
                 continue
-            if "force-large" in data_path:
-                f.write(f"test_data {data_path}/* True {weight_large_force}\n")
-            elif "force-very-large" in data_path:
-                f.write(
-                    f"test_data {data_path}/* {include_vlarge_force} {weight_vlarge_force}\n"
-                )
-            elif "stress-very-large" in data_path:
-                f.write(
-                    f"test_data {data_path}/* {include_vlarge_stress} {weight_vlarge_stress}\n"
-                )
+            f_include = True
+            if "-ehigh" in data_path:
+                all_weight = weight_e_high
             else:
-                f.write(f"test_data {data_path}/* True 1.0\n")
+                all_weight = 1.0
+            if "force-large" in data_path:
+                all_weight *= weight_large_force
+            elif "force-vlarge" in data_path:
+                f_include = include_vlarge_force
+                all_weight *= weight_vlarge_force
+            elif "stress-vlarge" in data_path:
+                f_include = include_vlarge_stress
+                all_weight *= weight_vlarge_stress
+            f.write(f"test_data {data_path}/* {f_include} {all_weight}\n")
 
     # Replace alpha parameters if specified
     if alpha_param is not None:

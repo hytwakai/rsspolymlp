@@ -299,7 +299,7 @@ def generate_unique_structs(
         unique_structs = joblib.Parallel(n_jobs=num_process, backend=backend)(
             joblib.delayed(generate_unique_struct)(
                 poscar_name=res["poscar"],
-                polymlp_st=res.get("strcture", None),
+                polymlp_st=res.get("structure", None),
                 energy=res.get("energy", None),
                 spg_list=res.get("spg_list", None),
                 pressure=res.get("pressure", None),
@@ -314,7 +314,7 @@ def generate_unique_structs(
             unique_structs.append(
                 generate_unique_struct(
                     poscar_name=res["poscar"],
-                    polymlp_st=res.get("strcture", None),
+                    polymlp_st=res.get("structure", None),
                     energy=res.get("energy", None),
                     spg_list=res.get("spg_list", None),
                     pressure=res.get("pressure", None),
