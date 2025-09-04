@@ -72,10 +72,10 @@ def run():
         help="List of paths containing test datasets.",
     )
     parser.add_argument(
-        "--w_high_e",
+        "--w_hi_lo_e",
         type=float,
         default=0.1,
-        help="Weight to assign to datasets with relatively high energies.",
+        help="Weight to assign to datasets with relatively high or low energies.",
     )
     parser.add_argument(
         "--w_large_f",
@@ -214,7 +214,13 @@ def run():
         "--threshold_e_high",
         type=float,
         default=0.0,
-        help="Enrgy threshold (eV/atom) for -ehigh structures.",
+        help="Energy threshold (eV/atom) for structures with high-energy (-ehi-lo).",
+    )
+    parser.add_argument(
+        "--threshold_e_low",
+        type=float,
+        default=-100.0,
+        help="Energy threshold (eV/atom) for structures with low-energy (-ehi-lo).",
     )
     parser.add_argument(
         "--threshold_vlarge_s",
@@ -246,6 +252,11 @@ def run():
         default=0.1,
         help="Ratio of the dataset to be used for testing (e.g., 0.1 for 10 percent test data).",
     )
+    parser.add_argument(
+        "--include_stress",
+        action="store_true",
+        help="Including stress tensor.",
+    )
 
     args = parser.parse_args()
 
@@ -255,7 +266,7 @@ def run():
             elements=args.elements,
             train_data=args.train_data,
             test_data=args.test_data,
-            weight_e_high=args.w_high_e,
+            weight_e_hi_lo=args.w_hi_lo_e,
             weight_large_force=args.w_large_f,
             weight_vlarge_force=args.w_vlarge_f,
             weight_vlarge_stress=args.w_vlarge_s,
@@ -299,9 +310,11 @@ def run():
         divide_dft_dataset(
             target_dirs=args.paths,
             threshold_e_high=args.threshold_e_high,
+            threshold_e_low=args.threshold_e_low,
             threshold_vlarge_s=args.threshold_vlarge_s,
             threshold_vlarge_f=args.threshold_vlarge_f,
             threshold_large_f=args.threshold_large_f,
             threshold_close_minima_f=args.threshold_close_f,
+            include_stress=args.include_stress,
             divide_ratio=args.divide_ratio,
         )

@@ -244,7 +244,11 @@ def plot_rss_error(
             for dft_path in dir_glob:
                 _poscar_name = dft_path.split("/")[-1]
                 if _poscar_name in set(poscar_name):
-                    vasprun = Vasprun(dft_path + "/vasprun.xml")
+                    try:
+                        vasprun = Vasprun(dft_path + "/vasprun.xml")
+                    except Exception:
+                        print(dft_path + "/vasprun.xml error")
+                        continue
                     dft_energy = vasprun.energy
                     polymlp_st = vasprun.structure
                     for element in polymlp_st.elements:

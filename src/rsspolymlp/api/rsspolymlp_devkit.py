@@ -19,7 +19,7 @@ def polymlp_dev(
     elements: list[str],
     train_data: list[str],
     test_data: list[str],
-    weight_e_high: float = 0.1,
+    weight_e_hi_lo: float = 0.1,
     weight_large_force: float = 1.0,
     weight_vlarge_force: float = 1.0,
     weight_vlarge_stress: float = 1.0,
@@ -32,7 +32,7 @@ def polymlp_dev(
         element_list=elements,
         training_data_paths=train_data,
         test_data_paths=test_data,
-        weight_e_high=weight_e_high,
+        weight_e_hi_lo=weight_e_hi_lo,
         weight_large_force=weight_large_force,
         weight_vlarge_force=weight_vlarge_force,
         weight_vlarge_stress=weight_vlarge_stress,
@@ -169,10 +169,12 @@ def compress_vasprun(
 def divide_dft_dataset(
     target_dirs: str,
     threshold_e_high: float = 0.0,
+    threshold_e_low: float = -100.0,
     threshold_vlarge_s: float = 200.0,
     threshold_vlarge_f: float = 100.0,
     threshold_large_f: float = 10.0,
     threshold_close_minima_f: float = 3.0,
+    include_stress: bool = False,
     divide_ratio: float = 0.1,
 ):
     vasprun_paths = []
@@ -182,10 +184,12 @@ def divide_dft_dataset(
     vasprun_dict = divide_dataset(
         vasprun_paths=vasprun_paths,
         threshold_e_high=threshold_e_high,
+        threshold_e_low=threshold_e_low,
         threshold_vlarge_s=threshold_vlarge_s,
         threshold_vlarge_f=threshold_vlarge_f,
         threshold_large_f=threshold_large_f,
         threshold_close_minima_f=threshold_close_minima_f,
+        include_stress=include_stress,
     )
 
     output_dir = "dft_dataset"
@@ -195,10 +199,12 @@ def divide_dft_dataset(
         print("arguments:", file=f)
         print("  path:", target_dir, file=f)
         print("  threshold_e_high:", threshold_e_high, file=f)
+        print("  threshold_e_low:", threshold_e_low, file=f)
         print("  threshold_vlarge_s:", threshold_vlarge_s, file=f)
         print("  threshold_vlarge_f:", threshold_vlarge_f, file=f)
         print("  threshold_large_f:", threshold_large_f, file=f)
         print("  threshold_close_minima_f:", threshold_close_minima_f, file=f)
+        print("  include_stress:", include_stress, file=f)
         print("", file=f)
 
     with open(f"{output_dir}/n_data.yaml", "w") as f:

@@ -222,6 +222,11 @@ def run():
         action="store_true",
         help="",
     )
+    parser.add_argument(
+        "--update_result",
+        action="store_true",
+        help="",
+    )
 
     # --ghost_minima mode
     parser.add_argument(
@@ -318,6 +323,7 @@ def run():
             threshold=args.threshold,
             parse_vasp=args.parse_vasp,
             summarize_p=args.summarize_p,
+            update_result=args.update_result,
         )
 
     if args.ghost_minima:

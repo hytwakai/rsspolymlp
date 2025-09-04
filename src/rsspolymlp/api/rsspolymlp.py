@@ -281,6 +281,7 @@ def rss_summarize(
     threshold: float = None,
     parse_vasp: bool = False,
     summarize_p: bool = False,
+    update_result: bool = False,
 ):
     analyzer = RSSResultSummarizer(
         elements=elements,
@@ -292,6 +293,7 @@ def rss_summarize(
         output_poscar=output_poscar,
         threshold=threshold,
         parse_vasp=parse_vasp,
+        update_result=update_result,
     )
     if not summarize_p:
         analyzer.run_summarize()
