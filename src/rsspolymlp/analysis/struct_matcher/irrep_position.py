@@ -69,7 +69,12 @@ class IrrepPosition:
         target_type = np.where(unique_elements == target_element)[0][0]
         types = (types - target_type) % (np.max(types) + 1)
 
-        red_pos_cands = self.reduced_translation(_positions, types)
+        sort_idx = np.argsort(types)
+        sorted_elements = _elements[sort_idx]
+        sorted_types = types[sort_idx]
+        _positions = _positions[sort_idx, :]
+
+        red_pos_cands = self.reduced_translation(_positions, sorted_types)
 
         irrep_position = None
         irrep_cls_id = None
@@ -82,7 +87,7 @@ class IrrepPosition:
                 trans_cls_id = np.mod(_cls_id - _cls_id[target_idx], id_max).astype(int)
 
                 reduced_perm_positions, sorted_cls_id = self.reduced_permutation(
-                    trans_pos, types, trans_cls_id
+                    trans_pos, sorted_types, trans_cls_id
                 )
 
                 judge = self._compare_lex_order(irrep_position, reduced_perm_positions)
@@ -100,10 +105,10 @@ class IrrepPosition:
             _cls_id = irrep_cls_id.copy()
             _pos[:, [0, 1, 2]] = _pos[:, swap_val]
             _cls_id[:, [0, 1, 2]] = _cls_id[:, swap_val]
-            reduced_perm_positions, sorted_cls_id = self.reduced_permutation(
-                _pos, types, _cls_id
-            )
 
+            reduced_perm_positions, sorted_cls_id = self.reduced_permutation(
+                _pos, sorted_types, _cls_id
+            )
             judge = self._compare_lex_order(irrep_position, reduced_perm_positions)
             if judge == 0:
                 irrep_position = (irrep_position + reduced_perm_positions) / 2
@@ -112,9 +117,6 @@ class IrrepPosition:
                 irrep_cls_id = sorted_cls_id
 
         irrep_position = irrep_position.T.reshape(-1)
-        sort_idx = np.argsort(types)
-        sorted_elements = _elements[sort_idx]
-
         return irrep_position, sorted_elements
 
     def reduced_translation(
@@ -192,10 +194,10 @@ class IrrepPosition:
     ):
         pos = positions.copy()
         cls_id = cluster_id.copy()
-        near_zero_mask = np.isclose(np.abs(pos), 0, atol=1e-8)
-        pos[near_zero_mask] = 0
-        nonzero_mask = ~(cls_id == 0)
-        pos[nonzero_mask] %= 1.0
+        for ax in range(3):
+            near_zero_mask = np.isclose(np.abs(pos[:, ax]), 0, atol=self.symprec[ax])
+            pos[near_zero_mask, ax] = 0
+            pos[~near_zero_mask, ax] %= 1.0
 
         # Stable lexicographic sort by (ids_x, ids_y, ids_z)
         sort_idx = np.lexsort((cls_id[:, 2], cls_id[:, 1], cls_id[:, 0], types))
