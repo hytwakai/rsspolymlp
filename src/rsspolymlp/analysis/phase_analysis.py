@@ -111,15 +111,23 @@ class ConvexHullAnalyzer:
 
         comp_arr = np.array(comps)
         e_arr = np.array(min_e).reshape(-1, 1)
-        points = np.hstack([comp_arr[:, 1:], e_arr])
-        self.hull = ConvexHull(points)
 
-        verts = np.unique(self.hull.simplices)
-        e_hull = e_arr[verts].flatten()
-        mask = e_hull <= 1e-10
-        self.hull_energies = e_hull[mask]
-        self.hull_compositions = comp_arr[verts][mask]
-        self.hull_paths = np.array(paths)[verts][mask]
+        if comp_arr.shape[1] <= 1:
+            # Simply select the minimum energy point(s)
+            min_idx = np.where(np.abs(e_arr - e_arr.min()) <= 1e-10)[0]
+            self.hull_energies = e_arr[min_idx].flatten()
+            self.hull_compositions = comp_arr[min_idx]
+            self.hull_paths = np.array(paths)[min_idx]
+        else:
+            points = np.hstack([comp_arr[:, 1:], e_arr])
+            self.hull = ConvexHull(points)
+
+            verts = np.unique(self.hull.simplices)
+            e_hull = e_arr[verts].flatten()
+            mask = e_hull <= 1e-10
+            self.hull_energies = e_hull[mask]
+            self.hull_compositions = comp_arr[verts][mask]
+            self.hull_paths = np.array(paths)[verts][mask]
 
         # Write global minima YAML
         with open("phase_analysis/global_minima.yaml", "w") as f:

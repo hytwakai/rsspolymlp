@@ -144,6 +144,9 @@ class UniqueStructureAnalyzer:
                 self.unique_str_keep.append([unique_struct])
                 self.unique_str_prop_keep.append([other_properties])
 
+        if is_unique and len(self.unique_str) % 500 == 0:
+            print(f"Reached {len(self.unique_str)} unique structures.")
+
         return is_unique, is_change_struct
 
     def _spg_count(self, spg_list):
@@ -175,6 +178,7 @@ def generate_unique_struct(
     spg_list: Optional[list[str]] = None,
     pressure: Optional[float] = None,
     struct_no: Optional[int] = None,
+    dup_count: int = 1,
     symprec_set: list[float] = [1e-5, 1e-4, 1e-3, 1e-2],
 ) -> UniqueStructure:
     """
@@ -256,6 +260,7 @@ def generate_unique_struct(
         pressure=pressure,
         input_poscar=poscar_name,
         struct_no=struct_no,
+        dup_count=dup_count,
     )
 
 
@@ -304,6 +309,7 @@ def generate_unique_structs(
                 spg_list=res.get("spg_list", None),
                 pressure=res.get("pressure", None),
                 struct_no=res.get("struct_no", None),
+                dup_count=res.get("dup_count", 1),
                 symprec_set=symprec_set,
             )
             for res in rss_results
@@ -319,6 +325,7 @@ def generate_unique_structs(
                     spg_list=res.get("spg_list", None),
                     pressure=res.get("pressure", None),
                     struct_no=res.get("struct_no", None),
+                    dup_count=res.get("dup_count", 1),
                     symprec_set=symprec_set,
                 )
             )
@@ -391,6 +398,7 @@ def log_unique_structures(
                         "pressure": pressure,
                         "spg_list": _str.spg_list,
                         "struct_no": _str.struct_no,
+                        "dup_count": _str.dup_count,
                         "is_ghost_minima": bool(is_ghost_minima[idx]),
                     }
                 )

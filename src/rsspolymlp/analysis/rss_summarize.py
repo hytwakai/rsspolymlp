@@ -35,6 +35,7 @@ class RSSResultSummarizer:
         output_poscar: bool = False,
         threshold: float = None,
         parse_vasp: bool = False,
+        update_result: bool = False,
     ):
         self.elements = elements
         self.result_paths = result_paths
@@ -45,6 +46,7 @@ class RSSResultSummarizer:
         self.output_poscar = output_poscar
         self.threshold = threshold
         self.parse_vasp = parse_vasp
+        self.update_result = update_result
 
         self.num_opt_struct = 0
         self.pressure = None
@@ -334,6 +336,8 @@ class RSSResultSummarizer:
                 "num_optimized_structs"
             ]
             pre_result_paths = yaml_data["general_information"]["input_file_names"]
+            if self.update_result:
+                pre_result_paths = []
 
             with open(f"./json/{yaml_name.split('.yaml')[0]}.json") as f:
                 loaded_dict = json.load(f)
