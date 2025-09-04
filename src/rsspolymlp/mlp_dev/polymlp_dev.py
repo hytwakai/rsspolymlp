@@ -10,7 +10,7 @@ def prepare_polymlp_input_file(
     element_list: list[str],
     training_data_paths: list[str],
     test_data_paths: list[str],
-    weight_e_high: float = 0.1,
+    weight_e_hi_lo: float = 0.1,
     weight_large_force: float = 1.0,
     weight_vlarge_force: float = 1.0,
     weight_vlarge_stress: float = 1.0,
@@ -22,9 +22,9 @@ def prepare_polymlp_input_file(
     Generate or update a polymlp input file for model training.
 
     This function uses keywords in the dataset path names to determine weights:
-        - "-ehigh":
-            Indicates datasets containing structures with relatively high energies.
-            The weight specified by `weight_e_high` is applied, and it may be combined
+        - "-ehi-lo":
+            Indicates datasets containing structures with relatively high or low energies.
+            The weight specified by `weight_e_hi_lo` is applied, and it may be combined
             with other weight multipliers if applicable.
         - "force-large":
             Indicates datasets containing some structures with moderately large forces
@@ -77,8 +77,8 @@ def prepare_polymlp_input_file(
         # Write training data
         for data_path in training_data_paths:
             f_include = True
-            if "-ehigh" in data_path:
-                all_weight = weight_e_high
+            if "-ehi-lo" in data_path:
+                all_weight = weight_e_hi_lo
             else:
                 all_weight = 1.0
             if "force-large" in data_path:
@@ -97,8 +97,8 @@ def prepare_polymlp_input_file(
             if not os.path.isdir(data_path):
                 continue
             f_include = True
-            if "-ehigh" in data_path:
-                all_weight = weight_e_high
+            if "-ehi-lo" in data_path:
+                all_weight = weight_e_hi_lo
             else:
                 all_weight = 1.0
             if "force-large" in data_path:

@@ -26,10 +26,28 @@ def gen_mlp_data(
         print(poscar, "failed")
         return
 
-    objprop = PropUtil(polymlp_st.axis.T, polymlp_st.positions.T)
-    least_distance = objprop.least_distance
-
     strgen = StructureGenerator(polymlp_st, natom_lb=natom_lb, natom_ub=natom_ub)
+    axis = polymlp_st.axis
+    total_n_atoms = sum(polymlp_st.n_atoms)
+
+    len_axis = [np.linalg.norm(axis[:, i]) for i in range(3)]
+    min_axis = min(len_axis)
+    ratio = min_axis / np.array(len_axis)
+
+    cand = np.arange(1, 11)
+    size = [1, 1, 1]
+    for c in cand:
+        size_trial = np.maximum(np.round(ratio * c).astype(int), [1, 1, 1])
+        n_total = total_n_atoms * np.prod(size_trial)
+        if n_total >= natom_lb:
+            if n_total <= natom_ub:
+                size = size_trial
+            break
+        size = size_trial
+    strgen._size = size
+    strgen._supercell = supercell_diagonal(strgen.unitcell, strgen._size)
+    strgen._supercell.axis_inv = np.linalg.inv(strgen._supercell.axis)
+
     if np.array(strgen._size).tolist() == [1, 1, 1]:
         n_atoms = int(strgen._supercell.n_atoms[0])
         if n_atoms * 8 <= natom_ub:
@@ -41,6 +59,9 @@ def gen_mlp_data(
         print("- name:          ", poscar, file=f)
         print("  supercell_size:", np.array(strgen._size).tolist(), file=f)
         print("  n_atoms:       ", int(strgen._supercell.n_atoms[0]), file=f)
+
+    objprop = PropUtil(polymlp_st.axis.T, polymlp_st.positions.T)
+    least_distance = objprop.least_distance
 
     disp_list = np.arange(disp_grid, disp_max + 0.0001, disp_grid)
     for disp_ratio in disp_list:
