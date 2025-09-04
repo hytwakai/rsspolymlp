@@ -2,9 +2,7 @@ from collections import Counter
 
 import numpy as np
 
-from rsspolymlp.analysis.struct_matcher.invert_and_swap import (
-    invert_and_swap_positions,
-)
+from rsspolymlp.analysis.struct_matcher.invert_and_swap import invert_and_swap_positions
 
 
 class IrrepPosition:
@@ -195,9 +193,11 @@ class IrrepPosition:
         pos = positions.copy()
         cls_id = cluster_id.copy()
         for ax in range(3):
-            near_zero_mask = np.isclose(np.abs(pos[:, ax]), 0, atol=self.symprec[ax])
-            pos[near_zero_mask, ax] = 0
-            pos[~near_zero_mask, ax] %= 1.0
+            pos[:, ax] %= 1.0
+            near_zero_mask = np.isclose(
+                pos[:, ax], 0, atol=self.symprec[ax]
+            ) | np.isclose(pos[:, ax], 1, atol=self.symprec[ax])
+            pos[near_zero_mask, ax] = 0.0
 
         # Stable lexicographic sort by (ids_x, ids_y, ids_z)
         sort_idx = np.lexsort((cls_id[:, 2], cls_id[:, 1], cls_id[:, 0], types))
