@@ -2,6 +2,7 @@ import math
 import os
 import random
 import shutil
+from typing import Optional
 
 import numpy as np
 
@@ -12,41 +13,43 @@ from rsspolymlp.common.atomic_energy import atomic_energy
 
 def divide_dataset(
     vasprun_paths: list[str],
-    threshold_e_high: float = 0.0,  # in eV/atom
-    threshold_e_low: float = -100.0,
-    threshold_vlarge_s: float = 200.0,  # in GPa
-    threshold_vlarge_f: float = 100.0,  # in eV/ang
-    threshold_large_f: float = 10.0,
-    threshold_close_minima_f: float = 3.0,
+    threshold_e_high: float = 10.0,  # in eV/atom
+    threshold_e_low: Optional[float] = None,
+    threshold_f_small: float = 3.0,  # in eV/ang
+    threshold_f_normal: float = 10.0,
+    threshold_f_large: float = 100.0,
+    threshold_s_large: float = 200.0,  # in GPa
+    threshold_s_small: Optional[float] = None,
     include_stress: bool = False,
 ):
     """
-    Classify VASP calculation results into dataset categories based on force and stress magnitudes.
+    Classify VASP calculation results into dataset categories based on
+    magnitudes of the energy, force and stress tensor components.
 
     Returns:
         A dictionary categorizing paths into:
-            - "stress-vlarge"
-            - "stress-vlarge-ehi-lo"
-            - "force-vlarge"
-            - "force-vlarge-ehi-lo"
-            - "force-large"
-            - "force-large-ehi-lo"
-            - "minima-close"
-            - "minima-close-ehi-lo"
-            - "force-normal"
-            - "force-normal-ehi-lo"
+            - "f_small"
+            - "f_normal"
+            - "f_large"
+            - "f_exlarge"
+            - "s_large"
+            - "f_small-e_high"
+            - "f_normal-e_high"
+            - "f_large-e_high"
+            - "f_exlarge-e_high"
+            - "s_large-e_high"
     """
     vasprun_dict = {
-        "stress-vlarge": [],
-        "stress-vlarge-ehi-lo": [],
-        "force-vlarge": [],
-        "force-vlarge-ehi-lo": [],
-        "force-large": [],
-        "force-large-ehi-lo": [],
-        "minima-close": [],
-        "minima-close-ehi-lo": [],
-        "force-normal": [],
-        "force-normal-ehi-lo": [],
+        "f_small": [],
+        "f_normal": [],
+        "f_large": [],
+        "f_exlarge": [],
+        "s_large": [],
+        "f_small-e_high": [],
+        "f_normal-e_high": [],
+        "f_large-e_high": [],
+        "f_exlarge-e_high": [],
+        "s_large-e_high": [],
     }
 
     for vasprun_path in vasprun_paths:
@@ -57,47 +60,48 @@ def divide_dataset(
 
         energy = dft_dict.energy
         force = dft_dict.forces
-        stress = dft_dict.stress
         elements = dft_dict.structure.elements
         for elem in elements:
             energy -= atomic_energy(elem)
         energy_per_atom = energy / len(elements)
         cohe_energy = energy_per_atom
 
+        stress = dft_dict.stress
+        min_stress = min([stress[0][0], stress[1][1], stress[2][2]])
+        max_stress = np.max(np.abs(stress))
         if include_stress:
             vol_per_atom = dft_dict.structure.volume / len(dft_dict.structure.elements)
             pressure = np.mean([(stress / 10).tolist()[i][i] for i in range(3)])
             energy_per_atom += pressure * vol_per_atom / EVtoGPa
 
-        if energy_per_atom > threshold_e_high or energy_per_atom < threshold_e_low:
-            e_tag = "-ehi-lo"
+        # Filter by energy value
+        if energy_per_atom > threshold_e_high or (
+            threshold_e_low is not None and energy_per_atom < threshold_e_low
+        ):
+            e_tag = "-e_high"
         else:
             e_tag = ""
 
-        # Structures with extremely large stress components
-        if np.any(np.abs(stress) > threshold_vlarge_s * 10):
+        # Filter by stress tensor components
+        if max_stress > threshold_s_large * 10 or (
+            threshold_s_small is not None and min_stress < threshold_s_small * 10
+        ):
             if cohe_energy > -5:
-                vasprun_dict[f"stress-vlarge{e_tag}"].append(vasprun_path)
+                vasprun_dict[f"s_large{e_tag}"].append(vasprun_path)
             continue
 
-        # Structures with extremely large force components
-        if np.any(np.abs(force) >= threshold_vlarge_f):
-            if cohe_energy > -5:
-                vasprun_dict[f"force-vlarge{e_tag}"].append(vasprun_path)
+        # Filter by force components
+        if np.all(np.abs(force) <= threshold_f_small):
+            vasprun_dict[f"f_small{e_tag}"].append(vasprun_path)
             continue
-
-        # Structures with moderately large forces
-        if np.any(np.abs(force) >= threshold_large_f):
-            vasprun_dict[f"force-large{e_tag}"].append(vasprun_path)
+        if np.all(np.abs(force) <= threshold_f_normal):
+            vasprun_dict[f"f_normal{e_tag}"].append(vasprun_path)
             continue
-
-        # Structures with only small forces (close to local minima)
-        if np.all(np.abs(force) <= threshold_close_minima_f):
-            vasprun_dict[f"minima-close{e_tag}"].append(vasprun_path)
+        if np.all(np.abs(force) <= threshold_f_large):
+            vasprun_dict[f"f_large{e_tag}"].append(vasprun_path)
             continue
-
-        # Structures with typical (normal) force and stress values
-        vasprun_dict[f"force-normal{e_tag}"].append(vasprun_path)
+        if cohe_energy > -5:
+            vasprun_dict[f"f_exlarge{e_tag}"].append(vasprun_path)
 
     return vasprun_dict
 

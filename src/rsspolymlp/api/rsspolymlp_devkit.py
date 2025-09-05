@@ -1,6 +1,7 @@
 import glob
 import os
 import subprocess
+from typing import Optional
 
 import numpy as np
 from joblib import Parallel, delayed
@@ -19,12 +20,12 @@ def polymlp_dev(
     elements: list[str],
     train_data: list[str],
     test_data: list[str],
-    weight_e_hi_lo: float = 0.1,
-    weight_large_force: float = 1.0,
-    weight_vlarge_force: float = 1.0,
-    weight_vlarge_stress: float = 1.0,
-    include_vlarge_force: bool = True,
-    include_vlarge_stress: bool = False,
+    weight_e_high: float = 0.1,
+    weight_f_large: float = 1.0,
+    weight_f_exlarge: float = 1.0,
+    weight_s_large: float = 1.0,
+    include_f_exlarge: bool = True,
+    include_s_large: bool = False,
     alpha_param: list[int] = None,
 ):
     prepare_polymlp_input_file(
@@ -32,12 +33,12 @@ def polymlp_dev(
         element_list=elements,
         training_data_paths=train_data,
         test_data_paths=test_data,
-        weight_e_hi_lo=weight_e_hi_lo,
-        weight_large_force=weight_large_force,
-        weight_vlarge_force=weight_vlarge_force,
-        weight_vlarge_stress=weight_vlarge_stress,
-        include_vlarge_force=include_vlarge_force,
-        include_vlarge_stress=include_vlarge_stress,
+        weight_e_high=weight_e_high,
+        weight_f_large=weight_f_large,
+        weight_f_exlarge=weight_f_exlarge,
+        weight_s_large=weight_s_large,
+        include_f_exlarge=include_f_exlarge,
+        include_s_large=include_s_large,
         alpha_param=alpha_param,
     )
 
@@ -168,12 +169,13 @@ def compress_vasprun(
 
 def divide_dft_dataset(
     target_dirs: str,
-    threshold_e_high: float = 0.0,
-    threshold_e_low: float = -100.0,
-    threshold_vlarge_s: float = 200.0,
-    threshold_vlarge_f: float = 100.0,
-    threshold_large_f: float = 10.0,
-    threshold_close_minima_f: float = 3.0,
+    threshold_e_high: float = 10.0,  # in eV/atom
+    threshold_e_low: Optional[float] = None,
+    threshold_f_small: float = 3.0,  # in eV/ang
+    threshold_f_normal: float = 10.0,
+    threshold_f_large: float = 100.0,
+    threshold_s_large: float = 200.0,  # in GPa
+    threshold_s_small: Optional[float] = None,
     include_stress: bool = False,
     divide_ratio: float = 0.1,
 ):
@@ -185,10 +187,11 @@ def divide_dft_dataset(
         vasprun_paths=vasprun_paths,
         threshold_e_high=threshold_e_high,
         threshold_e_low=threshold_e_low,
-        threshold_vlarge_s=threshold_vlarge_s,
-        threshold_vlarge_f=threshold_vlarge_f,
-        threshold_large_f=threshold_large_f,
-        threshold_close_minima_f=threshold_close_minima_f,
+        threshold_f_small=threshold_f_small,
+        threshold_f_normal=threshold_f_normal,
+        threshold_f_large=threshold_f_large,
+        threshold_s_large=threshold_s_large,
+        threshold_s_small=threshold_s_small,
         include_stress=include_stress,
     )
 
@@ -200,10 +203,11 @@ def divide_dft_dataset(
         print("  path:", target_dir, file=f)
         print("  threshold_e_high:", threshold_e_high, file=f)
         print("  threshold_e_low:", threshold_e_low, file=f)
-        print("  threshold_vlarge_s:", threshold_vlarge_s, file=f)
-        print("  threshold_vlarge_f:", threshold_vlarge_f, file=f)
-        print("  threshold_large_f:", threshold_large_f, file=f)
-        print("  threshold_close_minima_f:", threshold_close_minima_f, file=f)
+        print("  threshold_f_small:", threshold_f_small, file=f)
+        print("  threshold_f_normal:", threshold_f_normal, file=f)
+        print("  threshold_f_large:", threshold_f_large, file=f)
+        print("  threshold_s_large:", threshold_s_large, file=f)
+        print("  threshold_s_small:", threshold_s_small, file=f)
         print("  include_stress:", include_stress, file=f)
         print("", file=f)
 

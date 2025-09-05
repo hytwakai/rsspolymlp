@@ -72,38 +72,38 @@ def run():
         help="List of paths containing test datasets.",
     )
     parser.add_argument(
-        "--w_hi_lo_e",
+        "--w_e_high",
         type=float,
         default=0.1,
         help="Weight to assign to datasets with relatively high or low energies.",
     )
     parser.add_argument(
-        "--w_large_f",
+        "--w_f_large",
         type=float,
         default=1.0,
         help="Weight to assign to datasets with some large forces.",
     )
     parser.add_argument(
-        "--w_vlarge_f",
+        "--w_f_exlarge",
         type=float,
         default=1.0,
-        help="Weight to assign to datasets with some very large forces.",
+        help="Weight to assign to datasets with some extremly large forces.",
     )
     parser.add_argument(
-        "--w_vlarge_s",
+        "--w_s_large",
         type=float,
         default=1.0,
-        help="Weight to assign to datasets with some very large stress tensor.",
+        help="Weight to assign to datasets with some extremly large stress tensor.",
     )
     parser.add_argument(
-        "--include_vlarge_f",
+        "--exclude_f_exlarge",
         action="store_true",
-        help="Include force entries in the force-very-large dataset.",
+        help="Exclude force entries in the f_exlarge dataset.",
     )
     parser.add_argument(
-        "--include_vlarge_s",
+        "--include_s_large",
         action="store_true",
-        help="Include stress tensor entries in the stress-very-large dataset.",
+        help="Include stress tensor entries in the s_large dataset.",
     )
     parser.add_argument(
         "--alpha_param",
@@ -211,51 +211,57 @@ def run():
 
     # --divide_data mode
     parser.add_argument(
-        "--threshold_e_high",
-        type=float,
-        default=0.0,
-        help="Energy threshold (eV/atom) for structures with high-energy (-ehi-lo).",
-    )
-    parser.add_argument(
-        "--threshold_e_low",
-        type=float,
-        default=-100.0,
-        help="Energy threshold (eV/atom) for structures with low-energy (-ehi-lo).",
-    )
-    parser.add_argument(
-        "--threshold_vlarge_s",
-        type=float,
-        default=200.0,
-        help="Stress threshold (GPa) for stress-vlarge structures.",
-    )
-    parser.add_argument(
-        "--threshold_vlarge_f",
-        type=float,
-        default=100.0,
-        help="Force threshold (eV/ang.) for force-vlarge structures.",
-    )
-    parser.add_argument(
-        "--threshold_large_f",
+        "--th_e_high",
         type=float,
         default=10.0,
-        help="Force threshold (eV/ang.) for force-large structures.",
+        help="Energy threshold (eV/atom) for structures classified as high energy (-e_high).",
     )
     parser.add_argument(
-        "--threshold_close_f",
+        "--th_e_low",
+        type=float,
+        default=None,
+        help="Energy threshold (eV/atom) for structures classified as low energy (-e_high).",
+    )
+    parser.add_argument(
+        "--th_f_small",
         type=float,
         default=3.0,
-        help="Force threshold (eV/ang.) for minima-close structures.",
+        help="Force threshold (eV/ang.) for structures with small forces (f_small).",
+    )
+    parser.add_argument(
+        "--th_f_normal",
+        type=float,
+        default=10.0,
+        help="Force threshold (eV/ang.) for structures with normal forces (f_normal).",
+    )
+    parser.add_argument(
+        "--th_f_large",
+        type=float,
+        default=100.0,
+        help="Force threshold (eV/ang.) for structures with large forces (f_large).",
+    )
+    parser.add_argument(
+        "--th_s_large",
+        type=float,
+        default=200.0,
+        help="Stress threshold (GPa) for structures with large stress tensor (s_large).",
+    )
+    parser.add_argument(
+        "--th_s_small",
+        type=float,
+        default=None,
+        help="Stress threshold (GPa) for structures with small stress tensor (s_small)",
+    )
+    parser.add_argument(
+        "--include_stress",
+        action="store_true",
+        help="Include stress tensor term in energy evaluation."
     )
     parser.add_argument(
         "--divide_ratio",
         type=float,
         default=0.1,
         help="Ratio of the dataset to be used for testing (e.g., 0.1 for 10 percent test data).",
-    )
-    parser.add_argument(
-        "--include_stress",
-        action="store_true",
-        help="Including stress tensor.",
     )
 
     args = parser.parse_args()
@@ -266,12 +272,12 @@ def run():
             elements=args.elements,
             train_data=args.train_data,
             test_data=args.test_data,
-            weight_e_hi_lo=args.w_hi_lo_e,
-            weight_large_force=args.w_large_f,
-            weight_vlarge_force=args.w_vlarge_f,
-            weight_vlarge_stress=args.w_vlarge_s,
-            include_vlarge_force=args.include_vlarge_f,
-            include_vlarge_stress=args.include_vlarge_s,
+            weight_e_high=args.w_e_high,
+            weight_f_large=args.w_f_large,
+            weight_f_exlarge=args.w_f_exlarge,
+            weight_s_large=args.w_s_large,
+            include_f_exlarge=not args.exclude_f_exlarge,
+            include_s_large=args.include_s_large,
             alpha_param=args.alpha_param,
         )
 
@@ -309,12 +315,13 @@ def run():
     if args.divide_data:
         divide_dft_dataset(
             target_dirs=args.paths,
-            threshold_e_high=args.threshold_e_high,
-            threshold_e_low=args.threshold_e_low,
-            threshold_vlarge_s=args.threshold_vlarge_s,
-            threshold_vlarge_f=args.threshold_vlarge_f,
-            threshold_large_f=args.threshold_large_f,
-            threshold_close_minima_f=args.threshold_close_f,
+            threshold_e_high=args.th_e_high,
+            threshold_e_low=args.th_e_low,
+            threshold_f_small=args.th_f_small,
+            threshold_f_normal=args.th_f_normal,
+            threshold_f_large=args.th_f_large,
+            threshold_s_large=args.th_s_large,
+            threshold_s_small=args.th_s_small,
             include_stress=args.include_stress,
             divide_ratio=args.divide_ratio,
         )

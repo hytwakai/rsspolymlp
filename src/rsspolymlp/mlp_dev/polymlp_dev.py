@@ -10,32 +10,32 @@ def prepare_polymlp_input_file(
     element_list: list[str],
     training_data_paths: list[str],
     test_data_paths: list[str],
-    weight_e_hi_lo: float = 0.1,
-    weight_large_force: float = 1.0,
-    weight_vlarge_force: float = 1.0,
-    weight_vlarge_stress: float = 1.0,
-    include_vlarge_force: bool = True,
-    include_vlarge_stress: bool = False,
+    weight_e_high: float = 0.1,
+    weight_f_large: float = 1.0,
+    weight_f_exlarge: float = 1.0,
+    weight_s_large: float = 1.0,
+    include_f_exlarge: bool = True,
+    include_s_large: bool = False,
     alpha_param: list[int] = None,
 ):
     """
     Generate or update a polymlp input file for model training.
 
     This function uses keywords in the dataset path names to determine weights:
-        - "-ehi-lo":
+        - "-e_high":
             Indicates datasets containing structures with relatively high or low energies.
-            The weight specified by `weight_e_hi_lo` is applied, and it may be combined
+            The weight specified by `weight_e_high` is applied, and it may be combined
             with other weight multipliers if applicable.
-        - "force-large":
+        - "f_large":
             Indicates datasets containing some structures with moderately large forces
-            (default threshold: ~10 eV/Å). The weight specified by `weight_large_force`
+            (default threshold: ~10 eV/Å). The weight specified by `weight_f_large`
             is applied (default: 1.0).
-        - "force-vlarge":
+        - "f_exlarge":
             Indicates datasets with some structures exhibiting extremely large forces
             (default threshold: ~100 eV/Å), typically due to very short interatomic distances.
-            The weight specified by `weight_vlarge_force` is applied (default: 1.0).
-        - "stress-vlarge":
-            Indicates datasets with extremely large stresses (default threshold: ~300 GPa),
+            The weight specified by `weight_f_exlarge` is applied (default: 1.0).
+        - "s_large":
+            Indicates datasets with extremely large stresses (default threshold: ~200 GPa),
             which often coincide with many large forces.
             Force training is disabled for these datasets.
         - Others:
@@ -47,9 +47,11 @@ def prepare_polymlp_input_file(
         elements (list[str]): List of atomic element symbols.
         train_data_paths (list[str]): Paths to training datasets.
         test_data_paths (list[str]): Paths to test datasets.
-        weight_large_force (float): Weight assigned to "force-large" datasets.
-        weight_vlarge_force (float): Weight assigned to "force-very-large" datasets.
-        include_vlarge_force (bool): Whether to include force entries in "force-very-large".
+        weight_e_high (float): Weight assigned to "-e_high" datasets.
+        weight_f_large (float): Weight assigned to "f_large" datasets.
+        weight_f_exlarge (float): Weight assigned to "f_exlarge" datasets.
+        include_f_exlarge (bool): Whether to include force entries in "f_exlarge".
+        include_s_large (bool): Whether to include force entries in "s_large".
         alpha_params (list[int]): List of three integers for specifying regularization strength.
     """
 
@@ -77,18 +79,18 @@ def prepare_polymlp_input_file(
         # Write training data
         for data_path in training_data_paths:
             f_include = True
-            if "-ehi-lo" in data_path:
-                all_weight = weight_e_hi_lo
+            if "-e_high" in data_path:
+                all_weight = weight_e_high
             else:
                 all_weight = 1.0
-            if "force-large" in data_path:
-                all_weight *= weight_large_force
-            elif "force-vlarge" in data_path:
-                f_include = include_vlarge_force
-                all_weight *= weight_vlarge_force
-            elif "stress-vlarge" in data_path:
-                f_include = include_vlarge_stress
-                all_weight *= weight_vlarge_stress
+            if "f_large" in data_path:
+                all_weight *= weight_f_large
+            elif "f_exlarge" in data_path:
+                f_include = include_f_exlarge
+                all_weight *= weight_f_exlarge
+            elif "s_large" in data_path:
+                f_include = include_s_large
+                all_weight *= weight_s_large
             f.write(f"train_data {data_path}/* {f_include} {all_weight}\n")
         f.write("\n")
 
@@ -97,18 +99,18 @@ def prepare_polymlp_input_file(
             if not os.path.isdir(data_path):
                 continue
             f_include = True
-            if "-ehi-lo" in data_path:
-                all_weight = weight_e_hi_lo
+            if "-ehigh" in data_path:
+                all_weight = weight_e_high
             else:
                 all_weight = 1.0
-            if "force-large" in data_path:
-                all_weight *= weight_large_force
-            elif "force-vlarge" in data_path:
-                f_include = include_vlarge_force
-                all_weight *= weight_vlarge_force
-            elif "stress-vlarge" in data_path:
-                f_include = include_vlarge_stress
-                all_weight *= weight_vlarge_stress
+            if "f_large" in data_path:
+                all_weight *= weight_f_large
+            elif "f_exlarge" in data_path:
+                f_include = include_f_exlarge
+                all_weight *= weight_f_exlarge
+            elif "s_large" in data_path:
+                f_include = include_s_large
+                all_weight *= weight_s_large
             f.write(f"test_data {data_path}/* {f_include} {all_weight}\n")
 
     # Replace alpha parameters if specified
