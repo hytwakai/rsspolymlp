@@ -99,7 +99,7 @@ def prepare_polymlp_input_file(
             if not os.path.isdir(data_path):
                 continue
             f_include = True
-            if "-ehigh" in data_path:
+            if "-e_high" in data_path:
                 all_weight = weight_e_high
             else:
                 all_weight = 1.0
