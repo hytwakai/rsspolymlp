@@ -301,6 +301,7 @@ def run():
             atom_counts=args.atom_counts,
             pot=args.pot,
             pressure=args.pressure,
+            c_maxiter=args.c_maxiter,
             n_opt_str=args.n_opt_str,
             max_init_str=args.max_init_str,
             min_volume=args.min_volume,
@@ -308,6 +309,7 @@ def run():
             least_distance=args.least_distance,
             solver_method=args.solver_method,
             not_stop_rss=args.not_stop_rss,
+            num_process=args.num_process,
             backend=args.backend,
         )
 

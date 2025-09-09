@@ -87,14 +87,20 @@ def rss_run_parallel(
         num_process = multiprocessing.cpu_count()
 
     if parallel_method == "joblib":
-        # Perform parallel optimization with joblib
         time_start = time.time()
-        Parallel(n_jobs=num_process, backend=backend)(
-            delayed(rssobj.run_optimization)(poscar) for poscar in poscar_path_all
-        )
-        executor = get_reusable_executor(max_workers=num_process)
-        executor.shutdown(wait=True)
+        if num_process == 1:
+            for poscar in poscar_path_all:
+                rssobj.run_optimization(poscar)
+        else:
+            # Perform parallel optimization with joblib
+            time_start = time.time()
+            Parallel(n_jobs=num_process, backend=backend)(
+                delayed(rssobj.run_optimization)(poscar) for poscar in poscar_path_all
+            )
+            executor = get_reusable_executor(max_workers=num_process)
+            executor.shutdown(wait=True)
         elapsed = time.time() - time_start
+
         with open("rss_result/parallel_time.log", "a") as f:
             print("Number of CPU cores:", num_process, file=f)
             print("Number of the structures:", len(glob.glob("log/*")), file=f)
@@ -212,6 +218,7 @@ def rss_polymlp(
     atom_counts,
     pot="polymlp.yaml",
     pressure=0.0,
+    c_maxiter=100,
     n_opt_str=1000,
     max_init_str=None,
     min_volume=0,
@@ -219,6 +226,7 @@ def rss_polymlp(
     least_distance=0.0,
     solver_method="CG",
     not_stop_rss=False,
+    num_process=-1,
     backend="loky",
     output_dir="./",
 ):
@@ -256,8 +264,10 @@ def rss_polymlp(
             pot=pot,
             pressure=pressure,
             solver_method=solver_method,
+            c_maxiter=c_maxiter,
             n_opt_str=n_opt_str,
             not_stop_rss=not_stop_rss,
+            num_process=num_process,
             backend=backend,
         )
 
