@@ -35,6 +35,9 @@ class RSSResultAnalyzer:
         self.iter_str = []  # Iteration statistics
         self.fval_str = []  # Function evaluation statistics
         self.gval_str = []  # Gradient evaluation statistics
+        self.total_iter_str = 0
+        self.total_fval_str = 0
+        self.total_gval_str = 0
         self.errors = Counter()  # Error tracking
         self.error_poscar = defaultdict(list)  # POSCAR error details
         self.time_all = 0  # Total computation time accumulator
@@ -81,6 +84,10 @@ class RSSResultAnalyzer:
     def _read_and_validate_logfile(self, logfile):
         try:
             struct_prop, judge = LogfileLoader(logfile).read_file()
+            self.time_all += struct_prop["time"]
+            self.total_iter_str += struct_prop["iter"]
+            self.total_fval_str += struct_prop["fval"]
+            self.total_gval_str += struct_prop["gval"]
         except (TypeError, ValueError):
             self.errors["else_err"] += 1
             self.error_poscar["else_err"].append(
@@ -109,7 +116,6 @@ class RSSResultAnalyzer:
             self.error_poscar["else_err"].append(poscar_name)
             return None, None
 
-        self.time_all += struct_prop["time"]
         self.potential = struct_prop["potential"]
         if struct_prop["pressure"] is not None:
             self.pressure = struct_prop["pressure"]
@@ -264,9 +270,9 @@ class RSSResultAnalyzer:
             print("", file=f)
 
             print("evaluation_counts:", file=f)
-            print(f"  iteration:            {self.iter_str[-1]}", file=f)
-            print(f"  function_evaluations: {self.fval_str[-1]}", file=f)
-            print(f"  gradient_evaluations: {self.gval_str[-1]}", file=f)
+            print(f"  iteration:            {self.total_iter_str}", file=f)
+            print(f"  function_evaluations: {self.total_fval_str}", file=f)
+            print(f"  gradient_evaluations: {self.total_gval_str}", file=f)
             print("", file=f)
 
             print("error_counts:", file=f)
@@ -307,16 +313,18 @@ class RSSResultAnalyzer:
         rss_result_all = log_unique_structures(
             file_name, unique_str_sorted, is_ghost_minima, self.pressure, iters_sorted
         )
-        with open("rss_result/rss_results.json", "w") as f:
-            json.dump(rss_result_all, f)
+        if not rss_result_all == {}:
+            with open("rss_result/rss_results.json", "w") as f:
+                json.dump(rss_result_all, f)
 
         with open(file_name, "a") as f:
             print("", file=f)
-            print("evaluation_count_per_structure:", file=f)
-            print(f"  iteration_list:            {self.iter_str}", file=f)
-            print(f"  function_evaluations_list: {self.fval_str}", file=f)
-            print(f"  gradient_evaluations_list: {self.gval_str}", file=f)
-            print("", file=f)
+            if len(self.iter_str) > 0:
+                print("evaluation_count_per_structure:", file=f)
+                print(f"  iteration_list:            {self.iter_str}", file=f)
+                print(f"  function_evaluations_list: {self.fval_str}", file=f)
+                print(f"  gradient_evaluations_list: {self.gval_str}", file=f)
+                print("", file=f)
 
             print("poscar_names_failed:", file=f)
             print(f"  low_energy:       {self.error_poscar['energy_low']}", file=f)

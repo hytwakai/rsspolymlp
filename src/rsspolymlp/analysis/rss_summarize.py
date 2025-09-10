@@ -203,11 +203,21 @@ class RSSResultSummarizer:
             with open(rss_result_path) as f:
                 loaded_dict = json.load(f)
 
-            _path_name = "/".join(path_name.split("/")[:-2])
-            rel_path = os.path.relpath(f"{_path_name}/opt_struct", start=os.getcwd())
             for i in range(len(loaded_dict["rss_results"])):
-                poscar_name = loaded_dict["rss_results"][i]["poscar"].split("/")[-1]
-                loaded_dict["rss_results"][i]["poscar"] = f"{rel_path}/{poscar_name}"
+                if "opt_struct" not in loaded_dict["rss_results"][i]["poscar"]:
+                    _path_name = "/".join(path_name.split("/")[:-2])
+                    rel_path = os.path.relpath(
+                        f"{_path_name}/opt_struct", start=os.getcwd()
+                    )
+                    poscar_name = loaded_dict["rss_results"][i]["poscar"].split("/")[-1]
+                    poscar_path = f"{rel_path}/{poscar_name}"
+                else:
+                    _path_name = "/".join(path_name.split("/")[:-2])
+                    poscar_path = os.path.relpath(
+                        f'{_path_name}/{loaded_dict["rss_results"][i]["poscar"]}',
+                        start=os.getcwd(),
+                    )
+                loaded_dict["rss_results"][i]["poscar"] = poscar_path
 
             target_elements = loaded_dict["elements"]
             comp_ratio = tuple(loaded_dict["comp_ratio"])

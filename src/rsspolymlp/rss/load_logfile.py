@@ -55,6 +55,7 @@ class LogfileLoader:
         axis = []
         positions = []
         elements = []
+        judge = True
         parse_struct = False
         in_axis = False
         in_frac_coords = False
@@ -93,9 +94,11 @@ class LogfileLoader:
                 else:
                     raise ValueError(f"Could not parse line: {line}")
 
-            judge = self.check_errors(line, _res)
-            if judge is not True:
-                return _res, judge
+            if judge:
+                judge = self.check_errors(line, _res)
+
+        if judge is not True:
+            return _res, judge
 
         _res["struct"] = {}
         _res["struct"]["axis"] = np.array(axis, dtype=np.float64)

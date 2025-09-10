@@ -361,12 +361,15 @@ def log_unique_structures(
 
         for is_ghost in [False, True]:
             for idx, _str in enumerate(unique_structs):
-                if is_ghost_minima[idx] != is_ghost:
+                if energy_min is not None:
+                    e_diff = round((_str.energy - energy_min) * 1000, 2)
+                    if (not is_ghost and e_diff < -300) or (is_ghost and e_diff >= -300):
+                        continue
+                elif is_ghost:
                     continue
                 print(f"  - struct_No: {_str.struct_no}", file=f)
                 print(f"    poscar_name: {_str.input_poscar}", file=f)
                 if energy_min is not None:
-                    e_diff = round((_str.energy - energy_min) * 1000, 2)
                     print(f"    energy_diff_meV_per_atom: {e_diff}", file=f)
                 print(f"    duplicates: {_str.dup_count}", file=f)
                 print(f"    enthalpy: {_str.energy}", file=f)
@@ -402,15 +405,16 @@ def log_unique_structures(
                         "is_ghost_minima": bool(is_ghost_minima[idx]),
                     }
                 )
-
-    comp_res = compute_composition(unique_structs[0].original_structure.elements)
-
-    rss_result_all = {
-        "elements": comp_res.unique_elements.tolist(),
-        "comp_ratio": comp_res.comp_ratio,
-        "pressure": pressure,
-        "rss_results": rss_results,
-    }
+    if len(unique_structs) > 0:
+        comp_res = compute_composition(unique_structs[0].original_structure.elements)
+        rss_result_all = {
+            "elements": comp_res.unique_elements.tolist(),
+            "comp_ratio": comp_res.comp_ratio,
+            "pressure": pressure,
+            "rss_results": rss_results,
+        }
+    else:
+        rss_result_all = {}
 
     return rss_result_all
 
