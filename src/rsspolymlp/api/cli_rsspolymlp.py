@@ -187,7 +187,7 @@ def run():
         type=str,
         help=(
             "Specify target directories or log files depending on the selected mode:\n"
-            "  --summarize       : Directories where RSS or VASP calculations were performed\n"
+            "  --summarize       : JSON files or directories containing VASP calculation results\n"
             "  --ghost_minima    : JSON files summarizing RSS results (e.g., Al1Cu1.json)\n"
             "  --phase_analysis  : JSON files or directories containing VASP calculation results\n"
         ),

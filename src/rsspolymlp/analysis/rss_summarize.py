@@ -199,11 +199,12 @@ class RSSResultSummarizer:
         paths_same_comp = defaultdict(list)
         results_same_comp = defaultdict(dict)
         for path_name in self.result_paths:
-            rss_result_path = f"{path_name}/rss_result/rss_results.json"
+            rss_result_path = f"{path_name}"
             with open(rss_result_path) as f:
                 loaded_dict = json.load(f)
 
-            rel_path = os.path.relpath(f"{path_name}/opt_struct", start=os.getcwd())
+            _path_name = "/".join(path_name.split("/")[:-2])
+            rel_path = os.path.relpath(f"{_path_name}/opt_struct", start=os.getcwd())
             for i in range(len(loaded_dict["rss_results"])):
                 poscar_name = loaded_dict["rss_results"][i]["poscar"].split("/")[-1]
                 loaded_dict["rss_results"][i]["poscar"] = f"{rel_path}/{poscar_name}"
