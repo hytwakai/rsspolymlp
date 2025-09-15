@@ -52,7 +52,7 @@ class RandomStructureSearch:
         with open(output_file, "w") as f, redirect_stdout(f):
             self.time_initial = time.time()
             energy_keep = None
-            max_iteration = 10
+            max_iteration = 30
             c1_set = [None, 0.9, 0.99]
             c2_set = [None, 0.99, 0.999]
 
@@ -119,7 +119,7 @@ class RandomStructureSearch:
             print("Initial structure")
             minobj.print_structure()
 
-        maxiter = 1000
+        maxiter = 300
         for c_count in range(3):
             if iteration == 0 and c_count <= 1 or iteration == 1 and c_count == 0:
                 maxiter = self.c_maxiter

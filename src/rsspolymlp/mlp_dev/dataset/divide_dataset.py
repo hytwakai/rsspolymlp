@@ -115,13 +115,17 @@ def divide_train_test(
     train_data = sorted(vasprun_list[split_index:])
     test_data = sorted(vasprun_list[:split_index])
 
-    os.makedirs(f"{output_dir}/train/{data_name}")
-    for p in train_data:
-        shutil.copy(p, f"{output_dir}/train/{data_name}")
+    try:
+        os.makedirs(f"{output_dir}/train/{data_name}")
+        for p in train_data:
+            shutil.copy(p, f"{output_dir}/train/{data_name}")
 
-    if len(test_data) > 0:
-        os.makedirs(f"{output_dir}/test/{data_name}")
-        for p in test_data:
-            shutil.copy(p, f"{output_dir}/test/{data_name}")
+        if len(test_data) > 0:
+            os.makedirs(f"{output_dir}/test/{data_name}")
+            for p in test_data:
+                shutil.copy(p, f"{output_dir}/test/{data_name}")
+    except FileExistsError:
+        print(f"File exists: {os.getcwd()}/{output_dir}, passed")
+        pass
 
     return train_data, test_data

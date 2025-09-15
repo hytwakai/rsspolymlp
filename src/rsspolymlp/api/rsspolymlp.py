@@ -288,7 +288,7 @@ def rss_summarize(
     backend="loky",
     symprec_set: list[float] = [1e-5, 1e-4, 1e-3, 1e-2],
     output_poscar: bool = False,
-    threshold: float = None,
+    thresholds: list[float] = None,
     parse_vasp: bool = False,
     summarize_p: bool = False,
     update_result: bool = False,
@@ -301,7 +301,7 @@ def rss_summarize(
         backend=backend,
         symprec_set=symprec_set,
         output_poscar=output_poscar,
-        threshold=threshold,
+        thresholds=thresholds,
         parse_vasp=parse_vasp,
         update_result=update_result,
     )

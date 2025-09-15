@@ -193,6 +193,15 @@ def run():
         ),
     )
 
+    parser.add_argument(
+        "--thresholds",
+        nargs="*",
+        type=float,
+        default=None,
+        help="Energy threshold values (in meV/atom) for outputting POSCAR files (--summarize)."
+        " Threshold values for energy above the convex hull in meV/atom (--phase_analysis)",
+    )
+
     # --summarize mode
     parser.add_argument(
         "--symprec_set",
@@ -205,12 +214,6 @@ def run():
         "--output_poscar",
         action="store_true",
         help="If set, POSCAR files will be output",
-    )
-    parser.add_argument(
-        "--threshold",
-        type=float,
-        default=None,
-        help="Energy threshold (in meV/atom) for outputting POSCAR files",
     )
     parser.add_argument(
         "--parse_vasp",
@@ -242,13 +245,6 @@ def run():
         type=str,
         default=None,
         help="Path to a file listing the names of ghost_minima structures to exclude",
-    )
-    parser.add_argument(
-        "--thresholds",
-        nargs="*",
-        type=float,
-        default=None,
-        help="Threshold values for energy above the convex hull in meV/atom",
     )
 
     args = parser.parse_args()
@@ -322,7 +318,7 @@ def run():
             backend=args.backend,
             symprec_set=args.symprec_set,
             output_poscar=args.output_poscar,
-            threshold=args.threshold,
+            thresholds=args.thresholds,
             parse_vasp=args.parse_vasp,
             summarize_p=args.summarize_p,
             update_result=args.update_result,

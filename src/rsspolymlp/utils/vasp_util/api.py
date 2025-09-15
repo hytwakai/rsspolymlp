@@ -18,6 +18,7 @@ def prepare_vasp_inputs(
     mode: str = "sp",  # "opt" or "sp"
     poscar_path: str = "./POSCAR",
     potcar_path: Union[str, list[str]] = "./POTCAR",
+    incar_name: str = "INCAR",
     script_name: str = "run_vasp.sh",
     ENCUT: float = 400,
     KSPACING: float = 0.09,
@@ -32,6 +33,7 @@ def prepare_vasp_inputs(
     ISMEAR: int = 1,
     SIGMA: float = 0.2,
     NCORE: int = 2,
+    ISTART: int = 0,
     LCHARG: bool = False,
     LWAVE: bool = False,
     EDIFFG: float = -0.01,
@@ -42,8 +44,11 @@ def prepare_vasp_inputs(
 
     # Generate INCAR file
     if mode == "sp":
+        if incar_name == "INCAR":
+            incar_name = "INCAR-sp"
         generate_single_point_incar(
-            incar_name="INCAR-sp",
+            incar_name=incar_name,
+            ISTART=ISTART,
             ENCUT=ENCUT,
             KSPACING=KSPACING,
             PSTRESS=PSTRESS,
@@ -67,6 +72,7 @@ def prepare_vasp_inputs(
             IBRION=IBRION,
             ISIF=ISIF,
             NSW=1,
+            ISTART=ISTART,
             ENCUT=ENCUT,
             KSPACING=KSPACING,
             PSTRESS=PSTRESS,
@@ -89,6 +95,7 @@ def prepare_vasp_inputs(
             IBRION=IBRION,
             ISIF=ISIF,
             NSW=NSW,
+            ISTART=ISTART,
             ENCUT=ENCUT,
             KSPACING=KSPACING,
             PSTRESS=PSTRESS,
@@ -132,6 +139,7 @@ def prepare_vasp_inputs(
     if mode == "sp":
         script_str = generate_sp_shell_script(
             run_vaspmpi=run_vaspmpi,
+            incar_name=incar_name,
         )
     elif mode == "opt":
         script_str = generate_opt_shell_script(

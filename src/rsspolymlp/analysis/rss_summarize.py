@@ -33,7 +33,7 @@ class RSSResultSummarizer:
         backend: str = "loky",
         symprec_set: list[float] = [1e-5, 1e-4, 1e-3, 1e-2],
         output_poscar: bool = False,
-        threshold: float = None,
+        thresholds: list[float] = None,
         parse_vasp: bool = False,
         update_result: bool = False,
     ):
@@ -44,7 +44,7 @@ class RSSResultSummarizer:
         self.backend = backend
         self.symprec_set = symprec_set
         self.output_poscar = output_poscar
-        self.threshold = threshold
+        self.thresholds = thresholds
         self.parse_vasp = parse_vasp
         self.update_result = update_result
 
@@ -135,8 +135,12 @@ class RSSResultSummarizer:
             with open(f"json/{log_name}.json", "w") as f:
                 json.dump(rss_result_all, f)
 
-            if self.output_poscar:
-                self.generate_poscars(f"json/{log_name}.json", threshold=self.threshold)
+            if self.thresholds is not None:
+                self.generate_poscars(
+                    f"json/{log_name}.json",
+                    thresholds=self.thresholds,
+                    output_poscar=self.output_poscar,
+                )
 
             print(log_name, "finished", flush=True)
 
@@ -190,8 +194,12 @@ class RSSResultSummarizer:
             with open(f"json/{log_name}.json", "w") as f:
                 json.dump(rss_result_all, f)
 
-            if self.output_poscar:
-                self.generate_poscars(f"json/{log_name}.json", threshold=self.threshold)
+            if self.thresholds is not None:
+                self.generate_poscars(
+                    f"json/{log_name}.json",
+                    thresholds=self.thresholds,
+                    output_poscar=self.output_poscar,
+                )
 
             print(log_name, "finished", flush=True)
 
@@ -373,31 +381,45 @@ class RSSResultSummarizer:
 
         return not_processed_path, integrated_res_paths
 
-    def generate_poscars(self, json_path: str, threshold=None):
+    def generate_poscars(self, json_path: str, thresholds=None, output_poscar=False):
+        if thresholds is None:
+            thresholds = [None]
+
+        struct_counts = []
         logname = os.path.basename(json_path).split(".json")[0]
-        if threshold is None:
-            dir_name = "poscars"
-        else:
-            dir_name = f"poscars_{threshold}"
-        os.makedirs(f"{dir_name}/{logname}", exist_ok=True)
+        for threshold in thresholds:
+            if threshold is None:
+                dir_name = "poscars"
+            else:
+                threshold = float(threshold)
+                dir_name = f"poscars_{threshold}"
+            if output_poscar:
+                os.makedirs(f"{dir_name}/{logname}", exist_ok=True)
 
-        with open(json_path) as f:
-            loaded_dict = json.load(f)
-        rss_results = loaded_dict["rss_results"]
+            print(f"Threshold (meV/atom): {threshold}")
 
-        e_min = None
-        struct_count = 0
-        for res in rss_results:
-            if not res.get("is_ghost_minima") and e_min is None:
-                e_min = res["energy"]
-            if e_min is not None and threshold is not None:
-                diff = abs(e_min - res["energy"])
-                if diff * 1000 > threshold:
-                    if struct_count == 1:
-                        e_min = None
-                    continue
+            with open(json_path) as f:
+                loaded_dict = json.load(f)
+            rss_results = loaded_dict["rss_results"]
 
-            dest = f"{dir_name}/{logname}/POSCAR_{logname}_No{res['struct_no']}"
-            shutil.copy(res["poscar"], dest)
-            struct_count += 1
-        print("Number of output POSCARs:", struct_count)
+            e_min = None
+            struct_count = 0
+            for res in rss_results:
+                if not res.get("is_ghost_minima") and e_min is None:
+                    e_min = res["energy"]
+                if e_min is not None and threshold is not None:
+                    diff = abs(e_min - res["energy"])
+                    if diff * 1000 > threshold:
+                        if struct_count == 1:
+                            print("The threshold value is probably too small.")
+                            e_min = None
+                        continue
+                dest = f"{dir_name}/{logname}/POSCAR_{logname}_No{res['struct_no']}"
+                if output_poscar:
+                    shutil.copy(res["poscar"], dest)
+                struct_count += 1
+
+            struct_counts.append(struct_count)
+            print("Number of local minimum structures:", struct_count)
+
+        return struct_counts

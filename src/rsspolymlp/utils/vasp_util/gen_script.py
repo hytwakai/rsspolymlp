@@ -1,7 +1,7 @@
 import argparse
 
 
-def generate_sp_shell_script(run_vaspmpi: str) -> str:
+def generate_sp_shell_script(run_vaspmpi: str, incar_name="INCAR-sp") -> str:
     """
     Generate a shell script for automated VASP execution and error recovery.
 
@@ -21,7 +21,7 @@ file="./OUTCAR"
 incar="./INCAR"
 output="vasp_stdout"
 
-cp INCAR-sp INCAR
+cp {incar_name} INCAR
 
 {run_vaspmpi} > "$output"
 

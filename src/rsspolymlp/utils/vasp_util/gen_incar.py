@@ -7,6 +7,7 @@ def bool_to_vasp(val: bool) -> str:
 
 def generate_single_point_incar(
     incar_name: str = "INCAR",
+    ISTART: int = 0,
     ENCUT: float = 400,
     KSPACING: float = 0.09,
     PSTRESS: float = 0.0,
@@ -29,8 +30,7 @@ def generate_single_point_incar(
     Returns the list of lines written.
     """
     lines = [
-        "ISTART = 0",
-        "ICHARG = 2",
+        f"ISTART = {ISTART}",
         f"ENCUT = {ENCUT}",
         f"KSPACING = {KSPACING}",
         f"PSTRESS = {PSTRESS}",
@@ -93,6 +93,7 @@ if __name__ == "__main__":
     parser.add_argument("--opt", action="store_true")
     parser.add_argument("--incar_name", default="INCAR", type=str)
 
+    parser.add_argument("--ISTART", default=0, type=int)
     parser.add_argument("--ENCUT", default=400, type=float)
     parser.add_argument("--KSPACING", default=0.09, type=float)
     parser.add_argument("--PSTRESS", default=0.0, type=float)
@@ -128,6 +129,7 @@ if __name__ == "__main__":
             NELM=args.NELM,
             NELMIN=args.NELMIN,
             PREC=args.PREC,
+            ISTART=args.ISTART,
             ISMEAR=args.ISMEAR,
             SIGMA=args.SIGMA,
             ENCUT=args.ENCUT,
@@ -152,6 +154,7 @@ if __name__ == "__main__":
             NELM=args.NELM,
             NELMIN=args.NELMIN,
             PREC=args.PREC,
+            ISTART=args.ISTART,
             ISMEAR=args.ISMEAR,
             SIGMA=args.SIGMA,
             ENCUT=args.ENCUT,

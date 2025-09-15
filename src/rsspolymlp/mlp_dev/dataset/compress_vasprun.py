@@ -34,9 +34,11 @@ def check_convergence(
     for vasp_path in vasp_paths:
         if not os.path.isfile(f"{vasp_path}/OSZICAR"):
             vasprun_status["fail"] += 1
+            print(vasp_path, "failed")
             continue
         if "E0=" not in open(f"{vasp_path}/OSZICAR").read():
             vasprun_status["fail"] += 1
+            print(vasp_path, "failed")
             continue
         if max_iteration_reached(vasp_path):
             vasprun_status["fail_iteration"] += 1
