@@ -20,6 +20,7 @@ class IrrepStructure:
     elements: np.ndarray
     element_count: Counter[str]
     spg_number: int
+    symprec_irreps: list
 
 
 def struct_match(
@@ -27,6 +28,7 @@ def struct_match(
     st_2_set: list[IrrepStructure],
     axis_tol: float = 0.01,
     pos_tol: float = 0.01,
+    spg_match: bool = True,
     verbose: bool = False,
 ) -> bool:
     """
@@ -58,37 +60,83 @@ def struct_match(
         True if a matching pair of structures is found under the given
         tolerances, False otherwise.
     """
-
     struct_match = False
-    axis_diff_list = []
-    pos_diff_list = []
+    axis_d_min = None
+    pos_d_min = None
     for st_1 in st_1_set:
         for st_2 in st_2_set:
-            if (
-                struct_match is True
-                or st_1.spg_number != st_2.spg_number
-                or st_1.element_count != st_2.element_count
-            ):
+            if struct_match or st_1.element_count != st_2.element_count:
+                continue
+            if spg_match and st_1.spg_number != st_2.spg_number:
                 continue
 
-            axis_diff = st_1.axis - st_2.axis
-            max_axis_diff = np.max(np.sqrt(np.sum(axis_diff**2, axis=1)))
-            axis_diff_list.append(max_axis_diff)
-            if max_axis_diff >= axis_tol:
+            axis_d = (
+                st_1.axis[:, None, :] - st_2.axis[None, :, :]
+            )  # (N_symp1, N_symp2, 6)
+            axis_d_flat = axis_d.reshape(-1, axis_d.shape[2])  # (N_symp1*N_symp2, 6)
+            l2_norm = np.linalg.norm(axis_d_flat, axis=1)
+            match_axis = l2_norm < axis_tol
+            if not np.any(match_axis):
                 continue
 
-            deltas = st_1.positions[:, None, :] - st_2.positions[None, :, :]
-            deltas_flat = deltas.reshape(-1, deltas.shape[2])
-            max_pos_diff = np.min(np.max(np.abs(deltas_flat), axis=1))
-            if max_pos_diff < pos_tol:
+            pos_d = st_1.positions[:, None, :] - st_2.positions[None, :, :]
+            pos_d_flat = pos_d.reshape(-1, pos_d.shape[2])
+            max_abs = np.max(np.abs(pos_d_flat), axis=1)
+            min_idx = np.argmin(max_abs[match_axis])
+
+            axis_l2_norm = l2_norm[match_axis][min_idx]
+            pos_max_abs = max_abs[match_axis][min_idx]
+            i, j = divmod(np.where(match_axis)[0][min_idx], st_2.positions.shape[0])
+            if pos_d_min is None or pos_d_min[0] > max_abs:
+                axis_d_min = [
+                    axis_l2_norm,
+                    [st_1.axis[i], st_2.axis[j], axis_d[i, j]],
+                ]
+                pos_d_min = [
+                    pos_max_abs,
+                    [
+                        st_1.symprec_irreps[i],
+                        st_1.positions[i],
+                        st_2.symprec_irreps[j],
+                        st_2.positions[j],
+                        pos_d[i, j],
+                    ],
+                ]
+            if pos_max_abs < pos_tol:
                 struct_match = True
-            pos_diff_list.append(max_pos_diff)
 
     if verbose:
-        print("axis_diff_list:")
-        print(f" - {axis_diff_list}")
-        print("pos_diff_list:")
-        print(f" - {pos_diff_list}")
+
+        def log_axis_positions(symprec, axis, positions):
+            print(" - symprec:", np.round(symprec, 5).tolist())
+            print("   - Metric_tensor:", np.round(axis, 4).tolist())
+            print("   - Positions:")
+            for axis_tag, p in zip(
+                ["a", "b", "c"], np.round(positions.reshape(3, -1), 3).tolist()
+            ):
+                formatted = ",".join(f"{val:6.3f}" for val in p)
+                print(f"     - {axis_tag}: [{formatted}]")
+
+        print("Structures:")
+        for i, st_set in enumerate([st_1_set, st_2_set]):
+            print(f" - Struct_No: {i+1}")
+            for st in st_set:
+                print(" - spg_number:", st.spg_number)
+                for h, pos in enumerate(st.positions):
+                    log_axis_positions(st.symprec_irreps[h], st.axis[h], pos)
+        if axis_d_min is not None:
+            print("")
+            print("difference_log:")
+            print(" - axis_l2_norm:", np.round(axis_d_min[0], 3))
+            print(" - pos_max_abs", np.round(pos_d_min[0], 3))
+            print(" - Structure_1:")
+            log_axis_positions(pos_d_min[1][0], axis_d_min[1][0], pos_d_min[1][1])
+            print(" - Structure_2:")
+            log_axis_positions(pos_d_min[1][2], axis_d_min[1][1], pos_d_min[1][3])
+            print(" - diffs:")
+            log_axis_positions([], axis_d_min[1][2], pos_d_min[1][4])
+        print("")
+        print("Match:", struct_match)
 
     return struct_match
 
@@ -167,6 +215,7 @@ def generate_irrep_struct(
         element list, element counts, and the space group number.
     """
 
+    metric_tensors = []
     irrep_positions = []
     for symprec_irrep in symprec_irreps:
         if isinstance(symprec_irrep, float):
@@ -176,21 +225,20 @@ def generate_irrep_struct(
         _pos = primitive_st.positions.T
         _elements = primitive_st.elements
 
-        volume = np.linalg.det(primitive_st.axis)
-        standardized_axis = _axis / (volume ** (1 / 3))
-
         irrep_pos = IrrepPosition(symprec=symprec_irrep)
-        rep_pos, sorted_elements = irrep_pos.irrep_positions(
+        metric_tensor, rep_pos, sorted_elements = irrep_pos.irrep_positions(
             _axis, _pos, _elements, spg_number
         )
+        metric_tensors.append(metric_tensor)
         irrep_positions.append(rep_pos)
 
     return IrrepStructure(
-        axis=standardized_axis,
+        axis=np.stack(metric_tensors, axis=0),
         positions=np.stack(irrep_positions, axis=0),
         elements=sorted_elements,
         element_count=Counter(sorted_elements),
         spg_number=spg_number,
+        symprec_irreps=symprec_irreps,
     )
 
 

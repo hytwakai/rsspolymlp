@@ -131,6 +131,7 @@ class UniqueStructureAnalyzer:
             if is_change_struct:
                 # Update duplicate count and replace with better data if necessary
                 unique_struct.dup_count = self.unique_str[idx].dup_count
+                unique_struct.struct_no = self.unique_str[idx].struct_no
                 self.unique_str[idx] = unique_struct
                 self.unique_str_prop[idx] = other_properties
             self.unique_str[idx].dup_count += 1
@@ -180,6 +181,7 @@ def generate_unique_struct(
     struct_no: Optional[int] = None,
     dup_count: int = 1,
     symprec_set: list[float] = [1e-5, 1e-4, 1e-3, 1e-2],
+    irrep_symprec_set: list[float] = [1e-5],
 ) -> UniqueStructure:
     """
     Generate a UniqueStructure object.
@@ -236,10 +238,16 @@ def generate_unique_struct(
     irrep_struct_set = []
     for i, primitive_st in enumerate(primitive_st_set):
         recommend_symprecs = get_recommend_symprecs(primitive_st)
+        symprec_irreps = irrep_symprec_set + recommend_symprecs
+        symprec_irreps = sorted(
+            symprec_irreps,
+            key=lambda x: x if isinstance(x, (int, float)) else sum(x) / len(x),
+        )
+
         irrep_struct = generate_irrep_struct(
             primitive_st,
             spg_number_set[i],
-            symprec_irreps=[1e-5] + recommend_symprecs,
+            symprec_irreps=symprec_irreps,
         )
         irrep_struct_set.append(irrep_struct)
 
@@ -270,6 +278,7 @@ def generate_unique_structs(
     num_process: int = -1,
     backend: str = "loky",
     symprec_set: list[float] = [1e-5, 1e-4, 1e-3, 1e-2],
+    irrep_symprec_set: list[float] = [1e-5],
 ) -> list[UniqueStructure]:
     """
     Generate a list of UniqueStructure objects from the given RSS results.
@@ -311,6 +320,7 @@ def generate_unique_structs(
                 struct_no=res.get("struct_no", None),
                 dup_count=res.get("dup_count", 1),
                 symprec_set=symprec_set,
+                irrep_symprec_set=irrep_symprec_set,
             )
             for res in rss_results
         )
@@ -327,6 +337,7 @@ def generate_unique_structs(
                     struct_no=res.get("struct_no", None),
                     dup_count=res.get("dup_count", 1),
                     symprec_set=symprec_set,
+                    irrep_symprec_set=irrep_symprec_set,
                 )
             )
     unique_structs = [s for s in unique_structs if s is not None]
@@ -363,7 +374,9 @@ def log_unique_structures(
             for idx, _str in enumerate(unique_structs):
                 if energy_min is not None:
                     e_diff = round((_str.energy - energy_min) * 1000, 2)
-                    if (not is_ghost and e_diff < -300) or (is_ghost and e_diff >= -300):
+                    if (not is_ghost and e_diff < -300) or (
+                        is_ghost and e_diff >= -300
+                    ):
                         continue
                 elif is_ghost:
                     continue

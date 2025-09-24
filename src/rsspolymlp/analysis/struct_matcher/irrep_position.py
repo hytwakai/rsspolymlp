@@ -2,7 +2,11 @@ from collections import Counter
 
 import numpy as np
 
-from rsspolymlp.analysis.struct_matcher.invert_and_swap import invert_and_swap_positions
+from rsspolymlp.analysis.struct_matcher.invert_and_swap import (
+    invert_and_swap_positions,
+    reduced_axis,
+)
+from rsspolymlp.common.property import PropUtil, get_metric_tensor
 
 
 class IrrepPosition:
@@ -45,16 +49,26 @@ class IrrepPosition:
             corresponding to the order of fractional atomic coordinates in irrep_position.
         """
 
-        _lattice = np.asarray(axis, dtype=float)
+        _axis = np.asarray(axis, dtype=float)
         _positions = np.asarray(positions, dtype=float)
         _elements = np.asarray(elements, dtype=str)
 
+        # from rsspolymlp.analysis.struct_matcher.niggli import convert_niggli,
+        # _axis, _positions = convert_niggli(_axis, _positions)
+        axis, positions = reduced_axis(_axis, _positions, self.symprec)
+
+        volume = abs(np.linalg.det(axis))
+        standardized_axis = axis / (volume ** (1 / 3))
+        prop = PropUtil(standardized_axis, positions)
+        abc_angle = np.asarray(prop.abc, dtype=float)
+        metric_tensor = get_metric_tensor(abc_angle)
+
         # Trivial case: single‑atom cell → nothing to do
         if _positions.shape[0] == 1:
-            return np.array([0, 0, 0]), _elements
+            return metric_tensor, np.array([0, 0, 0]), _elements
 
         self.invert_values, self.swap_values = invert_and_swap_positions(
-            _lattice, _positions, spg_number, self.symprec
+            abc_angle, spg_number, self.symprec
         )
 
         unique_elements = np.sort(np.unique(_elements))
@@ -70,9 +84,9 @@ class IrrepPosition:
         sort_idx = np.argsort(types)
         sorted_elements = _elements[sort_idx]
         sorted_types = types[sort_idx]
-        _positions = _positions[sort_idx, :]
+        positions = positions[sort_idx, :]
 
-        red_pos_cands = self.reduced_translation(_positions, sorted_types)
+        red_pos_cands = self.reduced_translation(positions, sorted_types)
 
         irrep_position = None
         irrep_cls_id = None
@@ -115,7 +129,7 @@ class IrrepPosition:
                 irrep_cls_id = sorted_cls_id
 
         irrep_position = irrep_position.T.reshape(-1)
-        return irrep_position, sorted_elements
+        return metric_tensor, irrep_position, sorted_elements
 
     def reduced_translation(
         self,

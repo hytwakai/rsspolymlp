@@ -103,3 +103,23 @@ class PropUtil:
         if spg_sets == []:
             print("Analyzing space group failed.")
         return spg_sets
+
+
+def get_metric_tensor(abc_angle):
+    """
+    abc_angle = [a, b, c, alpha, beta, gamma]
+    alpha, beta, gamma are degree units.
+    """
+    a, b, c, alpha, beta, gamma = abc_angle
+    alpha = np.deg2rad(alpha)
+    beta = np.deg2rad(beta)
+    gamma = np.deg2rad(gamma)
+
+    aa = a**2
+    bb = b**2
+    cc = c**2
+    bc = b * c * np.cos(alpha)
+    ac = a * c * np.cos(beta)
+    cb = a * b * np.cos(gamma)
+
+    return np.array([aa, bb, cc, bc, ac, cb])

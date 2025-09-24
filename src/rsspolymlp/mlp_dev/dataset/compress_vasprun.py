@@ -42,6 +42,7 @@ def check_convergence(
             continue
         if max_iteration_reached(vasp_path):
             vasprun_status["fail_iteration"] += 1
+            print(vasp_path, "failed_iteration")
             continue
         valid_paths.append(vasp_path)
 
@@ -67,6 +68,7 @@ def compress(vasprun_path, output_dir: str = "compress_dft_data"):
                 f"{output_dir}/{'.'.join(vasprun_path.split('/'))}",
             )
         else:
+            print(vasprun_path, "failed_parse")
             return False
     else:
         return False

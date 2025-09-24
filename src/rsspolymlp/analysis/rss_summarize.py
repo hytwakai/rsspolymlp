@@ -135,7 +135,7 @@ class RSSResultSummarizer:
             with open(f"json/{log_name}.json", "w") as f:
                 json.dump(rss_result_all, f)
 
-            if self.thresholds is not None:
+            if self.thresholds is not None or self.output_poscar is not False:
                 self.generate_poscars(
                     f"json/{log_name}.json",
                     thresholds=self.thresholds,
@@ -194,7 +194,7 @@ class RSSResultSummarizer:
             with open(f"json/{log_name}.json", "w") as f:
                 json.dump(rss_result_all, f)
 
-            if self.thresholds is not None:
+            if self.thresholds is not None or self.output_poscar is not False:
                 self.generate_poscars(
                     f"json/{log_name}.json",
                     thresholds=self.thresholds,

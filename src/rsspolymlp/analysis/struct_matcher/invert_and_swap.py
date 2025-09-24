@@ -4,14 +4,40 @@ from rsspolymlp.analysis.struct_matcher.chiral_spg import get_chiral_spg
 from rsspolymlp.common.property import PropUtil
 
 
-def invert_and_swap_positions(lattice, positions, spg_number, symprec):
+def reduced_axis(axis, positions, symprec):
+    prop = PropUtil(axis, positions)
+    abc_angle = np.asarray(prop.abc, dtype=float)
+    abc, angles = np.array(abc_angle[:3]), np.array(abc_angle[3:])
+
+    abc_sort = np.argsort(abc)
+    axis = axis[abc_sort, :]
+    positions = positions[:, abc_sort]
+
+    tol = symprec
+    length_similar = np.isclose(abc[:, None], abc[None, :], atol=tol)
+    has_close = length_similar.sum(axis=1) > 1
+
+    active_cols = np.nonzero(has_close)[0]
+    if len(active_cols) == 3:
+        angle_sort = np.argsort(-angles)
+        axis = axis[angle_sort, :]
+        positions = positions[:, angle_sort]
+    elif len(active_cols) == 2:
+        angle_sort = np.argsort(-angles[active_cols])
+        sorted_idx = active_cols[angle_sort]
+        axis[active_cols, :] = axis[sorted_idx, :]
+        positions[:, active_cols] = positions[:, sorted_idx]
+
+    return axis, positions
+
+
+def invert_and_swap_positions(abc_angle, spg_number, symprec):
     """Return all position arrays reachable by inverting/swapping
     crystallographically equivalent lattice axes."""
     # Axis lengths (a, b, c) and angles (α, β, γ)
-    prop = PropUtil(lattice, positions)
-    abc_angle = np.asarray(prop.abc, dtype=float)  # (6,)
+    abc_angle = np.asarray(abc_angle)  # (6,)
     abc, angles = abc_angle[:3], abc_angle[3:]
-    tol = symprec * 10.0
+    tol = symprec
 
     angle_similar = np.isclose(angles[:, None], angles[None, :], atol=tol)
     length_similar = np.isclose(abc[:, None], abc[None, :], atol=tol)
