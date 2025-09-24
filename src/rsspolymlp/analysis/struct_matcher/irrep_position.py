@@ -55,11 +55,11 @@ class IrrepPosition:
 
         # from rsspolymlp.analysis.struct_matcher.niggli import convert_niggli,
         # _axis, _positions = convert_niggli(_axis, _positions)
-        axis, positions = reduced_axis(_axis, _positions, self.symprec)
+        volume = abs(np.linalg.det(_axis))
+        standardized_axis = _axis / (volume ** (1 / 3))
+        _axis, _positions = reduced_axis(standardized_axis, _positions, self.symprec)
 
-        volume = abs(np.linalg.det(axis))
-        standardized_axis = axis / (volume ** (1 / 3))
-        prop = PropUtil(standardized_axis, positions)
+        prop = PropUtil(standardized_axis, _positions)
         abc_angle = np.asarray(prop.abc, dtype=float)
         metric_tensor = get_metric_tensor(abc_angle)
 
@@ -84,9 +84,9 @@ class IrrepPosition:
         sort_idx = np.argsort(types)
         sorted_elements = _elements[sort_idx]
         sorted_types = types[sort_idx]
-        positions = positions[sort_idx, :]
+        _positions = _positions[sort_idx, :]
 
-        red_pos_cands = self.reduced_translation(positions, sorted_types)
+        red_pos_cands = self.reduced_translation(_positions, sorted_types)
 
         irrep_position = None
         irrep_cls_id = None

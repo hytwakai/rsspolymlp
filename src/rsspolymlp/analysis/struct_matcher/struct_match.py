@@ -87,7 +87,7 @@ def struct_match(
             axis_l2_norm = l2_norm[match_axis][min_idx]
             pos_max_abs = max_abs[match_axis][min_idx]
             i, j = divmod(np.where(match_axis)[0][min_idx], st_2.positions.shape[0])
-            if pos_d_min is None or pos_d_min[0] > max_abs:
+            if pos_d_min is None or pos_d_min[0] > pos_max_abs:
                 axis_d_min = [
                     axis_l2_norm,
                     [st_1.axis[i], st_2.axis[j], axis_d[i, j]],
