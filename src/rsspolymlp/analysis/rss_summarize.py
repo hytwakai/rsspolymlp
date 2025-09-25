@@ -203,107 +203,6 @@ class RSSResultSummarizer:
 
             print(log_name, "finished", flush=True)
 
-    def _parse_mlp_result(self):
-        paths_same_comp = defaultdict(list)
-        results_same_comp = defaultdict(dict)
-        for path_name in self.result_paths:
-            rss_result_path = f"{path_name}"
-            with open(rss_result_path) as f:
-                loaded_dict = json.load(f)
-
-            for i in range(len(loaded_dict["rss_results"])):
-                if "opt_struct" not in loaded_dict["rss_results"][i]["poscar"]:
-                    _path_name = "/".join(path_name.split("/")[:-2])
-                    rel_path = os.path.relpath(
-                        f"{_path_name}/opt_struct", start=os.getcwd()
-                    )
-                    poscar_name = loaded_dict["rss_results"][i]["poscar"].split("/")[-1]
-                    poscar_path = f"{rel_path}/{poscar_name}"
-                else:
-                    _path_name = "/".join(path_name.split("/")[:-2])
-                    poscar_path = os.path.relpath(
-                        f'{_path_name}/{loaded_dict["rss_results"][i]["poscar"]}',
-                        start=os.getcwd(),
-                    )
-                loaded_dict["rss_results"][i]["poscar"] = poscar_path
-
-            target_elements = loaded_dict["elements"]
-            comp_ratio = tuple(loaded_dict["comp_ratio"])
-            _dicts = dict(zip(target_elements, comp_ratio))
-            comp_ratio_orderd = tuple(_dicts.get(el, 0) for el in self.elements)
-
-            paths_same_comp[comp_ratio_orderd].append(rss_result_path)
-            results_same_comp[comp_ratio_orderd][rss_result_path] = loaded_dict
-
-        return paths_same_comp, results_same_comp
-
-    def _parse_vasp_result(self):
-        paths_same_comp = defaultdict(list)
-        results_same_comp = defaultdict(dict)
-        for path_name in self.result_paths:
-            res_dict = {
-                "poscar": None,
-                "structure": None,
-                "energy": None,
-                "spg_list": None,
-            }
-            try:
-                vaspobj = Vasprun(path_name + "/vasprun.xml")
-            except Exception:
-                continue
-
-            polymlp_st = vaspobj.structure
-            objprop = PropUtil(polymlp_st.axis.T, polymlp_st.positions.T)
-            spg_list = objprop.analyze_space_group(polymlp_st.elements)
-
-            energy_dft = vaspobj.energy
-            for element in polymlp_st.elements:
-                energy_dft -= atomic_energy(element)
-            energy_dft /= len(polymlp_st.elements)
-
-            res_dict["poscar"] = path_name + "/vasprun.xml"
-            res_dict["structure"] = polymlp_st
-            res_dict["energy"] = energy_dft
-            res_dict["spg_list"] = spg_list
-
-            comp_res = compute_composition(
-                polymlp_st.elements, element_order=self.elements
-            )
-            comp_ratio = comp_res.comp_ratio
-            try:
-                tree = ET.parse(path_name + "/vasprun.xml")
-                root = tree.getroot()
-                for incar_item in root.findall(".//incar/i"):
-                    if incar_item.get("name") == "PSTRESS":
-                        self.pressure = float(incar_item.text.strip()) / 10
-            except Exception:
-                self.pressure = None
-
-            paths_same_comp[comp_ratio].append(path_name)
-            results_same_comp[comp_ratio][path_name] = {
-                "pressure": self.pressure,
-                "rss_results": [res_dict],
-            }
-
-        return paths_same_comp, results_same_comp
-
-    def _parse_json_result(self):
-        paths_same_comp = defaultdict(list)
-        results_same_comp = defaultdict(dict)
-        for path_name in self.result_paths:
-            with open(path_name) as f:
-                loaded_dict = json.load(f)
-
-            target_elements = loaded_dict["elements"]
-            comp_ratio = tuple(loaded_dict["comp_ratio"])
-            _dicts = dict(zip(target_elements, comp_ratio))
-            comp_ratio_orderd = tuple(_dicts.get(el, 0) for el in self.elements)
-
-            paths_same_comp[comp_ratio_orderd].append(path_name)
-            results_same_comp[comp_ratio_orderd][path_name] = loaded_dict
-
-        return paths_same_comp, results_same_comp
-
     def sort_in_single_comp(
         self,
         result_paths,
@@ -423,3 +322,104 @@ class RSSResultSummarizer:
             print("Number of local minimum structures:", struct_count)
 
         return struct_counts
+
+    def _parse_mlp_result(self):
+        paths_same_comp = defaultdict(list)
+        results_same_comp = defaultdict(dict)
+        for path_name in self.result_paths:
+            rss_result_path = f"{path_name}"
+            with open(rss_result_path) as f:
+                loaded_dict = json.load(f)
+
+            for i in range(len(loaded_dict["rss_results"])):
+                if "opt_struct" not in loaded_dict["rss_results"][i]["poscar"]:
+                    _path_name = "/".join(path_name.split("/")[:-2])
+                    rel_path = os.path.relpath(
+                        f"{_path_name}/opt_struct", start=os.getcwd()
+                    )
+                    poscar_name = loaded_dict["rss_results"][i]["poscar"].split("/")[-1]
+                    poscar_path = f"{rel_path}/{poscar_name}"
+                else:
+                    _path_name = "/".join(path_name.split("/")[:-2])
+                    poscar_path = os.path.relpath(
+                        f'{_path_name}/{loaded_dict["rss_results"][i]["poscar"]}',
+                        start=os.getcwd(),
+                    )
+                loaded_dict["rss_results"][i]["poscar"] = poscar_path
+
+            target_elements = loaded_dict["elements"]
+            comp_ratio = tuple(loaded_dict["comp_ratio"])
+            _dicts = dict(zip(target_elements, comp_ratio))
+            comp_ratio_orderd = tuple(_dicts.get(el, 0) for el in self.elements)
+
+            paths_same_comp[comp_ratio_orderd].append(rss_result_path)
+            results_same_comp[comp_ratio_orderd][rss_result_path] = loaded_dict
+
+        return paths_same_comp, results_same_comp
+
+    def _parse_vasp_result(self):
+        paths_same_comp = defaultdict(list)
+        results_same_comp = defaultdict(dict)
+        for path_name in self.result_paths:
+            res_dict = {
+                "poscar": None,
+                "structure": None,
+                "energy": None,
+                "spg_list": None,
+            }
+            try:
+                vaspobj = Vasprun(path_name + "/vasprun.xml")
+            except Exception:
+                continue
+
+            polymlp_st = vaspobj.structure
+            objprop = PropUtil(polymlp_st.axis.T, polymlp_st.positions.T)
+            spg_list = objprop.analyze_space_group(polymlp_st.elements)
+
+            energy_dft = vaspobj.energy
+            for element in polymlp_st.elements:
+                energy_dft -= atomic_energy(element)
+            energy_dft /= len(polymlp_st.elements)
+
+            res_dict["poscar"] = path_name + "/vasprun.xml"
+            res_dict["structure"] = polymlp_st
+            res_dict["energy"] = energy_dft
+            res_dict["spg_list"] = spg_list
+
+            comp_res = compute_composition(
+                polymlp_st.elements, element_order=self.elements
+            )
+            comp_ratio = comp_res.comp_ratio
+            try:
+                tree = ET.parse(path_name + "/vasprun.xml")
+                root = tree.getroot()
+                for incar_item in root.findall(".//incar/i"):
+                    if incar_item.get("name") == "PSTRESS":
+                        self.pressure = float(incar_item.text.strip()) / 10
+            except Exception:
+                self.pressure = None
+
+            paths_same_comp[comp_ratio].append(path_name)
+            results_same_comp[comp_ratio][path_name] = {
+                "pressure": self.pressure,
+                "rss_results": [res_dict],
+            }
+
+        return paths_same_comp, results_same_comp
+
+    def _parse_json_result(self):
+        paths_same_comp = defaultdict(list)
+        results_same_comp = defaultdict(dict)
+        for path_name in self.result_paths:
+            with open(path_name) as f:
+                loaded_dict = json.load(f)
+
+            target_elements = loaded_dict["elements"]
+            comp_ratio = tuple(loaded_dict["comp_ratio"])
+            _dicts = dict(zip(target_elements, comp_ratio))
+            comp_ratio_orderd = tuple(_dicts.get(el, 0) for el in self.elements)
+
+            paths_same_comp[comp_ratio_orderd].append(path_name)
+            results_same_comp[comp_ratio_orderd][path_name] = loaded_dict
+
+        return paths_same_comp, results_same_comp

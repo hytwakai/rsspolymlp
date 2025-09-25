@@ -221,11 +221,15 @@ class RSSResultAnalyzer:
             finished_set = finished_set[: index + 1]
         self.logfiles = [f"log/{p}.log" for p in finished_set]
 
+        print("Loading RSS results...")
         struct_properties = self._load_rss_logfiles()
+        print("RSS results loaded")
 
+        print("Eliminating duplicate structures...")
         unique_structs, unique_str_prop = self._analysis_unique_structure(
             struct_properties, use_joblib, num_process, backend
         )
+        print("Duplicate structures eliminated")
 
         time_finish = time() - time_start
 
