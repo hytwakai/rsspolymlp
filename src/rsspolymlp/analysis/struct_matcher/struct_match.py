@@ -110,32 +110,37 @@ def struct_match(
     if verbose:
 
         def log_axis_positions(symprec, axis, positions):
-            print(" - symprec:", np.round(symprec, 5).tolist())
-            print("   - metric_tensor:", np.round(axis, 4).tolist())
-            print("   - positions:")
+            print("    - symprec:", np.round(symprec, 5).tolist())
+            print("      metric_tensor:", np.round(axis, 4).tolist())
+            print("      positions:")
             for axis_tag, p in zip(
                 ["a", "b", "c"], np.round(positions.reshape(3, -1), 3).tolist()
             ):
                 formatted = ",".join(f"{val:6.3f}" for val in p)
-                print(f"     - {axis_tag}: [{formatted}]")
+                print(f"       - [{formatted}]")
 
-        print("Structures:")
+        print("tolerance:")
+        print("  axis_tol:", axis_tol)
+        print("  pos_tol:", pos_tol)
+        print("")
+        print("structures:")
         for i, st_set in enumerate([st_1_set, st_2_set]):
             print(f" - struct_No: {i+1}")
             for st in st_set:
-                print(" - spg_number:", st.spg_number)
+                print("   spg_number:", st.spg_number)
+                print("   representations:")
                 for h, pos in enumerate(st.positions):
                     log_axis_positions(st.symprec_irreps[h], st.axis[h], pos)
         if axis_d_min is not None:
             print("")
             print("difference_log:")
             print(" - axis_l2_norm:", np.round(axis_d_min[0], 3))
-            print(" - pos_max_abs", np.round(pos_d_min[0], 3))
-            print(" - structure_1:")
+            print("   pos_max_abs:", np.round(pos_d_min[0], 3))
+            print("   structure_1:")
             log_axis_positions(pos_d_min[1][0], axis_d_min[1][0], pos_d_min[1][1])
-            print(" - structure_2:")
+            print("   structure_2:")
             log_axis_positions(pos_d_min[1][2], axis_d_min[1][1], pos_d_min[1][3])
-            print(" - diffs:")
+            print("   diffs:")
             log_axis_positions([], axis_d_min[1][2], pos_d_min[1][4])
         print("")
         print("Match:", struct_match)
