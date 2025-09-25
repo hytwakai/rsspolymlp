@@ -59,7 +59,7 @@ class IrrepPosition:
         standardized_axis = _axis / (volume ** (1 / 3))
         _axis, _positions = reduced_axis(standardized_axis, _positions, self.symprec)
 
-        prop = PropUtil(standardized_axis, _positions)
+        prop = PropUtil(_axis, _positions)
         abc_angle = np.asarray(prop.abc, dtype=float)
         metric_tensor = get_metric_tensor(abc_angle)
 
@@ -208,10 +208,14 @@ class IrrepPosition:
         cls_id = cluster_id.copy()
         for ax in range(3):
             pos[:, ax] %= 1.0
+
             near_zero_mask = np.isclose(
                 pos[:, ax], 0, atol=self.symprec[ax]
             ) | np.isclose(pos[:, ax], 1, atol=self.symprec[ax])
-            pos[near_zero_mask, ax] = 0.0
+            vals = pos[near_zero_mask, ax]
+            dist_to_0 = vals
+            dist_to_1 = 1.0 - vals
+            pos[near_zero_mask, ax] = np.where(dist_to_0 < dist_to_1, vals, vals - 1.0)
 
         # Stable lexicographic sort by (ids_x, ids_y, ids_z)
         sort_idx = np.lexsort((cls_id[:, 2], cls_id[:, 1], cls_id[:, 0], types))

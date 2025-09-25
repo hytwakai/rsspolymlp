@@ -75,6 +75,7 @@ def struct_match(
             )  # (N_symp1, N_symp2, 6)
             axis_d_flat = axis_d.reshape(-1, axis_d.shape[2])  # (N_symp1*N_symp2, 6)
             l2_norm = np.linalg.norm(axis_d_flat, axis=1)
+
             match_axis = l2_norm < axis_tol
             if not np.any(match_axis):
                 continue
@@ -84,10 +85,13 @@ def struct_match(
             max_abs = np.max(np.abs(pos_d_flat), axis=1)
             min_idx = np.argmin(max_abs[match_axis])
 
-            axis_l2_norm = l2_norm[match_axis][min_idx]
             pos_max_abs = max_abs[match_axis][min_idx]
-            i, j = divmod(np.where(match_axis)[0][min_idx], st_2.positions.shape[0])
-            if pos_d_min is None or pos_d_min[0] > pos_max_abs:
+            if pos_max_abs < pos_tol:
+                struct_match = True
+
+            if verbose and (pos_d_min is None or pos_d_min[0] > pos_max_abs):
+                axis_l2_norm = l2_norm[match_axis][min_idx]
+                i, j = divmod(np.where(match_axis)[0][min_idx], st_2.positions.shape[0])
                 axis_d_min = [
                     axis_l2_norm,
                     [st_1.axis[i], st_2.axis[j], axis_d[i, j]],
@@ -102,15 +106,13 @@ def struct_match(
                         pos_d[i, j],
                     ],
                 ]
-            if pos_max_abs < pos_tol:
-                struct_match = True
 
     if verbose:
 
         def log_axis_positions(symprec, axis, positions):
             print(" - symprec:", np.round(symprec, 5).tolist())
-            print("   - Metric_tensor:", np.round(axis, 4).tolist())
-            print("   - Positions:")
+            print("   - metric_tensor:", np.round(axis, 4).tolist())
+            print("   - positions:")
             for axis_tag, p in zip(
                 ["a", "b", "c"], np.round(positions.reshape(3, -1), 3).tolist()
             ):
@@ -119,7 +121,7 @@ def struct_match(
 
         print("Structures:")
         for i, st_set in enumerate([st_1_set, st_2_set]):
-            print(f" - Struct_No: {i+1}")
+            print(f" - struct_No: {i+1}")
             for st in st_set:
                 print(" - spg_number:", st.spg_number)
                 for h, pos in enumerate(st.positions):
@@ -129,9 +131,9 @@ def struct_match(
             print("difference_log:")
             print(" - axis_l2_norm:", np.round(axis_d_min[0], 3))
             print(" - pos_max_abs", np.round(pos_d_min[0], 3))
-            print(" - Structure_1:")
+            print(" - structure_1:")
             log_axis_positions(pos_d_min[1][0], axis_d_min[1][0], pos_d_min[1][1])
-            print(" - Structure_2:")
+            print(" - structure_2:")
             log_axis_positions(pos_d_min[1][2], axis_d_min[1][1], pos_d_min[1][3])
             print(" - diffs:")
             log_axis_positions([], axis_d_min[1][2], pos_d_min[1][4])

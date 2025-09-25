@@ -94,7 +94,7 @@ class LogfileLoader:
                 else:
                     raise ValueError(f"Could not parse line: {line}")
 
-            if judge:
+            if judge is True:
                 judge = self.check_errors(line, _res)
 
         if judge is not True:
