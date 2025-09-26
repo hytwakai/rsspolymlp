@@ -8,12 +8,11 @@ import numpy as np
 from pypolymlp.core.data_format import PolymlpStructure
 from pypolymlp.core.interface_vasp import Poscar
 from rsspolymlp.analysis.struct_matcher.struct_match import (
-    IrrepStructure,
-    generate_irrep_struct,
+    ReducedStructRep,
     generate_primitive_cells,
+    generate_reduced_struct,
     struct_match,
 )
-from rsspolymlp.analysis.struct_matcher.utils import get_recommend_symprecs
 from rsspolymlp.common.composition import compute_composition
 from rsspolymlp.common.convert_dict import polymlp_struct_to_dict
 from rsspolymlp.common.property import PropUtil
@@ -21,8 +20,8 @@ from rsspolymlp.common.property import PropUtil
 
 @dataclass
 class UniqueStructure:
-    irrep_struct_set: list[IrrepStructure]
-    recommend_symprecs: list[float]
+    reduced_struct_set: list[ReducedStructRep]
+    symprec_set: list[float]
     original_structure: PolymlpStructure
     axis_abc: np.ndarray
     n_atoms: int
@@ -90,7 +89,7 @@ class UniqueStructureAnalyzer:
         is_change_struct = False
         _energy = unique_struct.energy
         _spg_list = unique_struct.spg_list
-        _irrep_struct_set = unique_struct.irrep_struct_set
+        _reduced_struct_set = unique_struct.reduced_struct_set
         if other_properties is None:
             other_properties = {}
 
@@ -109,8 +108,8 @@ class UniqueStructureAnalyzer:
                         break
 
                 if struct_match(
-                    ndstr.irrep_struct_set,
-                    _irrep_struct_set,
+                    ndstr.reduced_struct_set,
+                    _reduced_struct_set,
                     axis_tol=axis_tol,
                     pos_tol=pos_tol,
                 ):
@@ -180,8 +179,8 @@ def generate_unique_struct(
     pressure: Optional[float] = None,
     struct_no: Optional[int] = None,
     dup_count: int = 1,
-    symprec_set: list[float] = [1e-5, 1e-4, 1e-3, 1e-2],
-    irrep_symprec_set: list[float] = [1e-5],
+    symprec_set1: list[float] = [1e-5, 1e-4, 1e-3, 1e-2],
+    symprec_set2: list[float] = [1e-4, 1e-2, 1e-1],
 ) -> UniqueStructure:
     """
     Generate a UniqueStructure object.
@@ -230,34 +229,32 @@ def generate_unique_struct(
 
     primitive_st_set, spg_number_set = generate_primitive_cells(
         polymlp_st=polymlp_st,
-        symprec_set=symprec_set,
+        symprec_set=symprec_set1,
     )
     if primitive_st_set == []:
         return None
 
-    irrep_struct_set = []
+    reduced_struct_set = []
     for i, primitive_st in enumerate(primitive_st_set):
-        recommend_symprecs = get_recommend_symprecs(primitive_st)
-        symprec_irreps = irrep_symprec_set + recommend_symprecs
-        symprec_irreps = sorted(
-            symprec_irreps,
+        symprec_set2 = sorted(
+            symprec_set2,
             key=lambda x: x if isinstance(x, (int, float)) else sum(x) / len(x),
         )
 
-        irrep_struct = generate_irrep_struct(
+        reduced_struct = generate_reduced_struct(
             primitive_st,
             spg_number_set[i],
-            symprec_irreps=symprec_irreps,
+            symprec_set=symprec_set2,
         )
-        irrep_struct_set.append(irrep_struct)
+        reduced_struct_set.append(reduced_struct)
 
     objprop = PropUtil(polymlp_st.axis.T, polymlp_st.positions.T)
     if spg_list is None:
         spg_list = objprop.analyze_space_group(polymlp_st.elements)
 
     return UniqueStructure(
-        irrep_struct_set=irrep_struct_set,
-        recommend_symprecs=recommend_symprecs,
+        reduced_struct_set=reduced_struct_set,
+        symprec_set=[symprec_set1, symprec_set2],
         original_structure=polymlp_st,
         axis_abc=objprop.abc,
         n_atoms=int(len(polymlp_st.elements)),
@@ -277,8 +274,8 @@ def generate_unique_structs(
     use_joblib: bool = True,
     num_process: int = -1,
     backend: str = "loky",
-    symprec_set: list[float] = [1e-5, 1e-4, 1e-3, 1e-2],
-    irrep_symprec_set: list[float] = [1e-5],
+    symprec_set1: list[float] = [1e-5, 1e-4, 1e-3, 1e-2],
+    symprec_set2: list[float] = [1e-4, 1e-2, 1e-1],
 ) -> list[UniqueStructure]:
     """
     Generate a list of UniqueStructure objects from the given RSS results.
@@ -319,8 +316,8 @@ def generate_unique_structs(
                 pressure=res.get("pressure", None),
                 struct_no=res.get("struct_no", None),
                 dup_count=res.get("dup_count", 1),
-                symprec_set=symprec_set,
-                irrep_symprec_set=irrep_symprec_set,
+                symprec_set1=symprec_set1,
+                symprec_set2=symprec_set2,
             )
             for res in rss_results
         )
@@ -336,8 +333,8 @@ def generate_unique_structs(
                     pressure=res.get("pressure", None),
                     struct_no=res.get("struct_no", None),
                     dup_count=res.get("dup_count", 1),
-                    symprec_set=symprec_set,
-                    irrep_symprec_set=irrep_symprec_set,
+                    symprec_set1=symprec_set1,
+                    symprec_set2=symprec_set2,
                 )
             )
     unique_structs = [s for s in unique_structs if s is not None]

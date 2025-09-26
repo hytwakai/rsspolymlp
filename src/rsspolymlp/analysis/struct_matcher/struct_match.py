@@ -8,31 +8,31 @@ import numpy as np
 from pypolymlp.core.data_format import PolymlpStructure
 from pypolymlp.core.interface_vasp import Poscar
 from pypolymlp.utils.vasp_utils import write_poscar_file
-from rsspolymlp.analysis.struct_matcher.irrep_position import IrrepPosition
+from rsspolymlp.analysis.struct_matcher.dev.reduced_position import StructRepReducer
 from rsspolymlp.common.composition import compute_composition
 from rsspolymlp.utils.spglib_utils import SymCell
 
 
 @dataclass
-class IrrepStructure:
+class ReducedStructRep:
     axis: np.ndarray
     positions: np.ndarray
     elements: np.ndarray
     element_count: Counter[str]
     spg_number: int
-    symprec_irreps: list
+    symprec_set: list
 
 
 def struct_match(
-    st_1_set: list[IrrepStructure],
-    st_2_set: list[IrrepStructure],
+    st_1_set: list[ReducedStructRep],
+    st_2_set: list[ReducedStructRep],
     axis_tol: float = 0.01,
     pos_tol: float = 0.01,
     spg_match: bool = True,
     verbose: bool = False,
 ) -> bool:
     """
-    Determine whether two sets of IrrepStructure objects are structurally
+    Determine whether two sets of ReducedStructRep objects are structurally
     equivalent.
 
     This function compares all pairs of irreducible representations from the
@@ -43,9 +43,9 @@ def struct_match(
 
     Parameters
     ----------
-    st_1_set : list of IrrepStructure
+    st_1_set : list of ReducedStructRep
         First set of symmetry-reduced structures (e.g., from structure A).
-    st_2_set : list of IrrepStructure
+    st_2_set : list of ReducedStructRep
         Second set of symmetry-reduced structures (e.g., from structure B).
     axis_tol : float, default=0.01
         Tolerance for lattice vector differences, computed using the squared
@@ -99,9 +99,9 @@ def struct_match(
                 pos_d_min = [
                     pos_max_abs,
                     [
-                        st_1.symprec_irreps[i],
+                        st_1.symprec_set[i],
                         st_1.positions[i],
-                        st_2.symprec_irreps[j],
+                        st_2.symprec_set[j],
                         st_2.positions[j],
                         pos_d[i, j],
                     ],
@@ -130,7 +130,7 @@ def struct_match(
                 print("   spg_number:", st.spg_number)
                 print("   representations:")
                 for h, pos in enumerate(st.positions):
-                    log_axis_positions(st.symprec_irreps[h], st.axis[h], pos)
+                    log_axis_positions(st.symprec_set[h], st.axis[h], pos)
         if axis_d_min is not None:
             print("")
             print("difference_log:")
@@ -151,7 +151,7 @@ def struct_match(
 def generate_primitive_cells(
     poscar_name: Optional[str] = None,
     polymlp_st: Optional[PolymlpStructure] = None,
-    symprec_set: list[float] = [1e-5],
+    symprec_set: list[float] = [1e-5, 1e-4, 1e-3, 1e-2],
 ) -> tuple[list[PolymlpStructure], list[int]]:
     """
     Generate primitive cells of a given structure under different symmetry tolerances.
@@ -162,7 +162,7 @@ def generate_primitive_cells(
         Path to a POSCAR file.
     polymlp_st : PolymlpStructure, optional
         PolymlpStructure object.
-    symprec_set : list of float, default=[1e-5]
+    symprec_set : list of float
         List of symmetry tolerances to use for identifying space group and primitive cell.
 
     Returns
@@ -197,13 +197,15 @@ def generate_primitive_cells(
     return primitive_st_set, spg_number_set
 
 
-def generate_irrep_struct(
+def generate_reduced_struct(
     primitive_st: PolymlpStructure,
     spg_number: int,
-    symprec_irreps: list = [1e-5],
-) -> IrrepStructure:
+    symprec_set: list = [1e-4, 1e-2, 1e-1],
+    standardize_axis: bool = False,
+    cartesian_coords: bool = True,
+) -> ReducedStructRep:
     """
-    Generate an IrrepStructure by computing irreducible atomic positions
+    Generate an ReducedStructRep by computing irreducible atomic positions
     for a primitive structure under different symmetry tolerances.
 
     Parameters
@@ -212,47 +214,73 @@ def generate_irrep_struct(
         Primitive structure.
     spg_number : int
         Space group number corresponding to the given primitive structure.
-    symprec_irreps : list of float or list of 3-float lists, default=[1e-5]
+    symprec_set : list of float or list of 3-float lists, default=[1e-5]
         List of symmetry tolerances used to calculate irreducible representations.
 
     Returns
     -------
-    IrrepStructure
+    ReducedStructRep
         Object containing the standardized lattice, stacked irreducible positions,
         element list, element counts, and the space group number.
     """
 
     metric_tensors = []
-    irrep_positions = []
-    for symprec_irrep in symprec_irreps:
-        if isinstance(symprec_irrep, float):
-            symprec_irrep = [symprec_irrep] * 3
+    reduced_positions = []
+    used_symprec = []
+    for symprec in symprec_set:
+        if isinstance(symprec, float):
+            input_symprec = [symprec] * 3
 
         _axis = primitive_st.axis.T
         _pos = primitive_st.positions.T
         _elements = primitive_st.elements
 
-        irrep_pos = IrrepPosition(symprec=symprec_irrep)
-        metric_tensor, rep_pos, sorted_elements = irrep_pos.irrep_positions(
-            _axis, _pos, _elements, spg_number
+        reducer = StructRepReducer(
+            symprec=input_symprec,
+            standardize_axis=standardize_axis,
+            cartesian_coords=cartesian_coords,
         )
-        metric_tensors.append(metric_tensor)
-        irrep_positions.append(rep_pos)
+        metric_tensor, red_pos, sorted_elements = (
+            reducer.get_reduced_structure_representation(
+                _axis, _pos, _elements, spg_number
+            )
+        )
 
-    return IrrepStructure(
+        app = True
+        for i, mt_ref in enumerate(metric_tensors):
+            diffs = np.abs(mt_ref - metric_tensor)
+            if np.all(diffs < 1e-4):
+                app = False
+                break
+        if not app:
+            app = True
+            for i, ps_ref in enumerate(reduced_positions):
+                diffs = np.abs(ps_ref - red_pos)
+                if np.all(diffs < 1e-4):
+                    app = False
+                    used_symprec[i].append(symprec)
+                    break
+        if app:
+            metric_tensors.append(metric_tensor)
+            reduced_positions.append(red_pos)
+            used_symprec.append([symprec])
+
+    return ReducedStructRep(
         axis=np.stack(metric_tensors, axis=0),
-        positions=np.stack(irrep_positions, axis=0),
+        positions=np.stack(reduced_positions, axis=0),
         elements=sorted_elements,
         element_count=Counter(sorted_elements),
         spg_number=spg_number,
-        symprec_irreps=symprec_irreps,
+        symprec_set=used_symprec,
     )
 
 
-def write_poscar_irrep_struct(irrep_st: IrrepStructure, file_name: str = "POSCAR"):
-    axis = irrep_st.axis
-    positions = irrep_st.positions[-1].reshape(3, -1)
-    elements = irrep_st.elements
+def write_poscar_reduced_struct(
+    reduced_st: ReducedStructRep, file_name: str = "POSCAR"
+):
+    axis = reduced_st.axis
+    positions = reduced_st.positions[-1].reshape(3, -1)
+    elements = reduced_st.elements
     comp_res = compute_composition(elements)
     polymlp_st = PolymlpStructure(
         axis.T,

@@ -15,7 +15,6 @@ import numpy as np
 from pypolymlp.core.interface_vasp import Poscar
 from pypolymlp.core.io_polymlp import load_mlps
 from rsspolymlp.analysis.ghost_minima import detect_ghost_minima
-from rsspolymlp.analysis.struct_matcher.utils import get_distance_cluster
 from rsspolymlp.analysis.unique_struct import (
     UniqueStructureAnalyzer,
     generate_unique_structs,
@@ -142,17 +141,19 @@ class RSSResultAnalyzer:
         _struct_prop = struct_prop
         _struct_prop["structure"] = polymlp_st
 
-        distance_cluster = get_distance_cluster(polymlp_st=polymlp_st)
-        if distance_cluster is not None:
-            max_layer_diff = max(
-                [
-                    np.max(distance_cluster[0]) * axis_abc[0],
-                    np.max(distance_cluster[1]) * axis_abc[1],
-                    np.max(distance_cluster[2]) * axis_abc[2],
-                ]
-            )
-            if max_layer_diff > self.cutoff:
-                return None
+        positions = polymlp_st.positions.T
+        if positions.shape[0] == 1:
+            max_gap = axis_abc[0:3]
+        else:
+            sort_idx = np.argsort(positions, axis=0, kind="mergesort")
+            coord_sorted = np.take_along_axis(positions, sort_idx, axis=0)
+            gap = np.roll(coord_sorted, -1, axis=0) - coord_sorted
+            gap[-1, :] += 1.0
+            gap = gap * axis_abc[0:3]
+            max_gap = np.max(gap, axis=0)
+        max_layer_diff = np.max(max_gap)
+        if max_layer_diff > self.cutoff:
+            return None
 
         return _struct_prop
 

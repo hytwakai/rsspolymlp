@@ -232,7 +232,7 @@ class RSSResultSummarizer:
             use_joblib=self.use_joblib,
             num_process=self.num_process,
             backend=self.backend,
-            symprec_set=self.symprec_set,
+            symprec_set1=self.symprec_set,
         )
         self.num_opt_struct += len(unique_structs)
 
@@ -271,7 +271,7 @@ class RSSResultSummarizer:
                 use_joblib=self.use_joblib,
                 num_process=self.num_process,
                 backend=self.backend,
-                symprec_set=self.symprec_set,
+                symprec_set1=self.symprec_set,
             )
             self.analyzer._initialize_unique_structs(unique_structs)
 
