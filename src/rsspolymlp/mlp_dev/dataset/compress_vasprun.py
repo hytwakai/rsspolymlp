@@ -56,8 +56,8 @@ def compress(vasprun_path, output_dir: str = "compress_dft_data"):
 
     if os.path.isfile(vasprun_path):
         os.chdir(os.path.dirname(vasprun_path))
-        if not os.path.isfile("vasprun.xml.polymlp"):
-            judge = compress_vaspruns("vasprun.xml")
+        if not os.path.isfile(vasprun_path + ".polymlp"):
+            judge = compress_vaspruns(vasprun_path)
         else:
             judge = True
         os.chdir(cwd_path)
@@ -65,7 +65,7 @@ def compress(vasprun_path, output_dir: str = "compress_dft_data"):
             os.makedirs(output_dir, exist_ok=True)
             shutil.copy(
                 vasprun_path + ".polymlp",
-                f"{output_dir}/{'.'.join(vasprun_path.split('/'))}",
+                f"{output_dir}/{'-'.join(vasprun_path.split('/'))}",
             )
         else:
             print(vasprun_path, "failed_parse")

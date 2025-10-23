@@ -181,6 +181,8 @@ def generate_unique_struct(
     dup_count: int = 1,
     symprec_set1: list[float] = [1e-5, 1e-4, 1e-3, 1e-2],
     symprec_set2: list[float] = [1e-4, 1e-2, 1e-1],
+    standardize_axis: bool = False,
+    cartesian_coords: bool = True,
 ) -> UniqueStructure:
     """
     Generate a UniqueStructure object.
@@ -245,6 +247,8 @@ def generate_unique_struct(
             primitive_st,
             spg_number_set[i],
             symprec_set=symprec_set2,
+            standardize_axis=standardize_axis,
+            cartesian_coords=cartesian_coords,
         )
         reduced_struct_set.append(reduced_struct)
 
@@ -276,6 +280,8 @@ def generate_unique_structs(
     backend: str = "loky",
     symprec_set1: list[float] = [1e-5, 1e-4, 1e-3, 1e-2],
     symprec_set2: list[float] = [1e-4, 1e-2, 1e-1],
+    standardize_axis: bool = False,
+    cartesian_coords: bool = True,
 ) -> list[UniqueStructure]:
     """
     Generate a list of UniqueStructure objects from the given RSS results.
@@ -318,6 +324,8 @@ def generate_unique_structs(
                 dup_count=res.get("dup_count", 1),
                 symprec_set1=symprec_set1,
                 symprec_set2=symprec_set2,
+                standardize_axis=standardize_axis,
+                cartesian_coords=cartesian_coords,
             )
             for res in rss_results
         )
@@ -335,6 +343,8 @@ def generate_unique_structs(
                     dup_count=res.get("dup_count", 1),
                     symprec_set1=symprec_set1,
                     symprec_set2=symprec_set2,
+                    standardize_axis=standardize_axis,
+                    cartesian_coords=cartesian_coords,
                 )
             )
     unique_structs = [s for s in unique_structs if s is not None]

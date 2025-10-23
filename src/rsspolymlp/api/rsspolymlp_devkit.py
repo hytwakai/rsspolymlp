@@ -6,7 +6,7 @@ from typing import Optional
 import numpy as np
 from joblib import Parallel, delayed
 
-from pypolymlp.utils.count_time import PolymlpCost
+from pypolymlp.postproc.count_time import PolymlpCost
 from rsspolymlp.mlp_dev.dataset.compress_vasprun import check_convergence, compress
 from rsspolymlp.mlp_dev.dataset.divide_dataset import divide_dataset, divide_train_test
 from rsspolymlp.mlp_dev.dataset.gen_mlp_dataset import gen_mlp_data

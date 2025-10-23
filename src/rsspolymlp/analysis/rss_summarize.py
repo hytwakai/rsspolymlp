@@ -390,6 +390,10 @@ class RSSResultSummarizer:
                 energy_dft -= atomic_energy(element)
             energy_dft /= len(polymlp_st.elements)
 
+            if energy_dft < -5:
+                print(path_name, "exhibits an unphysically low energy. Skipping.")
+                continue
+
             res_dict["poscar"] = path_name + "/vasprun.xml"
             res_dict["structure"] = polymlp_st
             res_dict["energy"] = energy_dft

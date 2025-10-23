@@ -78,6 +78,11 @@ def run():
         help="Including stress tensor.",
     )
     parser.add_argument(
+        "--mean_normal_stress",
+        action="store_true",
+        help="Including the mean normal stress.",
+    )
+    parser.add_argument(
         "--e_low",
         type=float,
         default=-5,
@@ -115,6 +120,7 @@ def run():
             mlp_jsons=args.mlp_jsons,
             dft_dirs=args.dft_dirs,
             stress_tensor=args.stress_tensor,
+            mean_normal_stress=args.mean_normal_stress,
             e_low=args.e_low,
             e_high=args.e_high,
             file_name=args.file_name,

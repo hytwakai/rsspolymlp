@@ -22,7 +22,7 @@ def struct_matcher(
         use_joblib=use_joblib,
         num_process=num_process,
         backend=backend,
-        symprec_set=symprec_set,
+        symprec_set1=symprec_set,
     )
 
     analyzer = UniqueStructureAnalyzer()

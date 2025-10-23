@@ -81,14 +81,20 @@ class LogfileLoader:
                 continue
 
             if in_axis and line.startswith("- ["):
-                vec = self.parse_vector_line(line[2:].strip())
+                if "np.float64" in line[2:]:
+                    vec = self.parse_vector_line(line[2:].strip())
+                else:
+                    vec = ast.literal_eval(line[2:])
                 axis.append(vec)
 
             elif in_frac_coords and line.startswith("-"):
                 match = re.match(r"-\s*(\w+)\s*(\[.*\])", line)
                 if match:
                     el = match.group(1)
-                    coord = self.parse_vector_line(match.group(2))
+                    if "np.float64" in match.group(2):
+                        coord = self.parse_vector_line(match.group(2))
+                    else:
+                        coord = ast.literal_eval(match.group(2))
                     elements.append(el)
                     positions.append(coord)
                 else:

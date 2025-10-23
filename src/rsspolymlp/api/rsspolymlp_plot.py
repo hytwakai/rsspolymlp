@@ -138,19 +138,19 @@ def pareto_opt_mlp(
             print(f"    rmse_force:  {res_dict['rmse'][idx][1]}", file=f)
 
     custom_template = CustomPlt(
-        label_size=8,
+        label_size=9,
         label_pad=4.0,
         legend_size=7,
-        xtick_size=7,
-        ytick_size=7,
-        xtick_pad=4.0,
-        ytick_pad=4.0,
+        xtick_size=8,
+        ytick_size=8,
+        xtick_pad=5.0,
+        ytick_pad=5.0,
     )
     plt = custom_template.get_custom_plt()
     plotter = MakePlot(
         plt=plt,
-        column_size=1,
-        height_ratio=1,
+        column_size=0.9,
+        height_ratio=0.9,
     )
     plotter.initialize_ax()
 
@@ -167,7 +167,7 @@ def pareto_opt_mlp(
         close_index = pareto_ef_idx
     else:
         close_index = pareto_e_idx
-    plotter.set_visuality(n_color=1, n_line=0, n_marker=1)
+    plotter.set_visuality(n_color=1, n_line=0, n_marker=0)
     plotter.ax_plot(
         res_dict["cost"][pareto_e_idx],
         res_dict["rmse"][pareto_e_idx][:, 0],
@@ -175,7 +175,7 @@ def pareto_opt_mlp(
         label=None,
         plot_size=0.7,
     )
-    plotter.set_visuality(n_color=1, n_line=-1, n_marker=1)
+    plotter.set_visuality(n_color=1, n_line=-1, n_marker=0)
     plotter.ax_plot(
         res_dict["cost"][close_index],
         res_dict["rmse"][close_index][:, 0],
@@ -185,8 +185,8 @@ def pareto_opt_mlp(
     )
 
     plotter.finalize_ax(
-        xlabel="Computational time (ms/step/atom) (single CPU core)",
-        ylabel="RMSE (meV/atom)",
+        xlabel="Computational time (ms/step/atom)\n(single CPU core)",
+        ylabel="Energy RMSE (meV/atom)",
         x_limits=[1e-2, 30],
         y_limits=[0, rmse_max],
         xlog=True,
@@ -205,6 +205,7 @@ def plot_rss_error(
     mlp_jsons: list[str],
     dft_dirs: list[str],
     stress_tensor: bool = False,
+    mean_normal_stress: bool = False,
     e_low: float = -5,
     e_high: float = 10,
     file_name: str = "rss_error.png",
@@ -246,25 +247,49 @@ def plot_rss_error(
                 if _poscar_name in set(poscar_name):
                     try:
                         vasprun = Vasprun(dft_path + "/vasprun.xml")
+                        dft_energy = vasprun.energy
                     except Exception:
                         print(dft_path + "/vasprun.xml error")
                         continue
-                    dft_energy = vasprun.energy
+
                     polymlp_st = vasprun.structure
                     for element in polymlp_st.elements:
                         dft_energy -= atomic_energy(element)
                     dft_energy /= len(polymlp_st.elements)
 
+                    pstress = 0
+                    if os.path.isfile(dft_path + "/INCAR"):
+                        with open(dft_path + "/INCAR") as f:
+                            lines = [i.strip() for i in f]
+                            for line in lines:
+                                if "PSTRESS" in line:
+                                    pstress = float(line.split()[-1]) / 10
+                                    break
+
                     if stress_tensor:
-                        pressure = np.mean(
-                            [(vasprun.stress / 10).tolist()[i][i] for i in range(3)]
-                        )
-                        vol_per_atom = polymlp_st.volume / len(polymlp_st.elements)
-                        dft_energy += pressure * vol_per_atom / EVtoGPa
+                        if mean_normal_stress:
+                            vol_per_atom = polymlp_st.volume / len(polymlp_st.elements)
+                            if not pstress == 0:
+                                dft_energy -= pstress * vol_per_atom / EVtoGPa
+                            print("add pressure term")
+                            pressure = np.mean(
+                                [(vasprun.stress / 10).tolist()[i][i] for i in range(3)]
+                            )
+                            dft_energy += pressure * vol_per_atom / EVtoGPa
                         np_file = "rss_error/enthalpy.npy"
                     else:
+                        if not pstress == 0:
+                            vol_per_atom = polymlp_st.volume / len(polymlp_st.elements)
+                            dft_energy -= pstress * vol_per_atom / EVtoGPa
                         np_file = "rss_error/energy.npy"
-                    dft_result.append((_poscar_name, dft_energy))
+
+                    dft_result.append(
+                        (
+                            _poscar_name,
+                            dft_energy,
+                            energies[poscar_name.index(_poscar_name)]["mlp_energy"],
+                        )
+                    )
 
             np.save(np_file, np.array(dft_result))
 
@@ -308,6 +333,16 @@ def plot_rss_error(
         plot_size=0.9,
         zorder=2,
     )
+
+    dft_energy = np.array(dft_energy)
+    mlp_energy = np.array(mlp_energy)
+
+    errors = dft_energy - mlp_energy
+    mask = np.abs(errors) <= 0.5
+    filtered_dft = dft_energy[mask]
+    filtered_mlp = mlp_energy[mask]
+    rmse = np.sqrt(np.mean((filtered_dft - filtered_mlp) ** 2))
+    print("RMSE(meV) =", rmse * 1000)
 
     plotter.finalize_ax(
         xlabel="DFT energy (eV/atom)",
