@@ -239,10 +239,7 @@ class StructRepReducer:
             near_zero_mask = cls_id[:, ax] == 0
             vals = pos[near_zero_mask, ax]
             dist_to_0 = vals
-            if self.cartesian_coords:
-                dist_to_1 = np.sqrt(self.reduced_axis[0:3])[ax] - vals
-            else:
-                dist_to_1 = 1.0 - vals
+            dist_to_1 = 1.0 - vals
             pos[near_zero_mask, ax] = np.where(dist_to_0 < dist_to_1, vals, vals - 1.0)
 
         # Stable lexicographic sort by (ids_x, ids_y, ids_z)
@@ -261,8 +258,6 @@ class StructRepReducer:
 
         atom_num = int(_target_vals.shape[1] / 3)
         atom_list = list(range(int(_target_vals.shape[1] / 3)))
-        atom_list.reverse()
-
         for axis in range(3):
             for atom_idx in atom_list:
                 target_idx = atom_idx + axis * atom_num

@@ -22,7 +22,7 @@ If you use `rsspolymlp` in your study, please cite the following articles.
 
 ### Required libraries and python modules
 
-- python >= 3.9
+- python >= 3.10
 - scikit-learn
 - joblib
 - pypolymlp
