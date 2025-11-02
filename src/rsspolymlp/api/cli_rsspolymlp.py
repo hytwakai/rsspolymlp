@@ -125,6 +125,11 @@ def run():
         "--pressure", type=float, default=0.0, help="Pressure term (in GPa)"
     )
     parser.add_argument(
+        "--symmetry",
+        action="store_true",
+        help="If enabled, the optimization is comducted with using symmetry constraints.",
+    )
+    parser.add_argument(
         "--solver_method", type=str, default="CG", help="Type of solver"
     )
     parser.add_argument(
@@ -263,6 +268,7 @@ def run():
         rss_run_parallel(
             pot=args.pot,
             pressure=args.pressure,
+            with_symmetry=args.symmetry,
             solver_method=args.solver_method,
             c_maxiter=args.c_maxiter,
             n_opt_str=args.n_opt_str,
@@ -276,6 +282,7 @@ def run():
         rss_run_single(
             pot=args.pot,
             pressure=args.pressure,
+            with_symmetry=args.symmetry,
             solver_method=args.solver_method,
             c_maxiter=args.c_maxiter,
             n_opt_str=args.n_opt_str,
@@ -297,6 +304,7 @@ def run():
             atom_counts=args.atom_counts,
             pot=args.pot,
             pressure=args.pressure,
+            with_symmetry=args.symmetry,
             c_maxiter=args.c_maxiter,
             n_opt_str=args.n_opt_str,
             max_init_str=args.max_init_str,

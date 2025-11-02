@@ -15,7 +15,7 @@ from rsspolymlp.analysis.ghost_minima import (
 from rsspolymlp.analysis.phase_analysis import ConvexHullAnalyzer
 from rsspolymlp.analysis.rss_summarize import RSSResultSummarizer
 from rsspolymlp.rss.eliminate_duplicates import RSSResultAnalyzer
-from rsspolymlp.rss.optimization_mlp import RandomStructureSearch
+from rsspolymlp.rss.optimization_mlp import OptimizationMLP
 from rsspolymlp.rss.random_struct import GenerateRandomStructure
 
 
@@ -40,6 +40,7 @@ def rss_init_struct(
 def rss_run_parallel(
     pot="polymlp.yaml",
     pressure=0.0,
+    with_symmetry=False,
     solver_method="CG",
     c_maxiter=100,
     n_opt_str=1000,
@@ -75,9 +76,10 @@ def rss_run_parallel(
     if len(poscar_path_all) == 0:
         return
 
-    rssobj = RandomStructureSearch(
+    rssobj = OptimizationMLP(
         pot=pot,
         pressure=pressure,
+        with_symmetry=with_symmetry,
         solver_method=solver_method,
         c_maxiter=c_maxiter,
         n_opt_str=n_opt_str,
@@ -134,6 +136,7 @@ def rss_run_parallel(
 def rss_run_single(
     pot="polymlp.yaml",
     pressure=0.0,
+    with_symmetry=False,
     solver_method="CG",
     c_maxiter=100,
     n_opt_str=1000,
@@ -152,9 +155,10 @@ def rss_run_single(
         glob.glob("initial_struct/*"), key=lambda x: int(x.split("_")[-1])
     )
     poscar_list = [p for p in poscar_path_all if os.path.basename(p)]
-    rssobj = RandomStructureSearch(
+    rssobj = OptimizationMLP(
         pot=pot,
         pressure=pressure,
+        with_symmetry=with_symmetry,
         solver_method=solver_method,
         c_maxiter=c_maxiter,
         n_opt_str=n_opt_str,
@@ -218,6 +222,7 @@ def rss_polymlp(
     atom_counts,
     pot="polymlp.yaml",
     pressure=0.0,
+    with_symmetry=False,
     c_maxiter=100,
     n_opt_str=1000,
     max_init_str=None,
@@ -263,6 +268,7 @@ def rss_polymlp(
         rss_run_parallel(
             pot=pot,
             pressure=pressure,
+            with_symmetry=with_symmetry,
             solver_method=solver_method,
             c_maxiter=c_maxiter,
             n_opt_str=n_opt_str,

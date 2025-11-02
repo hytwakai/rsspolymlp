@@ -10,12 +10,13 @@ from pypolymlp.core.interface_vasp import Poscar
 from pypolymlp.utils.spglib_utils import SymCell
 
 
-class RandomStructureSearch:
+class OptimizationMLP:
 
     def __init__(
         self,
         pot="polymlp.yaml",
         pressure=0.0,
+        with_symmetry=False,
         solver_method="CG",
         c_maxiter=100,
         n_opt_str=1000,
@@ -23,6 +24,7 @@ class RandomStructureSearch:
     ):
         self.pot = pot
         self.pressure = pressure
+        self.with_symmetry = with_symmetry
         self.solver_method = solver_method
         self.c_maxiter = c_maxiter
         self.n_opt_str = n_opt_str
@@ -111,7 +113,7 @@ class RandomStructureSearch:
             relax_cell=True,
             relax_volume=True,
             relax_positions=True,
-            with_sym=False,
+            with_sym=self.with_symmetry,
             pressure=self.pressure,
             verbose=True,
         )
@@ -237,9 +239,12 @@ class RandomStructureSearch:
             res_f, res_s = self.minobj.residual_forces
             print("Residuals (force):")
             print(res_f.T)
-            print(
-                "Maximum absolute value in Residuals (force):", np.max(np.abs(res_f.T))
-            )
+            if res_f.size == 0:
+                print("Maximum absolute value in Residuals (force):", 0.0)
+            else:
+                print(
+                    "Maximum absolute value in Residuals (force):", np.max(np.abs(res_f.T))
+                )
             print("Residuals (stress):")
             print(res_s)
             print(

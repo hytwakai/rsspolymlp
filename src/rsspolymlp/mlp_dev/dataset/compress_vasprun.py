@@ -56,8 +56,8 @@ def compress(vasprun_path, output_dir: str = "compress_dft_data"):
 
     if os.path.isfile(vasprun_path):
         os.chdir(os.path.dirname(vasprun_path))
-        if not os.path.isfile(vasprun_path + ".polymlp"):
-            judge = compress_vaspruns(vasprun_path)
+        if not os.path.isfile(vasprun_path.split("/")[-1] + ".polymlp"):
+            judge = compress_vaspruns(vasprun_path.split("/")[-1])
         else:
             judge = True
         os.chdir(cwd_path)

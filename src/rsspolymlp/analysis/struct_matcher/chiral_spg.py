@@ -78,3 +78,8 @@ def get_chiral_spg():
     sohncke_all_spg = np.concatenate([sohncke_class_2_spg, sohncke_class_3_spg])
 
     return sohncke_all_spg
+
+
+def is_chiral(spg_number):
+    chiral_spg = get_chiral_spg()
+    return spg_number in chiral_spg

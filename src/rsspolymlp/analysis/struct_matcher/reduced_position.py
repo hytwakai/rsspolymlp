@@ -2,8 +2,10 @@ from collections import Counter
 
 import numpy as np
 
-from rsspolymlp.analysis.struct_matcher.dev.invert_and_swap import (
-    invert_and_swap_positions,
+from rsspolymlp.analysis.struct_matcher.chiral_spg import is_chiral
+from rsspolymlp.analysis.struct_matcher.invert_and_swap import (
+    metric_tensor_transform,
+    signed_permutation_matrices,
 )
 from rsspolymlp.common.property import PropUtil, get_metric_tensor
 
@@ -27,8 +29,6 @@ class StructRepReducer:
         self.symprec = np.array(symprec)
         self.standardize_axis = standardize_axis
         self.cartesian_coords = cartesian_coords
-        self.invert_values = None
-        self.swap_values = None
 
     def get_reduced_structure_representation(
         self, axis, positions, elements, spg_number
@@ -67,56 +67,65 @@ class StructRepReducer:
         else:
             _axis = self.axis
 
-        reduced_axis, _positions = self.get_reduced_axis(
-            _axis, self.positions, self.symprec
-        )
-
-        prop = PropUtil(reduced_axis, _positions)
+        prop = PropUtil(_axis, self.positions)
         self.abc_angle = np.asarray(prop.abc, dtype=float)
         metric_tensor = get_metric_tensor(self.abc_angle)
 
+        reduced_axis, signed_permutation_cands = self.get_reduced_axis(
+            metric_tensor,
+            spg_number,
+        )
+
         # Trivial case: single‑atom cell → nothing to do
-        if _positions.shape[0] == 1:
-            return metric_tensor, np.array([0, 0, 0]), self.elements
+        if self.positions.shape[0] == 1:
+            return reduced_axis, np.array([0, 0, 0]), self.elements
 
         reduced_positions, sorted_elements = self.get_reduced_positions(
-            metric_tensor, _positions, self.elements, spg_number
+            self.positions,
+            self.elements,
+            signed_permutation_cands,
         )
 
         return metric_tensor, reduced_positions, sorted_elements
 
-    def get_reduced_axis(self, axis, positions, symprec):
-        prop = PropUtil(axis, positions)
-        abc_angle = np.asarray(prop.abc, dtype=float)
-        abc, angles = np.array(abc_angle[:3]), np.array(abc_angle[3:])
+    def get_reduced_axis(self, metric_tensor, spg_number):
+        proper_matrices, improper_matrices = signed_permutation_matrices()
+        proper_G_transform, improper_G_transform = metric_tensor_transform()
+        if not is_chiral(spg_number):
+            all_signed_permutation_matrices = np.concatenate(
+                [proper_matrices, improper_matrices], axis=0
+            )
+            all_G_transform = np.concatenate(
+                [proper_G_transform, improper_G_transform], axis=0
+            )
+        else:
+            all_signed_permutation_matrices = proper_matrices
+            all_G_transform = proper_G_transform
 
-        abc_sort = np.argsort(abc)
-        reduced_axis = axis[abc_sort, :]
-        converted_pos = positions[:, abc_sort]
+        all_metric_tensor = []
+        for P in all_G_transform:
+            trans_metric_tensor = P @ metric_tensor
+            all_metric_tensor.append(trans_metric_tensor)
+        all_metric_tensor = np.array(all_metric_tensor)
 
-        tol = symprec
-        length_similar = np.isclose(abc[:, None], abc[None, :], atol=tol)
-        has_close = length_similar.sum(axis=1) > 1
+        reduced_axis_cands = all_metric_tensor
+        signed_permutation_cands = all_signed_permutation_matrices
+        for idx in range(6):
+            max_metric = np.min(reduced_axis_cands[:, idx])
+            is_near_max = np.where(
+                np.abs(reduced_axis_cands[:, idx] - max_metric) <= self.symprec[idx % 3]
+            )[0]
 
-        active_cols = np.nonzero(has_close)[0]
-        if len(active_cols) == 3:
-            angle_sort = np.argsort(-angles)
-            reduced_axis = reduced_axis[angle_sort, :]
-            converted_pos = converted_pos[:, angle_sort]
-        elif len(active_cols) == 2:
-            angle_sort = np.argsort(-angles[active_cols])
-            sorted_idx = active_cols[angle_sort]
-            reduced_axis[active_cols, :] = reduced_axis[sorted_idx, :]
-            converted_pos[:, active_cols] = converted_pos[:, sorted_idx]
+            reduced_axis_cands = reduced_axis_cands[is_near_max, :]
+            signed_permutation_cands = signed_permutation_cands[is_near_max, :]
+            if reduced_axis_cands.shape[0] == 1:
+                break
 
-        return reduced_axis, converted_pos
+        reduced_axis = reduced_axis_cands[0]
+        return reduced_axis, signed_permutation_cands
 
-    def get_reduced_positions(self, metric_tensor, positions, elements, spg_number):
+    def get_reduced_positions(self, positions, elements, signed_permutation_cands):
         """Derive a reduced representation of atomic positions."""
-        self.invert_values, self.swap_values = invert_and_swap_positions(
-            metric_tensor, spg_number, self.symprec
-        )
-
         unique_elements = np.sort(np.unique(elements))
         types = np.array([np.where(unique_elements == el)[0][0] for el in elements])
 
@@ -132,7 +141,9 @@ class StructRepReducer:
         sorted_types = types[sort_idx]
         positions = positions[sort_idx, :]
 
-        position_cands = self.position_candidates(positions, sorted_types)
+        position_cands = self.position_candidates(
+            positions, sorted_types, signed_permutation_cands
+        )
 
         reduced_perm_cands = []
         for pos_cand in position_cands:
@@ -157,23 +168,28 @@ class StructRepReducer:
         self,
         positions: np.ndarray,
         types: np.ndarray,
+        signed_permutation_cands: np.ndarray,
     ):
         _positions = positions.copy()
-        cluster_id, snapped_pos = self.assign_clusters(_positions, types)
+        cluster_id, snapped_pos = self.assign_clusters(
+            _positions, types, signed_permutation_cands
+        )
 
         position_cands = []
 
         mask = types == 0
-        for invert_val in self.invert_values:
+        for cand in signed_permutation_cands:
             _pos = np.zeros_like(_positions)
             _cls_id = np.zeros_like(_positions, dtype=np.int32)
-            for axis, val in enumerate(invert_val):
-                if val == 1:
-                    _pos[:, axis] = snapped_pos[:, axis]
-                    _cls_id[:, axis] = cluster_id[:, axis]
+            for axis, val in enumerate(cand):
+                target_axis = np.where(val != 0)[0][0]
+                sign = val[target_axis]
+                if sign == 1:
+                    _pos[:, axis] = snapped_pos[:, target_axis]
+                    _cls_id[:, axis] = cluster_id[:, target_axis]
                 else:
-                    _pos[:, axis] = snapped_pos[:, axis + 3]
-                    _cls_id[:, axis] = cluster_id[:, axis + 3]
+                    _pos[:, axis] = snapped_pos[:, target_axis + 3]
+                    _cls_id[:, axis] = cluster_id[:, target_axis + 3]
             position_cands.append(
                 {
                     "positions": _pos,
@@ -181,24 +197,6 @@ class StructRepReducer:
                     "cands_idx": np.where(mask)[0],
                 }
             )
-
-        _position_cands = position_cands.copy()
-        for swap_val in self.swap_values:
-            if np.array_equal(swap_val, [0, 1, 2]):
-                continue
-
-            for cand in _position_cands:
-                _pos = cand["positions"].copy()
-                _cls_id = cand["cluster_id"].copy()
-                _pos[:, [0, 1, 2]] = _pos[:, swap_val]
-                _cls_id[:, [0, 1, 2]] = _cls_id[:, swap_val]
-                position_cands.append(
-                    {
-                        "positions": _pos,
-                        "cluster_id": _cls_id,
-                        "cands_idx": cand["cands_idx"].copy(),
-                    }
-                )
 
         return position_cands
 
@@ -249,7 +247,12 @@ class StructRepReducer:
         reduced_perm_cands = reduced_perm_cands[0, :]
         return reduced_perm_cands
 
-    def assign_clusters(self, positions: np.ndarray, types: np.ndarray):
+    def assign_clusters(
+        self,
+        positions: np.ndarray,
+        types: np.ndarray,
+        signed_permutation_cands: np.ndarray,
+    ):
         """
         Assigns cluster IDs along each axis; atoms at identical positions share the same ID.
         """
@@ -257,9 +260,7 @@ class StructRepReducer:
         _types = types.copy()
 
         invert_list = [False]
-        if self.invert_values is not None and any(
-            np.any(v == -1) for v in self.invert_values
-        ):
+        if any(np.any(v == -1) for v in signed_permutation_cands):
             invert_list = [False, True]
 
         cluster_id, snapped_positions = self._assign_clusters_by_type(
