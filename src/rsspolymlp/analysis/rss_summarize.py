@@ -306,24 +306,18 @@ class RSSResultSummarizer:
             for res in rss_results:
                 if not res.get("is_ghost_minima") and e_min is None:
                     e_min = res["energy"]
-                    ghost_num = res["struct_no"]
-                    for num in range(ghost_num):
-                        for _res in rss_results:
-                            if num + 1 == _res["struct_no"]:
-                                dest = (
-                                    f"{dir_name}/{logname}/POSCAR_{logname}_No{num+1}"
-                                )
-                                if output_poscar:
-                                    shutil.copy(_res["poscar"], dest)
-                                break
+                elif res.get("is_ghost_minima") and output_poscar:
+                    dest = f"{dir_name}/{logname}/POSCAR_{logname}_No{res['struct_no']}"
+                    shutil.copy(res["poscar"], dest)
+                    continue
 
                 if e_min is not None and threshold is not None:
                     diff = abs(e_min - res["energy"])
                     if diff * 1000 > threshold:
                         continue
 
-                dest = f"{dir_name}/{logname}/POSCAR_{logname}_No{res['struct_no']}"
                 if output_poscar:
+                    dest = f"{dir_name}/{logname}/POSCAR_{logname}_No{res['struct_no']}"
                     shutil.copy(res["poscar"], dest)
                 struct_count += 1
 

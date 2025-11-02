@@ -23,11 +23,13 @@ class StructRepReducer:
         self,
         symprec: list[float] = [1e-4, 1e-4, 1e-4],
         standardize_axis: bool = False,
+        original_axis: bool = False,
         cartesian_coords: bool = True,
     ):
         """Init method."""
         self.symprec = np.array(symprec)
         self.standardize_axis = standardize_axis
+        self.original_axis = original_axis
         self.cartesian_coords = cartesian_coords
 
     def get_reduced_structure_representation(
@@ -111,10 +113,17 @@ class StructRepReducer:
         reduced_axis_cands = all_metric_tensor
         signed_permutation_cands = all_signed_permutation_matrices
         for idx in range(6):
-            min_metric = np.min(reduced_axis_cands[:, idx])
-            is_near_max = np.where(
-                np.abs(reduced_axis_cands[:, idx] - min_metric) <= self.symprec[idx % 3]
-            )[0]
+            if self.original_axis:
+                is_near_max = np.where(
+                    np.abs(reduced_axis_cands[:, idx] - metric_tensor[idx])
+                    <= self.symprec[idx % 3]
+                )[0]
+            else:
+                min_metric = np.min(reduced_axis_cands[:, idx])
+                is_near_max = np.where(
+                    np.abs(reduced_axis_cands[:, idx] - min_metric)
+                    <= self.symprec[idx % 3]
+                )[0]
 
             reduced_axis_cands = reduced_axis_cands[is_near_max, :]
             signed_permutation_cands = signed_permutation_cands[is_near_max, :]

@@ -202,6 +202,7 @@ def generate_reduced_struct(
     spg_number: int,
     symprec_set: list = [1e-4, 1e-2, 1e-1],
     standardize_axis: bool = False,
+    original_axis: bool = False,
     cartesian_coords: bool = True,
 ) -> ReducedStructRep:
     """
@@ -238,6 +239,7 @@ def generate_reduced_struct(
         reducer = StructRepReducer(
             symprec=input_symprec,
             standardize_axis=standardize_axis,
+            original_axis=original_axis,
             cartesian_coords=cartesian_coords,
         )
         metric_tensor, red_pos, sorted_elements = (
