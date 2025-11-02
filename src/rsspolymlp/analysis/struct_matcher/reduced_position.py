@@ -71,14 +71,14 @@ class StructRepReducer:
         self.abc_angle = np.asarray(prop.abc, dtype=float)
         metric_tensor = get_metric_tensor(self.abc_angle)
 
-        reduced_axis, signed_permutation_cands = self.get_reduced_axis(
+        self.reduced_axis, signed_permutation_cands = self.get_reduced_axis(
             metric_tensor,
             spg_number,
         )
 
         # Trivial case: single‑atom cell → nothing to do
         if self.positions.shape[0] == 1:
-            return reduced_axis, np.array([0, 0, 0]), self.elements
+            return self.reduced_axis, np.array([0, 0, 0]), self.elements
 
         reduced_positions, sorted_elements = self.get_reduced_positions(
             self.positions,
@@ -86,7 +86,7 @@ class StructRepReducer:
             signed_permutation_cands,
         )
 
-        return metric_tensor, reduced_positions, sorted_elements
+        return self.reduced_axis, reduced_positions, sorted_elements
 
     def get_reduced_axis(self, metric_tensor, spg_number):
         proper_matrices, improper_matrices = signed_permutation_matrices()
@@ -111,9 +111,9 @@ class StructRepReducer:
         reduced_axis_cands = all_metric_tensor
         signed_permutation_cands = all_signed_permutation_matrices
         for idx in range(6):
-            max_metric = np.min(reduced_axis_cands[:, idx])
+            min_metric = np.min(reduced_axis_cands[:, idx])
             is_near_max = np.where(
-                np.abs(reduced_axis_cands[:, idx] - max_metric) <= self.symprec[idx % 3]
+                np.abs(reduced_axis_cands[:, idx] - min_metric) <= self.symprec[idx % 3]
             )[0]
 
             reduced_axis_cands = reduced_axis_cands[is_near_max, :]
@@ -124,7 +124,12 @@ class StructRepReducer:
         reduced_axis = reduced_axis_cands[0]
         return reduced_axis, signed_permutation_cands
 
-    def get_reduced_positions(self, positions, elements, signed_permutation_cands):
+    def get_reduced_positions(
+        self,
+        positions,
+        elements,
+        signed_permutation_cands,
+    ):
         """Derive a reduced representation of atomic positions."""
         unique_elements = np.sort(np.unique(elements))
         types = np.array([np.where(unique_elements == el)[0][0] for el in elements])
@@ -146,6 +151,7 @@ class StructRepReducer:
         )
 
         reduced_perm_cands = []
+        target_vals = []
         for pos_cand in position_cands:
             for target_idx in pos_cand["cands_idx"]:
                 _pos = pos_cand["positions"].copy()
@@ -154,13 +160,22 @@ class StructRepReducer:
                     target_idx, _pos, sorted_types, _cls_id
                 )
                 if self.cartesian_coords:
-                    reduced_perm_positions = (
-                        reduced_perm_positions * self.abc_angle[0:3]
+                    reduced_perm_positions = reduced_perm_positions * np.sqrt(
+                        self.reduced_axis[0:3]
                     )
-                reduced_perm_cands.append(reduced_perm_positions[1:, :].T.reshape(-1))
+                reduced_perm_cands.append(reduced_perm_positions.T.reshape(-1))
 
+                mask = types == 0
+                target_vals.append(
+                    reduced_perm_positions[0 : len(mask) - 1, :].T.reshape(-1)
+                )
+
+        target_vals = np.array(target_vals)
         reduced_perm_cands = np.array(reduced_perm_cands)
-        reduced_positions = self.reduced_translation(reduced_perm_cands)
+        reduced_positions = self.reduced_translation(
+            target_vals,
+            reduced_perm_cands,
+        )
 
         return reduced_positions, sorted_elements
 
@@ -213,13 +228,21 @@ class StructRepReducer:
 
         pos = pos - pos[target_idx]
         cls_id = np.mod(cls_id - cls_id[target_idx], id_max).astype(int)
+
+        pos = np.delete(pos, target_idx, axis=0)
+        cls_id = np.delete(cls_id, target_idx, axis=0).astype(int)
+        types = np.delete(types, target_idx, axis=0)
+
         for ax in range(3):
             pos[:, ax] %= 1.0
 
             near_zero_mask = cls_id[:, ax] == 0
             vals = pos[near_zero_mask, ax]
             dist_to_0 = vals
-            dist_to_1 = 1.0 - vals
+            if self.cartesian_coords:
+                dist_to_1 = np.sqrt(self.reduced_axis[0:3])[ax] - vals
+            else:
+                dist_to_1 = 1.0 - vals
             pos[near_zero_mask, ax] = np.where(dist_to_0 < dist_to_1, vals, vals - 1.0)
 
         # Stable lexicographic sort by (ids_x, ids_y, ids_z)
@@ -228,23 +251,37 @@ class StructRepReducer:
 
         return reduced_perm_positions
 
-    def reduced_translation(self, reduced_perm_cands: np.ndarray):
-        atom_num3 = reduced_perm_cands.shape[1]
-        for idx in range(atom_num3):
-            axis_idx = idx // atom_num3
-            sort_idx = np.argsort(-reduced_perm_cands[:, idx])
-            _reduced_perm_cands = reduced_perm_cands[sort_idx, :]
-            sorted_one_coord = reduced_perm_cands[sort_idx, idx]
-            max_coord = sorted_one_coord[0]
+    def reduced_translation(
+        self,
+        target_vals: np.ndarray,
+        reduced_perm_cands: np.ndarray,
+    ):
+        _reduced_perm_cands = reduced_perm_cands
+        _target_vals = target_vals
 
-            is_near_max = np.where(
-                np.abs(sorted_one_coord - max_coord) <= self.symprec[axis_idx]
-            )[0]
-            reduced_perm_cands = _reduced_perm_cands[: is_near_max[-1] + 1, :]
-            if reduced_perm_cands.shape[0] == 1:
-                break
+        atom_num = int(_target_vals.shape[1] / 3)
+        atom_list = list(range(int(_target_vals.shape[1] / 3)))
+        atom_list.reverse()
 
-        reduced_perm_cands = reduced_perm_cands[0, :]
+        for axis in range(3):
+            for atom_idx in atom_list:
+                target_idx = atom_idx + axis * atom_num
+                sort_idx = np.argsort(-_target_vals[:, target_idx])
+                _target_vals = _target_vals[sort_idx, :]
+                _reduced_perm_cands = _reduced_perm_cands[sort_idx, :]
+
+                sorted_one_coord = _target_vals[:, target_idx]
+                max_coord = sorted_one_coord[0]
+
+                is_near_max = np.where(
+                    np.abs(sorted_one_coord - max_coord) <= self.symprec[axis]
+                )[0]
+                _target_vals = _target_vals[: is_near_max[-1] + 1, :]
+                _reduced_perm_cands = _reduced_perm_cands[: is_near_max[-1] + 1, :]
+                if _reduced_perm_cands.shape[0] == 1:
+                    break
+
+        reduced_perm_cands = _reduced_perm_cands[0, :]
         return reduced_perm_cands
 
     def assign_clusters(
@@ -304,7 +341,7 @@ class StructRepReducer:
                 gap = np.roll(coord_sorted, -1, axis=0) - coord_sorted
                 gap[-1, :] += 1.0
                 if self.cartesian_coords:
-                    gap = gap * self.abc_angle[0:3]
+                    gap = gap * np.sqrt(self.reduced_axis[0:3])
 
                 # New cluster starts where gap > symprec
                 is_new_cluster = gap > self.symprec
