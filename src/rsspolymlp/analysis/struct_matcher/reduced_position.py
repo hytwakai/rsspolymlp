@@ -78,9 +78,25 @@ class StructRepReducer:
             spg_number,
         )
 
+        aa, bb, cc, bc, ac, ab = self.reduced_axis
+        G = np.array([[aa, ab, ac], [ab, bb, bc], [ac, bc, cc]], dtype=float)
+        w, U = np.linalg.eigh(G)
+        w = np.clip(w, 0, None)
+        G_half = (U * np.sqrt(w)) @ U.T
+        metric_tensor_half = np.array(
+            [
+                G_half[0, 0],
+                G_half[1, 1],
+                G_half[2, 2],
+                G_half[1, 2],
+                G_half[0, 2],
+                G_half[0, 1],
+            ]
+        )
+
         # Trivial case: single‑atom cell → nothing to do
         if self.positions.shape[0] == 1:
-            return self.reduced_axis, np.array([0, 0, 0]), self.elements
+            return metric_tensor_half, np.array([0, 0, 0]), self.elements
 
         reduced_positions, sorted_elements = self.get_reduced_positions(
             self.positions,
@@ -88,7 +104,7 @@ class StructRepReducer:
             signed_permutation_cands,
         )
 
-        return self.reduced_axis, reduced_positions, sorted_elements
+        return metric_tensor_half, reduced_positions, sorted_elements
 
     def get_reduced_axis(self, metric_tensor, spg_number):
         proper_matrices, improper_matrices = signed_permutation_matrices()
