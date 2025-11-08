@@ -55,7 +55,7 @@ rsspolymlp --rss_full --elements Al Cu --atom_counts 4 4 --pot polymlp.yaml --pr
 #### 4. Identify unique structures across atom counts `n`
 
 ```shell
-rsspolymlp --summarize --elements Al Cu --paths <rss_directory>/*
+rsspolymlp --summarize --paths <rss_directory>/*/rss_result/rss_results.json
 # <rss_directory>: parent directory containing RSS runs at the same pressure
 ```
 
@@ -64,8 +64,9 @@ rsspolymlp --summarize --elements Al Cu --paths <rss_directory>/*
 Ghost minimum structures are identified and filtered based on nearest-neighbor distances.
 
 ```shell
-rsspolymlp --ghost_minima --paths <summary_dir>/json/*
-rsspolymlp --ghost_minima --compare_dft --paths <summary_dir>/ghost_minima_dft
+cd <summary_dir>
+rsspolymlp --ghost_minima --paths ./json/*.json
+rsspolymlp --ghost_minima --compare_dft --paths ./ghost_minima_dft
 # <summary_dir>: output directory from rss-summarize, storing aggregated RSS results
 ```
 
@@ -74,9 +75,9 @@ rsspolymlp --ghost_minima --compare_dft --paths <summary_dir>/ghost_minima_dft
 This step computes relative or formation energies of the RSS-obtained structures, extracts global minima, and identifies metastable structures near the convex hull within a specified energy threshold (e.g., 30 meV/atom).
 
 ```shell
-rsspolymlp --phase_analysis --elements Al Cu --paths <summary_dir>/json/* \
+rsspolymlp --phase_analysis --elements Al Cu --paths ./*.json \
   --thresholds 10 30 50 \
-  --ghost_minima_file <summary_dir>/ghost_minima/ghost_minima_detection.yaml
+  --ghost_minima_file ghost_minima/ghost_minima_detection.yaml
 ```
 
 ---

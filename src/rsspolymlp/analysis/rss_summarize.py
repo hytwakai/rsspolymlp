@@ -6,7 +6,6 @@ from collections import defaultdict
 from time import time
 
 import numpy as np
-import yaml
 
 from pypolymlp.core.interface_vasp import Vasprun
 from rsspolymlp.analysis.ghost_minima import detect_ghost_minima
@@ -26,8 +25,9 @@ class RSSResultSummarizer:
 
     def __init__(
         self,
-        elements,
-        result_paths,
+        result_paths: list = [],
+        parent_paths: list = [],
+        element_order: list = None,
         use_joblib: bool = True,
         num_process: int = -1,
         backend: str = "loky",
@@ -35,10 +35,13 @@ class RSSResultSummarizer:
         output_poscar: bool = False,
         thresholds: list[float] = None,
         parse_vasp: bool = False,
-        update_result: bool = False,
+        update_parent: bool = False,
     ):
-        self.elements = elements
         self.result_paths = result_paths
+        self.parent_paths = parent_paths
+        self.result_paths.extend(self.parent_paths)
+
+        self.element_order = element_order
         self.use_joblib = use_joblib
         self.num_process = num_process
         self.backend = backend
@@ -46,9 +49,8 @@ class RSSResultSummarizer:
         self.output_poscar = output_poscar
         self.thresholds = thresholds
         self.parse_vasp = parse_vasp
-        self.update_result = update_result
+        self.update_parent = update_parent
 
-        self.num_opt_struct = 0
         self.pressure = None
         self.analyzer = UniqueStructureAnalyzer()
 
@@ -56,54 +58,66 @@ class RSSResultSummarizer:
         os.makedirs("json", exist_ok=True)
         os.makedirs("ghost_minima", exist_ok=True)
 
+        parent_path_ref = {}
+        if self.parent_paths is not None:
+            for json_path in self.parent_paths:
+                with open(json_path) as f:
+                    loaded_dict = json.load(f)
+
+                target_elements = loaded_dict["elements"]
+                comp_ratio = tuple(loaded_dict["comp_ratio"])
+                if self.element_order is not None:
+                    _dicts = dict(zip(target_elements, comp_ratio))
+                    comp_ratio = tuple(_dicts.get(el, 0) for el in self.element_order)
+                    target_elements = self.element_order
+
+                composition_tag = ""
+                for i in range(len(comp_ratio)):
+                    if not comp_ratio[i] == 0:
+                        composition_tag += f"{target_elements[i]}{comp_ratio[i]}"
+                parent_path_ref[composition_tag] = json_path
+
         if not self.parse_vasp:
-            paths_same_comp, results_same_comp = self._parse_mlp_result()
-            axis_tol = 0.01
-            pos_tol = 0.01
+            paths_same_comp, results_same_comp = self._parse_json_result(
+                parse_rss_result=True
+            )
+            axis_tol = 0.03
+            pos_tol = 0.03
         else:
             paths_same_comp, results_same_comp = self._parse_vasp_result()
-            axis_tol = 0.05
-            pos_tol = 0.03
+            axis_tol = 0.1
+            pos_tol = 0.1
 
-        for comp_ratio, res_paths in paths_same_comp.items():
-            self.num_opt_struct = 0
+        for composition_tag, res_paths in paths_same_comp.items():
+            print(f"Composition {composition_tag}: summarizing...")
             self.analyzer = UniqueStructureAnalyzer()
-
-            log_name = ""
-            for i in range(len(comp_ratio)):
-                if not comp_ratio[i] == 0:
-                    log_name += f"{self.elements[i]}{comp_ratio[i]}"
 
             time_start = time()
 
-            log_name = ""
-            for i in range(len(comp_ratio)):
-                if not comp_ratio[i] == 0:
-                    log_name += f"{self.elements[i]}{comp_ratio[i]}"
-            yaml_name = log_name + ".yaml"
-            res_paths, integrated_res_paths = self.initialize_uniq_struct(
-                yaml_name, res_paths
-            )
-            self.sort_in_single_comp(
-                res_paths,
-                results_same_comp[comp_ratio],
-                axis_tol=axis_tol,
-                pos_tol=pos_tol,
-            )
+            if composition_tag in parent_path_ref:
+                print(
+                    f"Processing parent result file: {parent_path_ref[composition_tag]}"
+                )
+                self.initialize_uniq_struct(parent_path_ref[composition_tag])
+
+            for res_path in res_paths:
+                if parent_path_ref[composition_tag] != res_path:
+                    print(f"Processing result file: {res_path}", flush=True)
+                    self.sort_in_single_comp(
+                        results_same_comp[composition_tag][res_path],
+                        axis_tol=axis_tol,
+                        pos_tol=pos_tol,
+                    )
 
             time_finish = time() - time_start
 
             unique_structs = self.analyzer.unique_str
 
-            with open(log_name + ".yaml", "w") as f:
+            with open(composition_tag + ".yaml", "w") as f:
                 print("general_information:", file=f)
                 print(f"  sorting_time_sec:      {round(time_finish, 2)}", file=f)
                 print(f"  pressure_GPa:          {self.pressure}", file=f)
-                print(f"  num_optimized_structs: {self.num_opt_struct}", file=f)
                 print(f"  num_unique_structs:    {len(unique_structs)}", file=f)
-                print(
-                    f"  input_file_names:      {sorted(integrated_res_paths)}", file=f
-                )
                 print("", file=f)
 
             energies = np.array([s.energy for s in unique_structs])
@@ -117,66 +131,59 @@ class RSSResultSummarizer:
                     energies[sort_idx], distances[sort_idx]
                 )
                 with open("ghost_minima/dist_minE_struct.dat", "a") as f:
-                    print(f"{ghost_minima_info[0]:.3f}  {log_name}", file=f)
+                    print(f"{ghost_minima_info[0]:.3f}  {composition_tag}", file=f)
                 if len(ghost_minima_info[1]) > 0:
                     with open("ghost_minima/dist_ghost_minima.dat", "a") as f:
-                        print(log_name, file=f)
+                        print(composition_tag, file=f)
                         print(np.round(ghost_minima_info[1], 3), file=f)
             else:
                 is_ghost_minima = None
 
             rss_result_all = log_unique_structures(
-                log_name + ".yaml",
+                composition_tag + ".yaml",
                 unique_str_sorted,
                 is_ghost_minima,
                 pressure=self.pressure,
             )
 
-            with open(f"json/{log_name}.json", "w") as f:
+            with open(f"json/{composition_tag}.json", "w") as f:
                 json.dump(rss_result_all, f)
 
             if self.thresholds is not None or self.output_poscar is not False:
                 self.generate_poscars(
-                    f"json/{log_name}.json",
+                    f"json/{composition_tag}.json",
                     thresholds=self.thresholds,
                     output_poscar=self.output_poscar,
                 )
 
-            print(log_name, "finished", flush=True)
+            print(f"Composition {composition_tag}: finished summarizing.", flush=True)
 
     def run_summarize_p(self):
         os.makedirs("json", exist_ok=True)
 
         paths_same_comp, results_same_comp = self._parse_json_result()
 
-        for comp_ratio, res_paths in paths_same_comp.items():
-            self.num_opt_struct = 0
+        for composition_tag, res_paths in paths_same_comp.items():
             self.analyzer = UniqueStructureAnalyzer()
 
-            log_name = ""
-            for i in range(len(comp_ratio)):
-                if not comp_ratio[i] == 0:
-                    log_name += f"{self.elements[i]}{comp_ratio[i]}"
-
             time_start = time()
-            self.sort_in_single_comp(
-                res_paths,
-                results_same_comp[comp_ratio],
-                keep_unique=True,
-                axis_tol=0.1,
-                pos_tol=0.03,
-            )
+            for res_path in res_paths:
+                self.sort_in_single_comp(
+                    results_same_comp[composition_tag][res_path],
+                    standardize_axis=True,
+                    keep_unique=True,
+                    axis_tol=0.1,
+                    pos_tol=0.03,
+                )
             time_finish = time() - time_start
 
             unique_structs = self.analyzer.unique_str_keep
             unique_structs = [sorted(s, key=lambda x: x.energy) for s in unique_structs]
 
-            with open(log_name + ".yaml", "w") as f:
+            with open(composition_tag + ".yaml", "w") as f:
                 print("general_information:", file=f)
                 print(f"  sorting_time_sec:      {round(time_finish, 2)}", file=f)
-                print(f"  num_optimized_structs: {self.num_opt_struct}", file=f)
                 print(f"  num_unique_structs:    {len(unique_structs)}", file=f)
-                print(f"  input_file_names:      {sorted(res_paths)}", file=f)
                 print("", file=f)
 
             energies = np.array([s[0].energy for s in unique_structs])
@@ -187,55 +194,52 @@ class RSSResultSummarizer:
             )
 
             rss_result_all = log_all_unique_structures(
-                log_name + ".yaml",
+                composition_tag + ".yaml",
                 unique_str_sorted,
             )
 
-            with open(f"json/{log_name}.json", "w") as f:
+            with open(f"json/{composition_tag}.json", "w") as f:
                 json.dump(rss_result_all, f)
 
             if self.thresholds is not None or self.output_poscar is not False:
                 self.generate_poscars(
-                    f"json/{log_name}.json",
+                    f"json/{composition_tag}.json",
                     thresholds=self.thresholds,
                     output_poscar=self.output_poscar,
                 )
 
-            print(log_name, "finished", flush=True)
+            print(composition_tag, "finished", flush=True)
 
     def sort_in_single_comp(
         self,
-        result_paths,
-        rss_result_dict,
+        loaded_dict,
+        standardize_axis=False,
         keep_unique=False,
         axis_tol=0.01,
         pos_tol=0.01,
     ):
-        rss_results = []
-        for res_path in result_paths:
-            loaded_dict = rss_result_dict[res_path]
-            rss_res = loaded_dict["rss_results"]
-            if not self.parse_vasp:
-                for res in rss_res:
-                    res["structure"] = polymlp_struct_from_dict(res["structure"])
-                    res["struct_no"] = None
+        rss_results = loaded_dict["rss_results"]
+        if not self.parse_vasp:
+            for res in rss_results:
+                res["structure"] = polymlp_struct_from_dict(res["structure"])
+                res["struct_no"] = None
 
-            pressure = loaded_dict.get("pressure")
-            for res in rss_res:
-                res["pressure"] = pressure
-            self.pressure = pressure
+        pressure = loaded_dict.get("pressure")
+        for res in rss_results:
+            res["pressure"] = pressure
+        self.pressure = pressure
 
-            rss_results.extend(rss_res)
-
+        print("Converting reduced crystal structure representation...")
         unique_structs = generate_unique_structs(
             rss_results,
             use_joblib=self.use_joblib,
             num_process=self.num_process,
             backend=self.backend,
             symprec_set1=self.symprec_set,
+            standardize_axis=standardize_axis,
         )
-        self.num_opt_struct += len(unique_structs)
 
+        print("Eliminating duplicate structures...")
         for unique_struct in unique_structs:
             self.analyzer.identify_duplicate_struct(
                 unique_struct=unique_struct,
@@ -244,41 +248,35 @@ class RSSResultSummarizer:
                 pos_tol=pos_tol,
             )
 
-    def initialize_uniq_struct(self, yaml_name, result_paths):
-        pre_result_paths = []
-
-        if os.path.isfile(yaml_name):
-            with open(yaml_name) as f:
-                yaml_data = yaml.safe_load(f)
-            self.num_opt_struct = yaml_data["general_information"][
-                "num_optimized_structs"
-            ]
-            pre_result_paths = yaml_data["general_information"]["input_file_names"]
-            if self.update_result:
-                pre_result_paths = []
-
-            with open(f"./json/{yaml_name.split('.yaml')[0]}.json") as f:
-                loaded_dict = json.load(f)
-            rss_results = loaded_dict["rss_results"]
-            for i in range(len(rss_results)):
-                rss_results[i]["structure"] = polymlp_struct_from_dict(
-                    rss_results[i]["structure"]
-                )
-            self.pressure = loaded_dict["pressure"]
-
-            unique_structs = generate_unique_structs(
-                rss_results,
-                use_joblib=self.use_joblib,
-                num_process=self.num_process,
-                backend=self.backend,
-                symprec_set1=self.symprec_set,
+    def initialize_uniq_struct(self, json_path):
+        with open(json_path) as f:
+            loaded_dict = json.load(f)
+        rss_results = loaded_dict["rss_results"]
+        for i in range(len(rss_results)):
+            rss_results[i]["structure"] = polymlp_struct_from_dict(
+                rss_results[i]["structure"]
             )
+        self.pressure = loaded_dict["pressure"]
+
+        print("Converting reduced crystal structure representation...")
+        unique_structs = generate_unique_structs(
+            rss_results,
+            use_joblib=self.use_joblib,
+            num_process=self.num_process,
+            backend=self.backend,
+            symprec_set1=self.symprec_set,
+        )
+
+        if self.update_parent:
+            print("Eliminating duplicate structures...")
+            for unique_struct in unique_structs:
+                self.analyzer.identify_duplicate_struct(
+                    unique_struct=unique_struct,
+                    axis_tol=0.03,
+                    pos_tol=0.03,
+                )
+        else:
             self.analyzer._initialize_unique_structs(unique_structs)
-
-        not_processed_path = list(set(result_paths) - set(pre_result_paths))
-        integrated_res_paths = list(set(result_paths) | set(pre_result_paths))
-
-        return not_processed_path, integrated_res_paths
 
     def generate_poscars(self, json_path: str, thresholds=None, output_poscar=False):
         if thresholds is None:
@@ -326,37 +324,46 @@ class RSSResultSummarizer:
 
         return struct_counts
 
-    def _parse_mlp_result(self):
+    def _parse_json_result(self, parse_rss_result=False):
         paths_same_comp = defaultdict(list)
         results_same_comp = defaultdict(dict)
         for path_name in self.result_paths:
-            rss_result_path = f"{path_name}"
-            with open(rss_result_path) as f:
+            with open(path_name) as f:
                 loaded_dict = json.load(f)
 
-            for i in range(len(loaded_dict["rss_results"])):
-                if "opt_struct" not in loaded_dict["rss_results"][i]["poscar"]:
-                    _path_name = "/".join(path_name.split("/")[:-2])
-                    rel_path = os.path.relpath(
-                        f"{_path_name}/opt_struct", start=os.getcwd()
-                    )
-                    poscar_name = loaded_dict["rss_results"][i]["poscar"].split("/")[-1]
-                    poscar_path = f"{rel_path}/{poscar_name}"
-                else:
-                    _path_name = "/".join(path_name.split("/")[:-2])
-                    poscar_path = os.path.relpath(
-                        f'{_path_name}/{loaded_dict["rss_results"][i]["poscar"]}',
-                        start=os.getcwd(),
-                    )
-                loaded_dict["rss_results"][i]["poscar"] = poscar_path
+            if parse_rss_result:
+                for i in range(len(loaded_dict["rss_results"])):
+                    if "opt_struct" not in loaded_dict["rss_results"][i]["poscar"]:
+                        _path_name = "/".join(path_name.split("/")[:-2])
+                        rel_path = os.path.relpath(
+                            f"{_path_name}/opt_struct", start=os.getcwd()
+                        )
+                        poscar_name = loaded_dict["rss_results"][i]["poscar"].split(
+                            "/"
+                        )[-1]
+                        poscar_path = f"{rel_path}/{poscar_name}"
+                    else:
+                        _path_name = "/".join(path_name.split("/")[:-2])
+                        poscar_path = os.path.relpath(
+                            f'{_path_name}/{loaded_dict["rss_results"][i]["poscar"]}',
+                            start=os.getcwd(),
+                        )
+                    loaded_dict["rss_results"][i]["poscar"] = poscar_path
 
             target_elements = loaded_dict["elements"]
             comp_ratio = tuple(loaded_dict["comp_ratio"])
-            _dicts = dict(zip(target_elements, comp_ratio))
-            comp_ratio_orderd = tuple(_dicts.get(el, 0) for el in self.elements)
+            if self.element_order is not None:
+                _dicts = dict(zip(target_elements, comp_ratio))
+                comp_ratio = tuple(_dicts.get(el, 0) for el in self.element_order)
+                target_elements = self.element_order
 
-            paths_same_comp[comp_ratio_orderd].append(rss_result_path)
-            results_same_comp[comp_ratio_orderd][rss_result_path] = loaded_dict
+            composition_tag = ""
+            for i in range(len(comp_ratio)):
+                if not comp_ratio[i] == 0:
+                    composition_tag += f"{target_elements[i]}{comp_ratio[i]}"
+
+            paths_same_comp[composition_tag].append(path_name)
+            results_same_comp[composition_tag][path_name] = loaded_dict
 
         return paths_same_comp, results_same_comp
 
@@ -394,9 +401,12 @@ class RSSResultSummarizer:
             res_dict["spg_list"] = spg_list
 
             comp_res = compute_composition(
-                polymlp_st.elements, element_order=self.elements
+                polymlp_st.elements, element_order=self.element_order
             )
             comp_ratio = comp_res.comp_ratio
+            if self.element_order is not None:
+                target_elements = self.element_order
+
             try:
                 tree = ET.parse(path_name + "/vasprun.xml")
                 root = tree.getroot()
@@ -406,27 +416,15 @@ class RSSResultSummarizer:
             except Exception:
                 self.pressure = None
 
-            paths_same_comp[comp_ratio].append(path_name)
-            results_same_comp[comp_ratio][path_name] = {
+            composition_tag = ""
+            for i in range(len(comp_ratio)):
+                if not comp_ratio[i] == 0:
+                    composition_tag += f"{target_elements}{comp_ratio[i]}"
+
+            paths_same_comp[composition_tag].append(path_name)
+            results_same_comp[composition_tag][path_name] = {
                 "pressure": self.pressure,
                 "rss_results": [res_dict],
             }
-
-        return paths_same_comp, results_same_comp
-
-    def _parse_json_result(self):
-        paths_same_comp = defaultdict(list)
-        results_same_comp = defaultdict(dict)
-        for path_name in self.result_paths:
-            with open(path_name) as f:
-                loaded_dict = json.load(f)
-
-            target_elements = loaded_dict["elements"]
-            comp_ratio = tuple(loaded_dict["comp_ratio"])
-            _dicts = dict(zip(target_elements, comp_ratio))
-            comp_ratio_orderd = tuple(_dicts.get(el, 0) for el in self.elements)
-
-            paths_same_comp[comp_ratio_orderd].append(path_name)
-            results_same_comp[comp_ratio_orderd][path_name] = loaded_dict
 
         return paths_same_comp, results_same_comp

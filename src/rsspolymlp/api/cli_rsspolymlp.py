@@ -190,6 +190,7 @@ def run():
         "--paths",
         nargs="*",
         type=str,
+        default=None,
         help=(
             "Specify target directories or log files depending on the selected mode:\n"
             "  --summarize       : JSON files or directories containing VASP calculation results\n"
@@ -208,6 +209,20 @@ def run():
     )
 
     # --summarize mode
+    parser.add_argument(
+        "--parent_paths",
+        nargs="*",
+        type=str,
+        default=None,
+        help="",
+    )
+    parser.add_argument(
+        "--element_order",
+        type=str,
+        nargs="+",
+        default=None,
+        help="List of element symbols",
+    )
     parser.add_argument(
         "--symprec_set",
         nargs="*",
@@ -231,7 +246,7 @@ def run():
         help="",
     )
     parser.add_argument(
-        "--update_result",
+        "--update_parent",
         action="store_true",
         help="",
     )
@@ -319,8 +334,9 @@ def run():
 
     if args.summarize:
         rss_summarize(
-            elements=args.elements,
-            result_paths=args.paths,
+            result_paths=args.paths or [],
+            parent_paths=args.parent_paths or [],
+            element_order=args.element_order,
             use_joblib=not args.not_use_joblib,
             num_process=args.num_process,
             backend=args.backend,
@@ -329,7 +345,7 @@ def run():
             thresholds=args.thresholds,
             parse_vasp=args.parse_vasp,
             summarize_p=args.summarize_p,
-            update_result=args.update_result,
+            update_parent=args.update_parent,
         )
 
     if args.ghost_minima:

@@ -287,8 +287,9 @@ def rss_polymlp(
 
 
 def rss_summarize(
-    elements,
-    result_paths,
+    result_paths: list = [],
+    parent_paths: list = [],
+    element_order: list = None,
     use_joblib=True,
     num_process=-1,
     backend="loky",
@@ -297,11 +298,12 @@ def rss_summarize(
     thresholds: list[float] = None,
     parse_vasp: bool = False,
     summarize_p: bool = False,
-    update_result: bool = False,
+    update_parent: bool = False,
 ):
     analyzer = RSSResultSummarizer(
-        elements=elements,
         result_paths=result_paths,
+        parent_paths=parent_paths,
+        element_order=element_order,
         use_joblib=use_joblib,
         num_process=num_process,
         backend=backend,
@@ -309,7 +311,7 @@ def rss_summarize(
         output_poscar=output_poscar,
         thresholds=thresholds,
         parse_vasp=parse_vasp,
-        update_result=update_result,
+        update_parent=update_parent,
     )
     if not summarize_p:
         analyzer.run_summarize()

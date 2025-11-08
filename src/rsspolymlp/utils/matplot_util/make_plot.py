@@ -115,6 +115,7 @@ class MakePlot:
         plot_size=1.0,
         line_size=1.0,
         zorder=1,
+        rasterized=False,
     ):
         """Plot data on the axis.
 
@@ -149,6 +150,7 @@ class MakePlot:
                 zorder=zorder,
                 markerfacecolor="none" if plot_type == "open" else self.color,
                 c=self.color,
+                rasterized=rasterized,
             )
 
     def ax_scatter(
@@ -159,6 +161,7 @@ class MakePlot:
         label=None,
         plot_size=1.0,
         zorder=1,
+        rasterized=False,
     ):
         """Plot data on the axis.
 
@@ -190,6 +193,7 @@ class MakePlot:
                 marker=self.marker,
                 label=label,
                 zorder=zorder,
+                rasterized=rasterized,
             )
             if plot_type == "open":
                 self.ax.scatter(
@@ -200,6 +204,7 @@ class MakePlot:
                     edgecolors="none",
                     marker="o",
                     zorder=zorder,
+                    rasterized=rasterized,
                 )
 
     def ax_hist(self, dist, bins=50, range=None):
