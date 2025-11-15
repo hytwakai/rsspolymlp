@@ -40,6 +40,7 @@ def prepare_vasp_inputs(
     IBRION: int = 2,
     ISIF: int = 3,
     NSW: int = 50,
+    max_iteration: int = 10,
 ):
 
     # Generate INCAR file
@@ -144,6 +145,7 @@ def prepare_vasp_inputs(
     elif mode == "opt":
         script_str = generate_opt_shell_script(
             run_vaspmpi=run_vaspmpi,
+            max_iteration=max_iteration,
         )
     else:
         raise ValueError("Mode must be either `sp` or `opt`.")

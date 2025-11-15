@@ -1,3 +1,4 @@
+import glob
 import json
 import os
 import shutil
@@ -59,23 +60,25 @@ class RSSResultSummarizer:
         os.makedirs("ghost_minima", exist_ok=True)
 
         parent_path_ref = {}
-        if self.parent_paths is not None:
-            for json_path in self.parent_paths:
-                with open(json_path) as f:
-                    loaded_dict = json.load(f)
+        if len(self.parent_paths) == 0 and os.path.isdir("json"):
+            self.parent_paths = glob.glob("json/*.json")
 
-                target_elements = loaded_dict["elements"]
-                comp_ratio = tuple(loaded_dict["comp_ratio"])
-                if self.element_order is not None:
-                    _dicts = dict(zip(target_elements, comp_ratio))
-                    comp_ratio = tuple(_dicts.get(el, 0) for el in self.element_order)
-                    target_elements = self.element_order
+        for json_path in self.parent_paths:
+            with open(json_path) as f:
+                loaded_dict = json.load(f)
 
-                composition_tag = ""
-                for i in range(len(comp_ratio)):
-                    if not comp_ratio[i] == 0:
-                        composition_tag += f"{target_elements[i]}{comp_ratio[i]}"
-                parent_path_ref[composition_tag] = json_path
+            target_elements = loaded_dict["elements"]
+            comp_ratio = tuple(loaded_dict["comp_ratio"])
+            if self.element_order is not None:
+                _dicts = dict(zip(target_elements, comp_ratio))
+                comp_ratio = tuple(_dicts.get(el, 0) for el in self.element_order)
+                target_elements = self.element_order
+
+            composition_tag = ""
+            for i in range(len(comp_ratio)):
+                if not comp_ratio[i] == 0:
+                    composition_tag += f"{target_elements[i]}{comp_ratio[i]}"
+            parent_path_ref[composition_tag] = json_path
 
         if not self.parse_vasp:
             paths_same_comp, results_same_comp = self._parse_json_result(
@@ -101,7 +104,10 @@ class RSSResultSummarizer:
                 self.initialize_uniq_struct(parent_path_ref[composition_tag])
 
             for res_path in res_paths:
-                if parent_path_ref[composition_tag] != res_path:
+                if (
+                    composition_tag not in parent_path_ref
+                    or parent_path_ref[composition_tag] != res_path
+                ):
                     print(f"Processing result file: {res_path}", flush=True)
                     self.sort_in_single_comp(
                         results_same_comp[composition_tag][res_path],
@@ -113,10 +119,15 @@ class RSSResultSummarizer:
 
             unique_structs = self.analyzer.unique_str
 
+            num_opt_str = 0
+            for ustr in unique_structs:
+                num_opt_str += ustr.dup_count
+
             with open(composition_tag + ".yaml", "w") as f:
                 print("general_information:", file=f)
                 print(f"  sorting_time_sec:      {round(time_finish, 2)}", file=f)
                 print(f"  pressure_GPa:          {self.pressure}", file=f)
+                print(f"  num_optimized_structs: {num_opt_str}", file=f)
                 print(f"  num_unique_structs:    {len(unique_structs)}", file=f)
                 print("", file=f)
 
@@ -380,6 +391,7 @@ class RSSResultSummarizer:
             try:
                 vaspobj = Vasprun(path_name + "/vasprun.xml")
             except Exception:
+                print("ParseError:", path_name + "/vasprun.xml")
                 continue
 
             polymlp_st = vaspobj.structure
@@ -391,7 +403,7 @@ class RSSResultSummarizer:
                 energy_dft -= atomic_energy(element)
             energy_dft /= len(polymlp_st.elements)
 
-            if energy_dft < -5:
+            if energy_dft < -10:
                 print(path_name, "exhibits an unphysically low energy. Skipping.")
                 continue
 
@@ -406,6 +418,8 @@ class RSSResultSummarizer:
             comp_ratio = comp_res.comp_ratio
             if self.element_order is not None:
                 target_elements = self.element_order
+            else:
+                target_elements = comp_res.unique_elements
 
             try:
                 tree = ET.parse(path_name + "/vasprun.xml")
@@ -419,7 +433,7 @@ class RSSResultSummarizer:
             composition_tag = ""
             for i in range(len(comp_ratio)):
                 if not comp_ratio[i] == 0:
-                    composition_tag += f"{target_elements}{comp_ratio[i]}"
+                    composition_tag += f"{target_elements[i]}{comp_ratio[i]}"
 
             paths_same_comp[composition_tag].append(path_name)
             results_same_comp[composition_tag][path_name] = {

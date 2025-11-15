@@ -73,7 +73,7 @@ fi
     return script.strip()
 
 
-def generate_opt_shell_script(run_vaspmpi: str) -> str:
+def generate_opt_shell_script(run_vaspmpi: str, max_iteration: int = 10) -> str:
     """
     Generate a shell script for geometry optimization using VASP with iterative recovery.
 
@@ -99,7 +99,7 @@ output="vasp_stdout"
 iteration_pre=0
 relax_state=0
 counter=1
-while [ $counter -le 10 ]; do
+while [ $counter -le {max_iteration} ]; do
     cp INCAR-first INCAR
     {run_vaspmpi} > "$output"
 
