@@ -1,136 +1,60 @@
 summary:
   threshold_meV_per_atom: 10.0
-  n_structs_single:       10
-  n_structs_multi:        18
+  n_structs_single:       4
+  n_structs_multi:        6
 
 near_ch_structures:
   - composition: [1.0, 0.0]
     structures:
       - struct_tag: POSCAR_Al1_No1
-        input_path: ../../../rss_mlp/Al-Cu/0.0GPa/8_0/opt_struct/POSCAR_1
+        input_path: ../../../rss_mlp/Al-Cu/0.0GPa/3_0/opt_struct/POSCAR_15
         delta_F_ch: 0.000000
         F_value:    0.000000000000000
+  - composition: [0.75, 0.25]
+    structures:
+      - struct_tag: POSCAR_Al3Cu1_No1
+        input_path: ../../../rss_mlp/Al-Cu/0.0GPa/3_1/opt_struct/POSCAR_19
+        delta_F_ch: 0.001453
+        F_value:    -0.078044769766283
   - composition: [0.6666666667, 0.3333333333]
     structures:
       - struct_tag: POSCAR_Al2Cu1_No1
-        input_path: ../../../rss_mlp/Al-Cu/0.0GPa/2_1/opt_struct/POSCAR_7
+        input_path: ../../../rss_mlp/Al-Cu/0.0GPa/2_1/opt_struct/POSCAR_30
         delta_F_ch: 0.000000
-        F_value:    -0.176260354948643
+        F_value:    -0.105996758097729
+  - composition: [0.5, 0.5]
+    structures:
+      - struct_tag: POSCAR_Al1Cu1_No1
+        input_path: ../../../rss_mlp/Al-Cu/0.0GPa/2_2/opt_struct/POSCAR_9
+        delta_F_ch: 0.001393
+        F_value:    -0.150533405451334
+      - struct_tag: POSCAR_Al1Cu1_No2
+        input_path: ../../../rss_mlp/Al-Cu/0.0GPa/2_2/opt_struct/POSCAR_18
+        delta_F_ch: 0.003008
+        F_value:    -0.148917888483106
   - composition: [0.3333333333, 0.6666666667]
     structures:
       - struct_tag: POSCAR_Al1Cu2_No1
-        input_path: ../../../rss_mlp/Al-Cu/0.0GPa/2_4/opt_struct/POSCAR_84
-        delta_F_ch: -0.000000
-        F_value:    -0.210074866465917
+        input_path: ../../../rss_mlp/Al-Cu/0.0GPa/1_2/opt_struct/POSCAR_16
+        delta_F_ch: 0.000000
+        F_value:    -0.197855568594349
   - composition: [0.25, 0.75]
     structures:
       - struct_tag: POSCAR_Al1Cu3_No1
-        input_path: ../../../rss_mlp/Al-Cu/0.0GPa/2_6/opt_struct/POSCAR_4
+        input_path: ../../../rss_mlp/Al-Cu/0.0GPa/1_3/opt_struct/POSCAR_10
         delta_F_ch: 0.000000
-        F_value:    -0.196763873687372
-  - composition: [0.2, 0.8]
-    structures:
-      - struct_tag: POSCAR_Al1Cu4_No1
-        input_path: ../../../rss_mlp/Al-Cu/0.0GPa/1_4/opt_struct/POSCAR_3
-        delta_F_ch: 0.006968
-        F_value:    -0.150442964821535
-  - composition: [0.1666666667, 0.8333333333]
-    structures:
-      - struct_tag: POSCAR_Al1Cu5_No1
-        input_path: ../../../rss_mlp/Al-Cu/0.0GPa/1_5/opt_struct/POSCAR_188
-        delta_F_ch: 0.000092
-        F_value:    -0.131084193645926
-      - struct_tag: POSCAR_Al1Cu5_No2
-        input_path: ../../../rss_mlp/Al-Cu/0.0GPa/1_5/opt_struct/POSCAR_105
-        delta_F_ch: 0.000260
-        F_value:    -0.130915522360696
-      - struct_tag: POSCAR_Al1Cu5_No3
-        input_path: ../../../rss_mlp/Al-Cu/0.0GPa/1_5/opt_struct/POSCAR_18
-        delta_F_ch: 0.001162
-        F_value:    -0.130014206901166
-      - struct_tag: POSCAR_Al1Cu5_No4
-        input_path: ../../../rss_mlp/Al-Cu/0.0GPa/1_5/opt_struct/POSCAR_20
-        delta_F_ch: 0.006164
-        F_value:    -0.125012160476750
-      - struct_tag: POSCAR_Al1Cu5_No5
-        input_path: ../../../rss_mlp/Al-Cu/0.0GPa/1_5/opt_struct/POSCAR_59
-        delta_F_ch: 0.009826
-        F_value:    -0.121349559185355
-  - composition: [0.1428571429, 0.8571428571]
-    structures:
-      - struct_tag: POSCAR_Al1Cu6_No1
-        input_path: ../../../rss_mlp/Al-Cu/0.0GPa/1_6/opt_struct/POSCAR_8
-        delta_F_ch: 0.007121
-        F_value:    -0.105315600125953
-  - composition: [0.125, 0.875]
-    structures:
-      - struct_tag: POSCAR_Al1Cu7_No1
-        input_path: ../../../rss_mlp/Al-Cu/0.0GPa/1_7/opt_struct/POSCAR_28
-        delta_F_ch: 0.005369
-        F_value:    -0.093012670101672
-      - struct_tag: POSCAR_Al1Cu7_No2
-        input_path: ../../../rss_mlp/Al-Cu/0.0GPa/1_7/opt_struct/POSCAR_133
-        delta_F_ch: 0.005839
-        F_value:    -0.092542771920361
-      - struct_tag: POSCAR_Al1Cu7_No3
-        input_path: ../../../rss_mlp/Al-Cu/0.0GPa/1_7/opt_struct/POSCAR_92
-        delta_F_ch: 0.006642
-        F_value:    -0.091739983029968
-      - struct_tag: POSCAR_Al1Cu7_No4
-        input_path: ../../../rss_mlp/Al-Cu/0.0GPa/1_7/opt_struct/POSCAR_15
-        delta_F_ch: 0.007144
-        F_value:    -0.091237499357440
-      - struct_tag: POSCAR_Al1Cu7_No5
-        input_path: ../../../rss_mlp/Al-Cu/0.0GPa/1_7/opt_struct/POSCAR_17
-        delta_F_ch: 0.008336
-        F_value:    -0.090045791691625
-      - struct_tag: POSCAR_Al1Cu7_No6
-        input_path: ../../../rss_mlp/Al-Cu/0.0GPa/1_7/opt_struct/POSCAR_137
-        delta_F_ch: 0.008536
-        F_value:    -0.089845618456833
-      - struct_tag: POSCAR_Al1Cu7_No7
-        input_path: ../../../rss_mlp/Al-Cu/0.0GPa/1_7/opt_struct/POSCAR_31
-        delta_F_ch: 0.009736
-        F_value:    -0.088646279486813
-      - struct_tag: POSCAR_Al1Cu7_No8
-        input_path: ../../../rss_mlp/Al-Cu/0.0GPa/1_7/opt_struct/POSCAR_178
-        delta_F_ch: 0.009790
-        F_value:    -0.088592206690560
+        F_value:    -0.185094518350054
   - composition: [0.0, 1.0]
     structures:
-      - struct_tag: POSCAR_Cu1_No7
-        input_path: ../../../rss_mlp/Al-Cu/0.0GPa/0_5/opt_struct/POSCAR_2
+      - struct_tag: POSCAR_Cu1_No1
+        input_path: ../../../rss_mlp/Al-Cu/0.0GPa/0_3/opt_struct/POSCAR_12
         delta_F_ch: 0.000000
         F_value:    0.000000000000000
-      - struct_tag: POSCAR_Cu1_No8
-        input_path: ../../../rss_mlp/Al-Cu/0.0GPa/0_7/opt_struct/POSCAR_10
-        delta_F_ch: 0.002357
-        F_value:    0.002357039596194
-      - struct_tag: POSCAR_Cu1_No9
-        input_path: ../../../rss_mlp/Al-Cu/0.0GPa/0_5/opt_struct/POSCAR_182
-        delta_F_ch: 0.003080
-        F_value:    0.003080386299052
-      - struct_tag: POSCAR_Cu1_No10
-        input_path: ../../../rss_mlp/Al-Cu/0.0GPa/0_5/opt_struct/POSCAR_107
-        delta_F_ch: 0.003303
-        F_value:    0.003303087011610
-      - struct_tag: POSCAR_Cu1_No11
-        input_path: ../../../rss_mlp/Al-Cu/0.0GPa/0_4/opt_struct/POSCAR_65
-        delta_F_ch: 0.003916
-        F_value:    0.003916159120284
-      - struct_tag: POSCAR_Cu1_No12
-        input_path: ../../../rss_mlp/Al-Cu/0.0GPa/0_8/opt_struct/POSCAR_88
-        delta_F_ch: 0.004140
-        F_value:    0.004140206979262
-      - struct_tag: POSCAR_Cu1_No13
-        input_path: ../../../rss_mlp/Al-Cu/0.0GPa/0_3/opt_struct/POSCAR_52
+      - struct_tag: POSCAR_Cu1_No2
+        input_path: ../../../rss_mlp/Al-Cu/0.0GPa/0_3/opt_struct/POSCAR_19
         delta_F_ch: 0.005562
-        F_value:    0.005562378822637
-      - struct_tag: POSCAR_Cu1_No14
-        input_path: ../../../rss_mlp/Al-Cu/0.0GPa/0_5/opt_struct/POSCAR_104
-        delta_F_ch: 0.006753
-        F_value:    0.006752777194815
-      - struct_tag: POSCAR_Cu1_No15
-        input_path: ../../../rss_mlp/Al-Cu/0.0GPa/0_2/opt_struct/POSCAR_9
+        F_value:    0.005562378822632
+      - struct_tag: POSCAR_Cu1_No3
+        input_path: ../../../rss_mlp/Al-Cu/0.0GPa/0_2/opt_struct/POSCAR_30
         delta_F_ch: 0.008509
-        F_value:    0.008508546536632
+        F_value:    0.008508546536658

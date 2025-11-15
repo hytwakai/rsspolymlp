@@ -18,11 +18,9 @@ for pressure in pressure_set:
     os.chdir(dir_path)
 
     print("- summarize start")
-    result_paths = sorted(glob.glob(f"../../../rss_mlp/Al-Cu/{pressure}GPa/*"))
+    result_paths = sorted(glob.glob(f"../../../rss_mlp/Al-Cu/{pressure}GPa/*/rss_result/rss_results.json"))
     rss_summarize(
-        elements=["Al", "Cu"],
         result_paths=result_paths,
-        use_joblib=True,
     )
     print("- summarize finished")
 

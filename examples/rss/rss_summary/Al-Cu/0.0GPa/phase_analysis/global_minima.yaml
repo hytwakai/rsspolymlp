@@ -1,16 +1,16 @@
 global_minima:
   - composition: [1.0, 0.0]
-    structure:   ../../../rss_mlp/Al-Cu/0.0GPa/8_0/opt_struct/POSCAR_1
+    structure:   ../../../rss_mlp/Al-Cu/0.0GPa/3_0/opt_struct/POSCAR_15
     formation_e: 0.0
   - composition: [0.6666666667, 0.3333333333]
-    structure:   ../../../rss_mlp/Al-Cu/0.0GPa/2_1/opt_struct/POSCAR_7
-    formation_e: -0.17626035494864345
+    structure:   ../../../rss_mlp/Al-Cu/0.0GPa/2_1/opt_struct/POSCAR_30
+    formation_e: -0.1059967580977288
   - composition: [0.3333333333, 0.6666666667]
-    structure:   ../../../rss_mlp/Al-Cu/0.0GPa/2_4/opt_struct/POSCAR_84
-    formation_e: -0.21007486646591733
+    structure:   ../../../rss_mlp/Al-Cu/0.0GPa/1_2/opt_struct/POSCAR_16
+    formation_e: -0.1978555685943495
   - composition: [0.25, 0.75]
-    structure:   ../../../rss_mlp/Al-Cu/0.0GPa/2_6/opt_struct/POSCAR_4
-    formation_e: -0.19676387368737203
+    structure:   ../../../rss_mlp/Al-Cu/0.0GPa/1_3/opt_struct/POSCAR_10
+    formation_e: -0.1850945183500543
   - composition: [0.0, 1.0]
-    structure:   ../../../rss_mlp/Al-Cu/0.0GPa/0_5/opt_struct/POSCAR_2
+    structure:   ../../../rss_mlp/Al-Cu/0.0GPa/0_3/opt_struct/POSCAR_12
     formation_e: 0.0

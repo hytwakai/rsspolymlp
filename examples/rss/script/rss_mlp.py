@@ -4,7 +4,7 @@ import numpy as np
 
 from rsspolymlp.api.rsspolymlp import rss_init_struct, rss_run_parallel, rss_uniq_struct
 
-atom_num_set = np.arange(1, 9)
+atom_num_set = np.arange(1, 5)
 pressure_set = [0.0]
 base_dir = os.getcwd()
 
@@ -20,7 +20,7 @@ for pressure in pressure_set:
             rss_init_struct(
                 elements=["Al", "Cu"],
                 atom_counts=[i, j],
-                num_init_str=300,
+                n_init_str=30,
             )
 
             print("- rss-parallel")
@@ -28,7 +28,8 @@ for pressure in pressure_set:
             rss_run_parallel(
                 pot=potential,
                 pressure=pressure,
-                n_opt_str=200,
+                n_opt_str=30,
+                not_stop_rss=True,
             )
 
             print("- uniq-struct")

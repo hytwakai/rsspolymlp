@@ -1,23 +1,24 @@
 general_information:
-  sorting_time_sec:         5.48
+  sorting_time_sec:         0.16
   selected_potential:       ['../../../../potential/AlCu_polymlp.lammps']
   pressure_GPa:             0.0
-  max_rss_structures:       300
-  num_initial_structures:   207
-  num_optimized_structures: 201
-  stopping_criterion:       Target number of optimized structures reached.
-  optimized_per_initial:    0.97
-  total_rss_time_sec:       733
+  max_rss_structures:       30
+  num_initial_structures:   30
+  num_optimized_structures: 30
+  num_unique_structures:    7
+  stopping_criterion:       All randomly generated initial structures have been processed. Stopping.
+  optimized_per_initial:    1.0
+  total_rss_time_sec:       110
 
 evaluation_counts:
-  iteration:            82110
-  function_evaluations: 153718
-  gradient_evaluations: 153400
+  iteration:            14190
+  function_evaluations: 26851
+  gradient_evaluations: 26778
 
 error_counts:
-  total:            6
-  low_energy:       5
-  zero_energy:      1
+  total:            0
+  low_energy:       0
+  zero_energy:      0
   anomalous_struct: 0
   force_conv:       0
   stress_conv:      0
@@ -25,169 +26,89 @@ error_counts:
   other_reason:     0
 
 invalid_layer_structures:
-  invalid_struct: 71
-  valid_struct:   130
+  invalid_struct: 9
+  valid_struct:   21
 
 unique_structures:
   - struct_No: 1
-    poscar_name: POSCAR_70
+    struct_path: POSCAR_12
     energy_diff_meV_per_atom: 0.0
-    duplicates: 1
-    enthalpy: -27.259319607118197
-    axis: [0.914503773305926, 4.013930235188131, 8.272431422885816, 103.8045495398383, 91.92592963672342, 94.25933013795537]
-    positions: [[0.5, 0.0, 0.5], [0.259972596333391, 0.566741783863984, 0.633458175903894], [0.740027403666609, 0.433258216136016, 0.366541824096106]]
-    elements: ['Cu', 'Cu', 'Cu']
-    space_group: ['P-1 (2)', 'P-1 (2)', 'P-1 (2)', 'P-1 (2)']
-    other_info: 3 atom / distance 2.172 (Ang.) / volume 9.79 (A^3/atom) / iteration 28422
-  - struct_No: 2
-    poscar_name: POSCAR_72
-    energy_diff_meV_per_atom: 1966.69
-    duplicates: 1
-    enthalpy: -25.292628644526957
-    axis: [0.9414098944938, 3.508432647585386, 4.855014565512297, 90.0, 93.47070027366986, 90.0]
-    positions: [[0.094336447737135, 0.5, 0.773377669367698], [0.905663552262865, 0.5, 0.226622330632302], [0.0, 0.0, 0.5]]
-    elements: ['Cu', 'Cu', 'Cu']
-    space_group: ['P2/m (10)', 'P2/m (10)', 'P2/m (10)', 'P2/m (10)']
-    other_info: 3 atom / distance 2.198 (Ang.) / volume 5.34 (A^3/atom) / iteration 25580
-  - struct_No: 3
-    poscar_name: POSCAR_1
-    energy_diff_meV_per_atom: 23773.31
-    duplicates: 69
-    enthalpy: -3.486006448165827
-    axis: [3.631516383277962, 3.631516383277962, 3.631516383277962, 90.0, 90.0, 90.0]
+    n_duplicates: 10
+    enthalpy: -3.4860064481658832
+    axis: [3.631516445055839, 3.631516445055839, 3.631516445055839, 90.0, 90.0, 90.0]
     positions: [[0.5, 0.0, 0.0], [0.5, 0.5, 0.5], [0.0, 0.0, 0.5], [0.0, 0.5, 0.0]]
     elements: ['Cu', 'Cu', 'Cu', 'Cu']
     space_group: ['Fm-3m (225)', 'Fm-3m (225)', 'Fm-3m (225)', 'Fm-3m (225)']
-    other_info: 4 atom / distance 2.568 (Ang.) / volume 11.97 (A^3/atom) / iteration 446
+    other_info: 4 atom / distance 2.568 (Ang.) / volume 11.97 (A^3/atom) / iteration 583
+  - struct_No: 2
+    struct_path: POSCAR_19
+    energy_diff_meV_per_atom: 5.56
+    n_duplicates: 3
+    enthalpy: -3.4804440693432515
+    axis: [2.567714603609452, 2.5677146036094514, 18.918080207062516, 90.0, 90.0, 120.00000000000001]
+    positions: [[0.0, 0.0, 0.277693305139521], [0.666666666666667, 0.333333333333333, 0.055640028193813], [0.333333333333333, 0.666666666666667, 0.166666666666667], [0.666666666666667, 0.333333333333333, 0.611026638472854], [0.333333333333333, 0.666666666666667, 0.388973361527146], [-0.0, -0.0, 0.5], [0.333333333333333, 0.666666666666667, 0.944359971806187], [0.0, 0.0, 0.722306694860479], [0.666666666666667, 0.333333333333333, 0.833333333333333]]
+    elements: ['Cu', 'Cu', 'Cu', 'Cu', 'Cu', 'Cu', 'Cu', 'Cu', 'Cu']
+    space_group: ['R-3m (166)', 'R-3m (166)', 'R-3m (166)', 'R-3m (166)']
+    other_info: 9 atom / distance 2.568 (Ang.) / volume 12.0 (A^3/atom) / iteration 464
+  - struct_No: 3
+    struct_path: POSCAR_22
+    energy_diff_meV_per_atom: 296.69
+    n_duplicates: 4
+    enthalpy: -3.1893177522109823
+    axis: [2.531285755794761, 2.5312857557947614, 31.68478935369409, 90.0, 90.0, 120.00000000000001]
+    positions: [[0.666666666666667, 0.333333333333333, 0.232535217953789], [0.333333333333333, 0.666666666666667, 0.166666666666667], [0.0, 0.0, 0.100798115379545], [0.333333333333333, 0.666666666666667, 0.565868551287122], [-0.0, -0.0, 0.5], [0.666666666666667, 0.333333333333333, 0.434131448712878], [0.0, 0.0, 0.899201884620455], [0.666666666666667, 0.333333333333333, 0.833333333333333], [0.333333333333333, 0.666666666666667, 0.767464782046211]]
+    elements: ['Cu', 'Cu', 'Cu', 'Cu', 'Cu', 'Cu', 'Cu', 'Cu', 'Cu']
+    space_group: ['R-3m (166)', 'R-3m (166)', 'R-3m (166)', 'R-3m (166)']
+    other_info: 9 atom / distance 2.531 (Ang.) / volume 19.54 (A^3/atom) / iteration 745
   - struct_No: 4
-    poscar_name: POSCAR_52
-    energy_diff_meV_per_atom: 23778.88
-    duplicates: 7
-    enthalpy: -3.480444069343228
-    axis: [2.567714638608374, 2.567714638608374, 18.918078438557366, 90.0, 90.0, 120.00000000000001]
-    positions: [[0.333333333333333, 0.666666666666667, 0.166666666666667], [0.0, 0.0, 0.277693305045869], [0.666666666666667, 0.333333333333333, 0.055640028287465], [-0.0, -0.0, 0.5], [0.666666666666667, 0.333333333333333, 0.611026638379202], [0.333333333333333, 0.666666666666667, 0.388973361620798], [0.666666666666667, 0.333333333333333, 0.833333333333333], [0.333333333333333, 0.666666666666667, 0.944359971712535], [0.0, 0.0, 0.722306694954131]]
-    elements: ['Cu', 'Cu', 'Cu', 'Cu', 'Cu', 'Cu', 'Cu', 'Cu', 'Cu']
-    space_group: ['R-3m (166)', 'R-3m (166)', 'R-3m (166)', 'R-3m (166)']
-    other_info: 9 atom / distance 2.571 (Ang.) / volume 12.0 (A^3/atom) / iteration 17972
-  - struct_No: 5
-    poscar_name: POSCAR_80
-    energy_diff_meV_per_atom: 24070.0
-    duplicates: 8
-    enthalpy: -3.1893177522111404
-    axis: [2.531285686921939, 2.531285686921939, 31.68479405283359, 90.0, 90.0, 120.00000000000001]
-    positions: [[0.333333333333333, 0.666666666666667, 0.166666666666667], [0.666666666666667, 0.333333333333333, 0.232535212216827], [0.0, 0.0, 0.100798121116507], [-0.0, -0.0, 0.5], [0.333333333333333, 0.666666666666667, 0.56586854555016], [0.666666666666667, 0.333333333333333, 0.43413145444984], [0.666666666666667, 0.333333333333333, 0.833333333333333], [0.0, 0.0, 0.899201878883493], [0.333333333333333, 0.666666666666667, 0.767464787783173]]
-    elements: ['Cu', 'Cu', 'Cu', 'Cu', 'Cu', 'Cu', 'Cu', 'Cu', 'Cu']
-    space_group: ['R-3m (166)', 'R-3m (166)', 'R-3m (166)', 'R-3m (166)']
-    other_info: 9 atom / distance 2.548 (Ang.) / volume 19.54 (A^3/atom) / iteration 792
-  - struct_No: 6
-    poscar_name: POSCAR_124
-    energy_diff_meV_per_atom: 24082.86
-    duplicates: 9
-    enthalpy: -3.1764569290620415
-    axis: [2.532640585950443, 2.532640585950442, 10.615272399025338, 90.0, 90.0, 120.00000000000001]
-    positions: [[0.0, 0.0, 0.0], [0.666666666666667, 0.333333333333333, 0.197146390241727], [0.666666666666667, 0.333333333333333, 0.802853609758273]]
-    elements: ['Cu', 'Cu', 'Cu']
-    space_group: ['P-6m2 (187)', 'P-6m2 (187)', 'P-6m2 (187)', 'P-6m2 (187)']
-    other_info: 3 atom / distance 2.553 (Ang.) / volume 19.66 (A^3/atom) / iteration 1030
-  - struct_No: 7
-    poscar_name: POSCAR_35
-    energy_diff_meV_per_atom: 24158.65
-    duplicates: 3
-    enthalpy: -3.100668583612467
-    axis: [2.50691795850725, 2.50779151900215, 10.262254350864035, 82.98942380250918, 89.99954125571685, 89.99596770727277]
-    positions: [[0.49999957530893, 0.09026443451955, 0.819274998935005], [0.50000042469107, 0.90973556548045, 0.180725001064995], [0.0, 0.5, 0.0]]
-    elements: ['Cu', 'Cu', 'Cu']
-    space_group: ['P-1 (2)', 'P-1 (2)', 'P2/m (10)', 'Cmmm (65)']
-    other_info: 3 atom / distance 2.556 (Ang.) / volume 21.34 (A^3/atom) / iteration 1767
-  - struct_No: 8
-    poscar_name: POSCAR_159
-    energy_diff_meV_per_atom: 24409.84
-    duplicates: 1
-    enthalpy: -2.8494791776002106
-    axis: [2.495720815895046, 4.31612315196779, 6.829312748484235, 91.44449868531704, 90.00023556963882, 106.80498205808513]
-    positions: [[0.769290030116042, 0.538582767326772, 0.345918146975177], [0.230709969883958, 0.461417232673228, 0.654081853024823], [0.5, 0.0, 0.5]]
+    struct_path: POSCAR_14
+    energy_diff_meV_per_atom: 636.53
+    n_duplicates: 1
+    enthalpy: -2.8494791776006245
+    axis: [2.495720806471076, 4.31612291434113, 6.829312369469327, 91.44449354891447, 90.000164893624, 106.80497579546751]
+    positions: [[0.730709354016251, 0.961417124880911, 0.654081865347756], [0.0, 0.5, 0.5], [0.269290645983749, 0.038582875119089, 0.345918134652244]]
     elements: ['Cu', 'Cu', 'Cu']
     space_group: ['P-1 (2)', 'C2/m (12)', 'C2/m (12)', 'C2/m (12)']
-    other_info: 3 atom / distance 2.475 (Ang.) / volume 23.47 (A^3/atom) / iteration 62457
-  - struct_No: 9
-    poscar_name: POSCAR_22
-    energy_diff_meV_per_atom: 24431.13
-    duplicates: 7
-    enthalpy: -2.8281879949297566
-    axis: [2.477594467527973, 9.126589580457408, 6.162997849303826, 90.0, 90.0, 90.0]
-    positions: [[0.5, 0.134326565587069, 0.691279518729045], [0.0, 0.365673434412931, 0.691279518729045], [0.0, 0.0, 0.975019341281533], [0.0, 0.634326565587069, 0.691279518729045], [0.5, 0.865673434412931, 0.691279518729045], [0.5, 0.5, 0.975019341281533]]
+    other_info: 3 atom / distance 2.475 (Ang.) / volume 23.47 (A^3/atom) / iteration 3781
+  - struct_No: 5
+    struct_path: POSCAR_9
+    energy_diff_meV_per_atom: 657.82
+    n_duplicates: 1
+    enthalpy: -2.8281879949293796
+    axis: [9.12658921148652, 2.477594544269087, 6.162997149277344, 90.0, 90.00008217025675, 90.0]
+    positions: [[0.011027212503203, 0.0, 0.993066051173137], [0.279680343053591, 0.0, 0.993066283612963], [0.145353613240181, 0.5, 0.70932630810358], [0.511027212503203, 0.5, 0.993066051173137], [0.779680343053591, 0.5, 0.993066283612963], [0.645353613240181, 0.0, 0.70932630810358]]
     elements: ['Cu', 'Cu', 'Cu', 'Cu', 'Cu', 'Cu']
-    space_group: ['Cmm2 (35)', 'Cmm2 (35)', 'Cmm2 (35)', 'Cmm2 (35)']
-    other_info: 6 atom / distance 2.448 (Ang.) / volume 23.23 (A^3/atom) / iteration 6791
-  - struct_No: 10
-    poscar_name: POSCAR_86
-    energy_diff_meV_per_atom: 24493.94
-    duplicates: 17
-    enthalpy: -2.765380988631774
-    axis: [2.446745347617885, 2.4467453476178846, 5.989805708404925, 90.0, 90.0, 119.99999999999999]
-    positions: [[0.0, 0.0, 0.0]]
+    space_group: ['Cm (8)', 'Cmm2 (35)', 'Cmm2 (35)', 'Cmm2 (35)']
+    other_info: 6 atom / distance 2.448 (Ang.) / volume 23.23 (A^3/atom) / iteration 5161
+  - struct_No: 6
+    struct_path: POSCAR_3
+    energy_diff_meV_per_atom: 720.63
+    n_duplicates: 1
+    enthalpy: -2.7653809886317586
+    axis: [2.446745320561544, 2.4467453205615444, 5.989806329321271, 90.0, 90.0, 119.99999999999999]
+    positions: [[0.0, 0.0, 0.5]]
     elements: ['Cu']
     space_group: ['P6/mmm (191)', 'P6/mmm (191)', 'P6/mmm (191)', 'P6/mmm (191)']
-    other_info: 1 atom / distance 2.447 (Ang.) / volume 31.05 (A^3/atom) / iteration 758
-  - struct_No: 11
-    poscar_name: POSCAR_102
-    energy_diff_meV_per_atom: 24497.4
-    duplicates: 1
-    enthalpy: -2.7619205431895972
-    axis: [2.459622024233702, 2.45962225222454, 5.524851388624395, 102.86104377051312, 90.00022642575813, 119.9999946990406]
-    positions: [[0.5, 0.0, 0.0]]
-    elements: ['Cu']
-    space_group: ['P-1 (2)', 'R-3m (166)', 'R-3m (166)', 'R-3m (166)']
-    other_info: 1 atom / distance 2.46 (Ang.) / volume 27.97 (A^3/atom) / iteration 38457
-  - struct_No: 12
-    poscar_name: POSCAR_10
-    energy_diff_meV_per_atom: 24498.19
-    duplicates: 1
-    enthalpy: -2.7611297435415265
-    axis: [2.458381271070807, 2.4583812872698334, 5.183486761594812, 89.99794998084592, 89.99986556974372, 60.00000258775067]
-    positions: [[0.0, 0.5, 0.0]]
-    elements: ['Cu']
-    space_group: ['P-1 (2)', 'C2/m (12)', 'P6/mmm (191)', 'P6/mmm (191)']
-    other_info: 1 atom / distance 2.458 (Ang.) / volume 27.13 (A^3/atom) / iteration 3318
-  - struct_No: 13
-    poscar_name: POSCAR_111
-    energy_diff_meV_per_atom: 24862.23
-    duplicates: 2
-    enthalpy: -2.397092018109952
-    axis: [2.422216563101519, 4.167909948181399, 9.207529279450128, 90.0, 90.0, 90.0]
-    positions: [[0.5, 0.0, 0.5], [0.5, 0.0, 0.0], [0.0, 0.5, 0.0]]
+    other_info: 1 atom / distance 2.447 (Ang.) / volume 31.05 (A^3/atom) / iteration 4495
+  - struct_No: 7
+    struct_path: POSCAR_27
+    energy_diff_meV_per_atom: 1517.0
+    n_duplicates: 1
+    enthalpy: -1.9690070266456479
+    axis: [2.370945515929637, 10.488352583889727, 11.355398984817649, 109.02979951498575, 91.60662354659834, 92.17433440268901]
+    positions: [[0.547867168234062, 0.639850500387083, 0.681672864585776], [0.452132831765938, 0.360149499612917, 0.318327135414224], [0.0, 0.5, 0.5]]
     elements: ['Cu', 'Cu', 'Cu']
-    space_group: ['Pmmm (47)', 'Pmmm (47)', 'Pmmm (47)', 'Pmmm (47)']
-    other_info: 3 atom / distance 2.41 (Ang.) / volume 30.99 (A^3/atom) / iteration 926
-  - struct_No: 14
-    poscar_name: POSCAR_104
-    energy_diff_meV_per_atom: 25911.84
-    duplicates: 2
-    enthalpy: -1.3474813481626338
-    axis: [1.024930818410184, 11.91565749269378, 8.379943626378347, 90.0, 93.50598646810674, 90.0]
-    positions: [[0.56198677153444, 0.053521982152975, 0.623976493148586], [0.5, 0.356717720644711, 0.5], [0.43801322846556, 0.053521982152975, 0.376023506851414], [0.06198677153444, 0.553521982152976, 0.623976493148586], [0.0, 0.856717720644711, 0.5], [0.93801322846556, 0.553521982152976, 0.376023506851414]]
-    elements: ['Cu', 'Cu', 'Cu', 'Cu', 'Cu', 'Cu']
-    space_group: ['C2 (5)', 'Fmm2 (42)', 'Fmm2 (42)', 'Fmm2 (42)']
-    other_info: 6 atom / distance 2.074 (Ang.) / volume 17.03 (A^3/atom) / iteration 41395
-  - struct_No: 15
-    poscar_name: POSCAR_154
-    energy_diff_meV_per_atom: 34356.05
-    duplicates: 1
-    enthalpy: 7.096727016161292
-    axis: [1.148735915211748, 5.92199923767606, 9.854636654248266, 103.86772649054859, 90.05556084334589, 93.16646265589033]
-    positions: [[0.939111187585329, 0.014195604432616, 0.050962055337447], [0.961925661140026, 0.113571958970745, 0.293662944476062], [0.857164577634586, 0.747300250732947, 0.407202496638366]]
-    elements: ['Cu', 'Cu', 'Cu']
-    space_group: ['P1 (1)', 'P1 (1)', 'P1 (1)', 'P1 (1)']
-    other_info: 3 atom / distance 2.322 (Ang.) / volume 21.66 (A^3/atom) / iteration 65455
+    space_group: ['P-1 (2)', 'P-1 (2)', 'P-1 (2)', 'P-1 (2)']
+    other_info: 3 atom / distance 2.371 (Ang.) / volume 88.84 (A^3/atom) / iteration 7975
 
 evaluation_count_per_structure:
-  iteration_list:            [446, 1521, 2693, 3318, 6791, 7951, 11428, 17063, 17972, 25580, 28422, 38457, 41395, 62457, 65455, 82110]
-  function_evaluations_list: [822, 2768, 4999, 6224, 12642, 14847, 21487, 31758, 33450, 47430, 52536, 71536, 77044, 116832, 122314, 153718]
-  gradient_evaluations_list: [822, 2768, 4999, 6223, 12640, 14845, 21472, 31742, 33434, 47369, 52452, 71438, 76912, 116595, 122062, 153400]
+  iteration_list:            [288, 645, 3781, 4495, 5161, 7366, 7975, 11370]
+  function_evaluations_list: [601, 1295, 7011, 8286, 9509, 13703, 14904, 21491]
+  gradient_evaluations_list: [591, 1285, 7001, 8273, 9495, 13671, 14872, 21433]
 
 poscar_names_failed:
-  low_energy:       ['POSCAR_5', 'POSCAR_39', 'POSCAR_84', 'POSCAR_144', 'POSCAR_206']
-  zero_energy:      ['POSCAR_92']
+  low_energy:       []
+  zero_energy:      []
   anomalous_struct: []
   force_conv:       []
   stress_conv:      []
@@ -195,4 +116,4 @@ poscar_names_failed:
   other_reason:     []
 
 poscar_invalid_layer_structures:
-  layer_structure: ['POSCAR_2', 'POSCAR_3', 'POSCAR_9', 'POSCAR_12', 'POSCAR_14', 'POSCAR_17', 'POSCAR_21', 'POSCAR_23', 'POSCAR_24', 'POSCAR_25', 'POSCAR_27', 'POSCAR_31', 'POSCAR_32', 'POSCAR_37', 'POSCAR_40', 'POSCAR_44', 'POSCAR_45', 'POSCAR_47', 'POSCAR_46', 'POSCAR_48', 'POSCAR_51', 'POSCAR_54', 'POSCAR_55', 'POSCAR_57', 'POSCAR_59', 'POSCAR_58', 'POSCAR_61', 'POSCAR_67', 'POSCAR_68', 'POSCAR_71', 'POSCAR_75', 'POSCAR_77', 'POSCAR_81', 'POSCAR_83', 'POSCAR_82', 'POSCAR_88', 'POSCAR_89', 'POSCAR_95', 'POSCAR_103', 'POSCAR_106', 'POSCAR_105', 'POSCAR_107', 'POSCAR_110', 'POSCAR_114', 'POSCAR_115', 'POSCAR_116', 'POSCAR_117', 'POSCAR_132', 'POSCAR_133', 'POSCAR_138', 'POSCAR_140', 'POSCAR_143', 'POSCAR_147', 'POSCAR_148', 'POSCAR_153', 'POSCAR_155', 'POSCAR_166', 'POSCAR_168', 'POSCAR_169', 'POSCAR_171', 'POSCAR_173', 'POSCAR_172', 'POSCAR_174', 'POSCAR_176', 'POSCAR_183', 'POSCAR_188', 'POSCAR_193', 'POSCAR_196', 'POSCAR_198', 'POSCAR_202', 'POSCAR_207']
+  layer_structure: ['POSCAR_5', 'POSCAR_2', 'POSCAR_1', 'POSCAR_16', 'POSCAR_23', 'POSCAR_20', 'POSCAR_24', 'POSCAR_18', 'POSCAR_25']
