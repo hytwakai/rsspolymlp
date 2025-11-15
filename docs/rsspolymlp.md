@@ -21,13 +21,8 @@ rsspolymlp --rss_parallel --pot polymlp.yaml --pressure 0.0 --n_opt_str 1000
 ```
 
 **Note:**
-Parallel execution uses `joblib` by default. Alternatively, you can specify `--parallel_method srun` for execution with `srun`, which is more suitable for high-performance computing environments.
-In this case, a script named `multiprocess.sh` will be automatically generated and can be executed as follows:
-
-```bash
-rsspolymlp --rss_parallel --parallel_method srun --pot polymlp.yaml --pressure 0.0 --n_opt_str 1000
-srun -n $SLURM_CPUS_ON_NODE ./multiprocess.sh
-```
+Parallel execution uses `joblib` by default and utilizes all available CPU cores. 
+Alternatively, you can specify `--num_process 1` to disable the parallel execution with `joblib`, which may be more suitable for certain computing environments.
 
 #### 3. Eliminate duplicate structures
 

@@ -1,8 +1,6 @@
-import fcntl
 import glob
 import multiprocessing
 import os
-import subprocess
 import time
 
 from joblib import Parallel, delayed
@@ -45,7 +43,6 @@ def rss_run_parallel(
     c_maxiter=100,
     n_opt_str=1000,
     not_stop_rss=False,
-    parallel_method="joblib",
     num_process=-1,
     backend="loky",
 ):
@@ -88,120 +85,30 @@ def rss_run_parallel(
     if num_process == -1:
         num_process = multiprocessing.cpu_count()
 
-    if parallel_method == "joblib":
+    time_start = time.time()
+    if num_process == 1:
+        for poscar in poscar_path_all:
+            rssobj.run_optimization(poscar)
+    else:
+        # Perform parallel optimization with joblib
         time_start = time.time()
-        if num_process == 1:
-            for poscar in poscar_path_all:
-                rssobj.run_optimization(poscar)
-        else:
-            # Perform parallel optimization with joblib
-            time_start = time.time()
-            Parallel(n_jobs=num_process, backend=backend)(
-                delayed(rssobj.run_optimization)(poscar) for poscar in poscar_path_all
-            )
-            executor = get_reusable_executor(max_workers=num_process)
-            executor.shutdown(wait=True)
-        elapsed = time.time() - time_start
+        Parallel(n_jobs=num_process, backend=backend)(
+            delayed(rssobj.run_optimization)(poscar) for poscar in poscar_path_all
+        )
+        executor = get_reusable_executor(max_workers=num_process)
+        executor.shutdown(wait=True)
+    elapsed = time.time() - time_start
 
-        with open("rss_result/parallel_time.log", "a") as f:
-            print("Number of CPU cores:", num_process, file=f)
-            print("Number of the structures:", len(glob.glob("log/*")), file=f)
-            print("Computational time:", elapsed, file=f)
-            print("", file=f)
-
-    elif parallel_method == "srun":
-        if len(poscar_path_all) > num_process:
-            with open("rss_result/start.dat", "w") as f:
-                pass
-            with open("multiprocess.sh", "w") as f:
-                print("#!/bin/bash", file=f)
-                print("case $SLURM_PROCID in", file=f)
-                for i in range(num_process):
-                    run_ = (
-                        f"rsspolymlp --rss_single "
-                        f"--pot {' '.join(pot)} "
-                        f"--n_opt_str {n_opt_str} "
-                        f"--pressure {pressure} "
-                        f"--solver_method {solver_method} "
-                        f"--c_maxiter {c_maxiter} "
-                    )
-                    if not_stop_rss:
-                        run_ += " --not_stop_rss"
-                    print(f"    {i}) {run_} ;;", file=f)
-                print("esac", file=f)
-                print("rm rss_result/start.dat", file=f)
-            subprocess.run(["chmod", "+x", "./multiprocess.sh"], check=True)
-
-
-def rss_run_single(
-    pot="polymlp.yaml",
-    pressure=0.0,
-    with_symmetry=False,
-    solver_method="CG",
-    c_maxiter=100,
-    n_opt_str=1000,
-    not_stop_rss=False,
-):
-    def acquire_lock():
-        lock_file = open("rss.lock", "w")
-        fcntl.flock(lock_file, fcntl.LOCK_EX)
-        return lock_file
-
-    def release_lock(lock_file):
-        fcntl.flock(lock_file, fcntl.LOCK_UN)
-        lock_file.close()
-
-    poscar_path_all = sorted(
-        glob.glob("initial_struct/*"), key=lambda x: int(x.split("_")[-1])
-    )
-    poscar_list = [p for p in poscar_path_all if os.path.basename(p)]
-    rssobj = OptimizationMLP(
-        pot=pot,
-        pressure=pressure,
-        with_symmetry=with_symmetry,
-        solver_method=solver_method,
-        c_maxiter=c_maxiter,
-        n_opt_str=n_opt_str,
-        not_stop_rss=not_stop_rss,
-    )
-
-    while True:
-        lock = acquire_lock()
-
-        finished_set = set()
-        for log in ["rss_result/finish.dat", "rss_result/start.dat"]:
-            if os.path.exists(log):
-                with open(log) as f:
-                    finished_set.update(line.strip() for line in f)
-        poscar_list = [
-            p for p in poscar_list if os.path.basename(p) not in finished_set
-        ]
-
-        if not poscar_list:
-            release_lock(lock)
-            print("All POSCAR files have been processed.")
-            break
-
-        poscar_path = poscar_list[0]
-        with open("rss_result/start.dat", "a") as f:
-            print(os.path.basename(poscar_path), file=f)
-
-        release_lock(lock)
-
-        with open("rss_result/success.dat") as f:
-            success_str = sum(1 for _ in f)
-        residual_str = n_opt_str - success_str
-        if residual_str <= 0:
-            print("Reached the target number of optimized structures.")
-            break
-
-        rssobj.run_optimization(poscar_path)
+    with open("rss_result/parallel_time.log", "a") as f:
+        print("Number of CPU cores:", num_process, file=f)
+        print("Number of the structures:", len(glob.glob("log/*")), file=f)
+        print("Computational time:", elapsed, file=f)
+        print("", file=f)
 
 
 def rss_uniq_struct(
     num_str=-1,
     cutoff=None,
-    use_joblib=True,
     num_process=-1,
     backend="loky",
 ):
@@ -211,7 +118,6 @@ def rss_uniq_struct(
 
     analyzer.run_rss_uniq_struct(
         num_str=num_str,
-        use_joblib=use_joblib,
         num_process=num_process,
         backend=backend,
     )
@@ -290,7 +196,6 @@ def rss_summarize(
     result_paths: list = [],
     parent_paths: list = [],
     element_order: list = None,
-    use_joblib=True,
     num_process=-1,
     backend="loky",
     symprec_set: list[float] = [1e-5, 1e-4, 1e-3, 1e-2],
@@ -304,7 +209,6 @@ def rss_summarize(
         result_paths=result_paths,
         parent_paths=parent_paths,
         element_order=element_order,
-        use_joblib=use_joblib,
         num_process=num_process,
         backend=backend,
         symprec_set=symprec_set,

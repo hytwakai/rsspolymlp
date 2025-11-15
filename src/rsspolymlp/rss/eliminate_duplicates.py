@@ -160,14 +160,12 @@ class RSSResultAnalyzer:
     def _analysis_unique_structure(
         self,
         struct_properties: list[dict],
-        use_joblib: bool = True,
         num_process: int = -1,
         backend: str = "locky",
     ):
         analyzer = UniqueStructureAnalyzer()
         unique_struct = generate_unique_structs(
             struct_properties,
-            use_joblib=use_joblib,
             num_process=num_process,
             backend=backend,
         )
@@ -204,7 +202,6 @@ class RSSResultAnalyzer:
     def run_rss_uniq_struct(
         self,
         num_str=-1,
-        use_joblib=False,
         num_process=-1,
         backend="loky",
     ):
@@ -228,7 +225,7 @@ class RSSResultAnalyzer:
 
         print("Eliminating duplicate structures...")
         unique_structs, unique_str_prop = self._analysis_unique_structure(
-            struct_properties, use_joblib, num_process, backend
+            struct_properties, num_process, backend
         )
         print("Duplicate structures eliminated")
 

@@ -7,7 +7,6 @@ from rsspolymlp.analysis.unique_struct import (
 
 def struct_matcher(
     poscar_paths,
-    use_joblib: bool = True,
     num_process: int = -1,
     backend: str = "loky",
     symprec_set: list[float] = [1e-5, 1e-4, 1e-3, 1e-2],
@@ -19,7 +18,6 @@ def struct_matcher(
 
     unique_structs = generate_unique_structs(
         rss_results,
-        use_joblib=use_joblib,
         num_process=num_process,
         backend=backend,
         symprec_set1=symprec_set,

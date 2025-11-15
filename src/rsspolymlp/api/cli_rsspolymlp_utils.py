@@ -20,11 +20,6 @@ def run():
         help="Paths of target POSCAR files.",
     )
     parser.add_argument(
-        "--not_use_joblib",
-        action="store_true",
-        help="Disable parallel processing using joblib.",
-    )
-    parser.add_argument(
         "--num_process",
         type=int,
         default=-1,
@@ -56,7 +51,6 @@ def run():
     if args.struct_matcher:
         struct_matcher(
             poscar_paths=args.poscar,
-            use_joblib=not args.not_use_joblib,
             num_process=args.num_process,
             backend=args.backend,
             symprec_set=args.symprec_set,

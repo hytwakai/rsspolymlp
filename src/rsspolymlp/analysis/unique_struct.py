@@ -275,7 +275,6 @@ def generate_unique_struct(
 
 def generate_unique_structs(
     rss_results,
-    use_joblib: bool = True,
     num_process: int = -1,
     backend: str = "loky",
     symprec_set1: list[float] = [1e-5, 1e-4, 1e-3, 1e-2],
@@ -298,8 +297,6 @@ def generate_unique_structs(
             - "spg_list": list of space group symbols identified under multiple tolerances
             - "pressure" (optional): pressure term (in GPa)
             - "struct_no" (optional): structure identifier (e.g., structure number)
-    use_joblib : bool, default=True
-        Whether to use joblib.Parallel for parallel processing.
     num_process : int, default=-1
         The number of parallel jobs. -1 means using all available processors.
     backend : str, default="loky"
@@ -312,24 +309,7 @@ def generate_unique_structs(
     unique_structs : list of UniqueStructure
         A list of UniqueStructure objects.
     """
-    if use_joblib:
-        unique_structs = joblib.Parallel(n_jobs=num_process, backend=backend)(
-            joblib.delayed(generate_unique_struct)(
-                poscar_name=res["poscar"],
-                polymlp_st=res.get("structure", None),
-                energy=res.get("energy", None),
-                spg_list=res.get("spg_list", None),
-                pressure=res.get("pressure", None),
-                struct_no=res.get("struct_no", None),
-                dup_count=res.get("dup_count", 1),
-                symprec_set1=symprec_set1,
-                symprec_set2=symprec_set2,
-                standardize_axis=standardize_axis,
-                cartesian_coords=cartesian_coords,
-            )
-            for res in rss_results
-        )
-    else:
+    if num_process == 1:
         unique_structs = []
         for res in rss_results:
             unique_structs.append(
@@ -347,6 +327,24 @@ def generate_unique_structs(
                     cartesian_coords=cartesian_coords,
                 )
             )
+    else:
+        unique_structs = joblib.Parallel(n_jobs=num_process, backend=backend)(
+            joblib.delayed(generate_unique_struct)(
+                poscar_name=res["poscar"],
+                polymlp_st=res.get("structure", None),
+                energy=res.get("energy", None),
+                spg_list=res.get("spg_list", None),
+                pressure=res.get("pressure", None),
+                struct_no=res.get("struct_no", None),
+                dup_count=res.get("dup_count", 1),
+                symprec_set1=symprec_set1,
+                symprec_set2=symprec_set2,
+                standardize_axis=standardize_axis,
+                cartesian_coords=cartesian_coords,
+            )
+            for res in rss_results
+        )
+        
     unique_structs = [s for s in unique_structs if s is not None]
     return unique_structs
 

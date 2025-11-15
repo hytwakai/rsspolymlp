@@ -47,10 +47,15 @@ rssobj = RandomStructureSearch(
     n_opt_str=1000,
 )
 
-# Perform parallel optimization with joblib
-Parallel(n_jobs=num_process, backend=backend)(
-    delayed(rssobj.run_optimization)(poscar) for poscar in poscar_path_all
-)
+use_joblib = True
+if not use_joblib:
+    for poscar in poscar_path_all:
+        rssobj.run_optimization(poscar)
+else:
+    # Perform parallel optimization with joblib
+    Parallel(n_jobs=num_process, backend=backend)(
+        delayed(rssobj.run_optimization)(poscar) for poscar in poscar_path_all
+    )
 ```
 
 ## Unique structure identification and RSS summary generation
@@ -60,7 +65,6 @@ from rsspolymlp.rss.eliminate_duplicates import RSSResultAnalyzer
 analyzer = RSSResultAnalyzer()
 analyzer.run_rss_uniq_struct(
     num_str=-1,
-    use_joblib=True,
     num_process=-1,
     backend="loky",
 )
@@ -78,7 +82,6 @@ os.chdir("rss_summary")
 target_paths = glob.glob("../rss_mlp/Al-Cu/0.0GPa/*")
 analyzer = RSSResultSummarizer(
     result_paths=paths,
-    use_joblib=True,
     num_process=-1,
     backend="loky,
     symprec_set=[1e-5, 1e-4, 1e-3, 1e-2],

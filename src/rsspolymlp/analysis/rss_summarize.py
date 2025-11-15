@@ -29,7 +29,6 @@ class RSSResultSummarizer:
         result_paths: list = [],
         parent_paths: list = [],
         element_order: list = None,
-        use_joblib: bool = True,
         num_process: int = -1,
         backend: str = "loky",
         symprec_set: list[float] = [1e-5, 1e-4, 1e-3, 1e-2],
@@ -43,7 +42,6 @@ class RSSResultSummarizer:
         self.result_paths.extend(self.parent_paths)
 
         self.element_order = element_order
-        self.use_joblib = use_joblib
         self.num_process = num_process
         self.backend = backend
         self.symprec_set = symprec_set
@@ -243,7 +241,6 @@ class RSSResultSummarizer:
         print("Converting reduced crystal structure representation...")
         unique_structs = generate_unique_structs(
             rss_results,
-            use_joblib=self.use_joblib,
             num_process=self.num_process,
             backend=self.backend,
             symprec_set1=self.symprec_set,
@@ -272,7 +269,6 @@ class RSSResultSummarizer:
         print("Converting reduced crystal structure representation...")
         unique_structs = generate_unique_structs(
             rss_results,
-            use_joblib=self.use_joblib,
             num_process=self.num_process,
             backend=self.backend,
             symprec_set1=self.symprec_set,

@@ -20,7 +20,6 @@ def divide_dataset(
     threshold_f_large: float = 100.0,
     threshold_s_large: float = 200.0,  # in GPa
     threshold_s_small: Optional[float] = None,
-    include_stress: bool = False,
 ):
     """
     Classify VASP calculation results into dataset categories based on
@@ -69,10 +68,10 @@ def divide_dataset(
         stress = dft_dict.stress
         min_stress = min([stress[0][0], stress[1][1], stress[2][2]])
         max_stress = np.max(np.abs(stress))
-        if include_stress:
-            vol_per_atom = dft_dict.structure.volume / len(dft_dict.structure.elements)
-            pressure = np.mean([(stress / 10).tolist()[i][i] for i in range(3)])
-            energy_per_atom += pressure * vol_per_atom / EVtoGPa
+
+        vol_per_atom = dft_dict.structure.volume / len(dft_dict.structure.elements)
+        pressure = np.mean([(stress / 10).tolist()[i][i] for i in range(3)])
+        energy_per_atom += pressure * vol_per_atom / EVtoGPa
 
         # Filter by energy value
         if energy_per_atom > threshold_e_high or (

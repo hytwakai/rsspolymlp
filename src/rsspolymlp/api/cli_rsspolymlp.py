@@ -7,7 +7,6 @@ from rsspolymlp.api.rsspolymlp import (
     rss_phase_analysis,
     rss_polymlp,
     rss_run_parallel,
-    rss_run_single,
     rss_summarize,
     rss_uniq_struct,
 )
@@ -146,13 +145,6 @@ def run():
 
     # Options for enabling parallel execution (--rss_parallel, --uniq_struct, --summarize mode)
     parser.add_argument(
-        "--parallel_method",
-        type=str,
-        choices=["joblib", "srun"],
-        default="joblib",
-        help="Select parallelization method: 'joblib' or 'srun'.",
-    )
-    parser.add_argument(
         "--num_process",
         type=int,
         default=-1,
@@ -164,11 +156,6 @@ def run():
         choices=["loky", "threading", "multiprocessing"],
         default="loky",
         help="Backend for joblib parallelization",
-    )
-    parser.add_argument(
-        "--not_use_joblib",
-        action="store_true",
-        help="Disable parallel processing using joblib.",
     )
 
     # --uniq_struct mode
@@ -293,22 +280,10 @@ def run():
             backend=args.backend,
         )
 
-    if args.rss_single:
-        rss_run_single(
-            pot=args.pot,
-            pressure=args.pressure,
-            with_symmetry=args.symmetry,
-            solver_method=args.solver_method,
-            c_maxiter=args.c_maxiter,
-            n_opt_str=args.n_opt_str,
-            not_stop_rss=args.not_stop_rss,
-        )
-
     if args.uniq_struct:
         rss_uniq_struct(
             num_str=args.num_str,
             cutoff=args.cutoff,
-            use_joblib=not args.not_use_joblib,
             num_process=args.num_process,
             backend=args.backend,
         )

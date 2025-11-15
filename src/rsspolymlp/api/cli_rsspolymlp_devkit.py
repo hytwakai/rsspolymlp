@@ -145,7 +145,7 @@ def run():
     parser.add_argument(
         "--rmse_path",
         type=str,
-        default="test/minima-close",
+        default="test/f_small",
         help="A part of the path name of the dataset used to compute the energy RMSE "
         "for identifying Pareto-optimal MLPs.",
     )
@@ -253,11 +253,6 @@ def run():
         help="Stress threshold (GPa) for structures with small stress tensor (s_small)",
     )
     parser.add_argument(
-        "--include_stress",
-        action="store_true",
-        help="Include stress tensor term in energy evaluation."
-    )
-    parser.add_argument(
         "--divide_ratio",
         type=float,
         default=0.1,
@@ -322,6 +317,5 @@ def run():
             threshold_f_large=args.th_f_large,
             threshold_s_large=args.th_s_large,
             threshold_s_small=args.th_s_small,
-            include_stress=args.include_stress,
             divide_ratio=args.divide_ratio,
         )

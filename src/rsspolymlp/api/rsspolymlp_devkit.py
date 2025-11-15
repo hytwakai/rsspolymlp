@@ -176,7 +176,6 @@ def divide_dft_dataset(
     threshold_f_large: float = 100.0,
     threshold_s_large: float = 200.0,  # in GPa
     threshold_s_small: Optional[float] = None,
-    include_stress: bool = False,
     divide_ratio: float = 0.1,
 ):
     vasprun_paths = []
@@ -192,7 +191,6 @@ def divide_dft_dataset(
         threshold_f_large=threshold_f_large,
         threshold_s_large=threshold_s_large,
         threshold_s_small=threshold_s_small,
-        include_stress=include_stress,
     )
 
     output_dir = "dft_dataset"
@@ -208,7 +206,6 @@ def divide_dft_dataset(
         print("  threshold_f_large:", threshold_f_large, file=f)
         print("  threshold_s_large:", threshold_s_large, file=f)
         print("  threshold_s_small:", threshold_s_small, file=f)
-        print("  include_stress:", include_stress, file=f)
         print("", file=f)
 
     with open(f"{output_dir}/n_data.yaml", "w") as f:
