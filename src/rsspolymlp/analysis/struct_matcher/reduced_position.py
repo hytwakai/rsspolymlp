@@ -7,7 +7,7 @@ from rsspolymlp.analysis.struct_matcher.invert_and_swap import (
     metric_tensor_transform,
     signed_permutation_matrices,
 )
-from rsspolymlp.common.property import PropUtil, get_metric_tensor
+from rsspolymlp.common.property import PropUtil
 
 
 class StructRepReducer:
@@ -70,15 +70,14 @@ class StructRepReducer:
             _axis = self.axis
 
         prop = PropUtil(_axis, self.positions)
-        self.abc_angle = np.asarray(prop.abc, dtype=float)
-        metric_tensor = get_metric_tensor(self.abc_angle)
+        metric_tensor = prop.metric_tensor
 
         self.reduced_axis, signed_permutation_cands = self.get_reduced_axis(
             metric_tensor,
             spg_number,
         )
 
-        aa, bb, cc, bc, ac, ab = self.reduced_axis
+        aa, bb, cc, ab, ac, bc = self.reduced_axis
         G = np.array([[aa, ab, ac], [ab, bb, bc], [ac, bc, cc]], dtype=float)
         w, U = np.linalg.eigh(G)
         w = np.clip(w, 0, None)
@@ -88,9 +87,9 @@ class StructRepReducer:
                 G_half[0, 0],
                 G_half[1, 1],
                 G_half[2, 2],
-                G_half[1, 2],
-                G_half[0, 2],
                 G_half[0, 1],
+                G_half[0, 2],
+                G_half[1, 2],
             ]
         )
 

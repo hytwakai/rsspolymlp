@@ -66,7 +66,7 @@ class GenerateRandomStructure:
         # Define initial structure constraints
         vol_constraint_max = self.max_volume * self.num_atom  # A^3
         vol_constraint_min = self.min_volume * self.num_atom  # A^3
-        axis_constraint = ((self.num_atom * self.max_volume * 5) ** (1 / 3)) ** 2
+        axis_constraint = ((self.num_atom * self.max_volume * 4) ** (1 / 3)) ** 2
 
         iteration = 1
         num_samples = 2000
