@@ -120,6 +120,6 @@ def get_metric_tensor(abc_angle):
     cc = c**2
     bc = b * c * np.cos(alpha)
     ac = a * c * np.cos(beta)
-    cb = a * b * np.cos(gamma)
+    ab = a * b * np.cos(gamma)
 
-    return np.array([aa, bb, cc, bc, ac, cb])
+    return np.array([aa, bb, cc, bc, ac, ab])

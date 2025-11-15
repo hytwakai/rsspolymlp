@@ -312,7 +312,6 @@ def run():
             result_paths=args.paths or [],
             parent_paths=args.parent_paths or [],
             element_order=args.element_order,
-            use_joblib=not args.not_use_joblib,
             num_process=args.num_process,
             backend=args.backend,
             symprec_set=args.symprec_set,

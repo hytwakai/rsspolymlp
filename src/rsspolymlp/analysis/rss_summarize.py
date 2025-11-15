@@ -4,6 +4,7 @@ import os
 import shutil
 import xml.etree.ElementTree as ET
 from collections import defaultdict
+from pathlib import Path
 from time import time
 
 import numpy as np
@@ -55,7 +56,6 @@ class RSSResultSummarizer:
 
     def run_summarize(self):
         os.makedirs("json", exist_ok=True)
-        os.makedirs("ghost_minima", exist_ok=True)
 
         parent_path_ref = {}
         if len(self.parent_paths) == 0 and os.path.isdir("json"):
@@ -95,23 +95,35 @@ class RSSResultSummarizer:
 
             time_start = time()
 
+            processed_paths = set()
             if composition_tag in parent_path_ref:
                 print(
                     f"Processing parent result file: {parent_path_ref[composition_tag]}"
                 )
-                self.initialize_uniq_struct(parent_path_ref[composition_tag])
+                processed_paths = self.initialize_uniq_struct(
+                    parent_path_ref[composition_tag]
+                )
 
             for res_path in res_paths:
                 if (
                     composition_tag not in parent_path_ref
                     or parent_path_ref[composition_tag] != res_path
                 ):
-                    print(f"Processing result file: {res_path}", flush=True)
-                    self.sort_in_single_comp(
-                        results_same_comp[composition_tag][res_path],
-                        axis_tol=axis_tol,
-                        pos_tol=pos_tol,
-                    )
+                    rss_results = [
+                        r
+                        for r in results_same_comp[composition_tag][res_path][
+                            "rss_results"
+                        ]
+                        if r["struct_path"] not in processed_paths
+                    ]
+                    if not len(rss_results) == 0:
+                        print(f"Processing result file: {res_path}", flush=True)
+                        self.remove_duplicates_in_comp(
+                            results_same_comp[composition_tag][res_path],
+                            processed_paths,
+                            axis_tol=axis_tol,
+                            pos_tol=pos_tol,
+                        )
 
             time_finish = time() - time_start
 
@@ -119,7 +131,7 @@ class RSSResultSummarizer:
 
             num_opt_str = 0
             for ustr in unique_structs:
-                num_opt_str += ustr.dup_count
+                num_opt_str += len(list(ustr.dupstr_paths))
 
             with open(composition_tag + ".yaml", "w") as f:
                 print("general_information:", file=f)
@@ -136,6 +148,7 @@ class RSSResultSummarizer:
             unique_str_sorted = [unique_structs[i] for i in sort_idx]
 
             if not self.parse_vasp:
+                os.makedirs("ghost_minima", exist_ok=True)
                 is_ghost_minima, ghost_minima_info = detect_ghost_minima(
                     energies[sort_idx], distances[sort_idx]
                 )
@@ -177,11 +190,11 @@ class RSSResultSummarizer:
 
             time_start = time()
             for res_path in res_paths:
-                self.sort_in_single_comp(
+                self.remove_duplicates_in_comp(
                     results_same_comp[composition_tag][res_path],
                     standardize_axis=True,
                     keep_unique=True,
-                    axis_tol=0.1,
+                    axis_tol=0.03,
                     pos_tol=0.03,
                 )
             time_finish = time() - time_start
@@ -219,7 +232,7 @@ class RSSResultSummarizer:
 
             print(composition_tag, "finished", flush=True)
 
-    def sort_in_single_comp(
+    def remove_duplicates_in_comp(
         self,
         loaded_dict,
         standardize_axis=False,
@@ -228,11 +241,6 @@ class RSSResultSummarizer:
         pos_tol=0.01,
     ):
         rss_results = loaded_dict["rss_results"]
-        if not self.parse_vasp:
-            for res in rss_results:
-                res["structure"] = polymlp_struct_from_dict(res["structure"])
-                res["struct_no"] = None
-
         pressure = loaded_dict.get("pressure")
         for res in rss_results:
             res["pressure"] = pressure
@@ -257,13 +265,15 @@ class RSSResultSummarizer:
             )
 
     def initialize_uniq_struct(self, json_path):
+        processed_paths = []
+
         with open(json_path) as f:
             loaded_dict = json.load(f)
         rss_results = loaded_dict["rss_results"]
-        for i in range(len(rss_results)):
-            rss_results[i]["structure"] = polymlp_struct_from_dict(
-                rss_results[i]["structure"]
-            )
+        for r in rss_results:
+            r["structure"] = polymlp_struct_from_dict(r["structure"])
+            processed_paths.extend(r["dupstr_paths"])
+            r["dupstr_paths"] = set(r["dupstr_paths"])
         self.pressure = loaded_dict["pressure"]
 
         print("Converting reduced crystal structure representation...")
@@ -284,6 +294,8 @@ class RSSResultSummarizer:
                 )
         else:
             self.analyzer._initialize_unique_structs(unique_structs)
+
+        return set(processed_paths)
 
     def generate_poscars(self, json_path: str, thresholds=None, output_poscar=False):
         if thresholds is None:
@@ -313,7 +325,7 @@ class RSSResultSummarizer:
                     e_min = res["energy"]
                 elif res.get("is_ghost_minima") and output_poscar:
                     dest = f"{dir_name}/{logname}/POSCAR_{logname}_No{res['struct_no']}"
-                    shutil.copy(res["poscar"], dest)
+                    shutil.copy(res["struct_path"], dest)
                     continue
 
                 if e_min is not None and threshold is not None:
@@ -323,7 +335,7 @@ class RSSResultSummarizer:
 
                 if output_poscar:
                     dest = f"{dir_name}/{logname}/POSCAR_{logname}_No{res['struct_no']}"
-                    shutil.copy(res["poscar"], dest)
+                    shutil.copy(res["struct_path"], dest)
                 struct_count += 1
 
             struct_counts.append(struct_count)
@@ -339,23 +351,19 @@ class RSSResultSummarizer:
                 loaded_dict = json.load(f)
 
             if parse_rss_result:
-                for i in range(len(loaded_dict["rss_results"])):
-                    if "opt_struct" not in loaded_dict["rss_results"][i]["poscar"]:
-                        _path_name = "/".join(path_name.split("/")[:-2])
-                        rel_path = os.path.relpath(
-                            f"{_path_name}/opt_struct", start=os.getcwd()
-                        )
-                        poscar_name = loaded_dict["rss_results"][i]["poscar"].split(
-                            "/"
-                        )[-1]
-                        poscar_path = f"{rel_path}/{poscar_name}"
+                base = Path(path_name).parents[1]
+
+                for r in loaded_dict["rss_results"]:
+                    poscar = r["struct_path"]
+                    if "opt_struct" in poscar:
+                        poscar_path = base / poscar
                     else:
-                        _path_name = "/".join(path_name.split("/")[:-2])
-                        poscar_path = os.path.relpath(
-                            f'{_path_name}/{loaded_dict["rss_results"][i]["poscar"]}',
-                            start=os.getcwd(),
-                        )
-                    loaded_dict["rss_results"][i]["poscar"] = poscar_path
+                        poscar_path = base / "opt_struct" / Path(poscar).name
+
+                    r["struct_path"] = os.path.relpath(poscar_path, os.getcwd())
+                    r["structure"] = polymlp_struct_from_dict(r["structure"])
+                    r["dupstr_paths"] = set(r.get("dupstr_paths", [None]))
+                    r["struct_no"] = None
 
             target_elements = loaded_dict["elements"]
             comp_ratio = tuple(loaded_dict["comp_ratio"])
@@ -379,10 +387,11 @@ class RSSResultSummarizer:
         results_same_comp = defaultdict(dict)
         for path_name in self.result_paths:
             res_dict = {
-                "poscar": None,
+                "struct_path": None,
                 "structure": None,
                 "energy": None,
                 "spg_list": None,
+                "dupstr_paths": None,
             }
             try:
                 vaspobj = Vasprun(path_name + "/vasprun.xml")
@@ -403,10 +412,13 @@ class RSSResultSummarizer:
                 print(path_name, "exhibits an unphysically low energy. Skipping.")
                 continue
 
-            res_dict["poscar"] = path_name + "/vasprun.xml"
+            res_dict["struct_path"] = os.path.relpath(
+                path_name + "/vasprun.xml", os.getcwd()
+            )
             res_dict["structure"] = polymlp_st
             res_dict["energy"] = energy_dft
             res_dict["spg_list"] = spg_list
+            res_dict["dupstr_paths"] = {res_dict["struct_path"]}
 
             comp_res = compute_composition(
                 polymlp_st.elements, element_order=self.element_order

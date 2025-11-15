@@ -119,6 +119,7 @@ def get_ghost_minima_dists(dir_path):
 def ghost_minima_candidates(result_paths):
     # Prepare output directory: remove existing files if already exists
     out_dir = "ghost_minima/ghost_minima_candidates"
+    os.makedirs(out_dir, exist_ok=True)
     for filename in os.listdir(out_dir):
         if "POSCAR" in filename:
             file_path = os.path.join(out_dir, filename)
