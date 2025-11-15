@@ -269,7 +269,7 @@ class ConvexHullAnalyzer:
             rss_results = loaded_dict["rss_results"]
             rss_results_array = {
                 "energy": np.array([r["energy"] for r in rss_results]),
-                "input_path": np.array([r["poscar"] for r in rss_results]),
+                "input_path": np.array([r["struct_path"] for r in rss_results]),
                 "is_ghost_minima": np.array(
                     [r["is_ghost_minima"] for r in rss_results]
                 ),

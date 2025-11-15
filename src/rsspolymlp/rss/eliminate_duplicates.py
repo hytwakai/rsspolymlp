@@ -94,7 +94,7 @@ class RSSResultAnalyzer:
             )
             return None, None
 
-        poscar_name = struct_prop["poscar"]
+        poscar_name = struct_prop["struct_path"]
 
         if judge in {"iteration", "energy_low", "energy_zero", "anom_struct"}:
             self.errors[judge] += 1

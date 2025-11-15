@@ -92,7 +92,7 @@ def rss_run_parallel(
     else:
         # Perform parallel optimization with joblib
         time_start = time.time()
-        Parallel(n_jobs=num_process, backend=backend)(
+        Parallel(n_jobs=num_process, backend=backend, verbose=100)(
             delayed(rssobj.run_optimization)(poscar) for poscar in poscar_path_all
         )
         executor = get_reusable_executor(max_workers=num_process)

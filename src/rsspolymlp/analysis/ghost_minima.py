@@ -137,7 +137,7 @@ def ghost_minima_candidates(result_paths):
         for res in rss_results:
             if res.get("is_ghost_minima"):
                 dest = f"ghost_minima/ghost_minima_candidates/POSCAR_{logname}_No{res['struct_no']}"
-                shutil.copy(res["poscar"], dest)
+                shutil.copy(res["struct_path"], dest)
                 _res = res
                 _res.pop("structure", None)
                 _res["ghost_minima_poscar"] = f"POSCAR_{logname}_No{res['struct_no']}"

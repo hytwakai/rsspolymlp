@@ -98,7 +98,7 @@ class RSSResultSummarizer:
             processed_paths = set()
             if composition_tag in parent_path_ref:
                 print(
-                    f"Processing parent result file: {parent_path_ref[composition_tag]}"
+                    f" - Processing result file (parent): {parent_path_ref[composition_tag]}"
                 )
                 processed_paths = self.initialize_uniq_struct(
                     parent_path_ref[composition_tag]
@@ -117,7 +117,7 @@ class RSSResultSummarizer:
                         if r["struct_path"] not in processed_paths
                     ]
                     if not len(rss_results) == 0:
-                        print(f"Processing result file: {res_path}", flush=True)
+                        print(f" - Processing result file: {res_path}", flush=True)
                         self.remove_duplicates_in_comp(
                             results_same_comp[composition_tag][res_path],
                             processed_paths,
@@ -246,7 +246,7 @@ class RSSResultSummarizer:
             res["pressure"] = pressure
         self.pressure = pressure
 
-        print("Converting reduced crystal structure representation...")
+        print("   - Converting reduced crystal structure representation...")
         unique_structs = generate_unique_structs(
             rss_results,
             num_process=self.num_process,
@@ -255,7 +255,7 @@ class RSSResultSummarizer:
             standardize_axis=standardize_axis,
         )
 
-        print("Eliminating duplicate structures...")
+        print("   - Eliminating duplicate structures...")
         for unique_struct in unique_structs:
             self.analyzer.identify_duplicate_struct(
                 unique_struct=unique_struct,
@@ -276,7 +276,7 @@ class RSSResultSummarizer:
             r["dupstr_paths"] = set(r["dupstr_paths"])
         self.pressure = loaded_dict["pressure"]
 
-        print("Converting reduced crystal structure representation...")
+        print("   - Converting reduced crystal structure representation...")
         unique_structs = generate_unique_structs(
             rss_results,
             num_process=self.num_process,
@@ -285,7 +285,7 @@ class RSSResultSummarizer:
         )
 
         if self.update_parent:
-            print("Eliminating duplicate structures...")
+            print("   - Eliminating duplicate structures...")
             for unique_struct in unique_structs:
                 self.analyzer.identify_duplicate_struct(
                     unique_struct=unique_struct,
@@ -344,6 +344,17 @@ class RSSResultSummarizer:
         return struct_counts
 
     def _parse_json_result(self, parse_rss_result=False):
+
+        def resolve_path(base: Path, p):
+            cwd = Path.cwd()
+            if p is None:
+                return None
+            p = Path(p)
+            target = (
+                base / p if "opt_struct" in p.parts else base / "opt_struct" / p.name
+            )
+            return os.path.relpath(target, start=cwd)
+
         paths_same_comp = defaultdict(list)
         results_same_comp = defaultdict(dict)
         for path_name in self.result_paths:
@@ -352,17 +363,12 @@ class RSSResultSummarizer:
 
             if parse_rss_result:
                 base = Path(path_name).parents[1]
-
                 for r in loaded_dict["rss_results"]:
-                    poscar = r["struct_path"]
-                    if "opt_struct" in poscar:
-                        poscar_path = base / poscar
-                    else:
-                        poscar_path = base / "opt_struct" / Path(poscar).name
-
-                    r["struct_path"] = os.path.relpath(poscar_path, os.getcwd())
+                    r["struct_path"] = resolve_path(base, r["struct_path"])
+                    r["dupstr_paths"] = {
+                        resolve_path(base, p) for p in r["dupstr_paths"]
+                    }
                     r["structure"] = polymlp_struct_from_dict(r["structure"])
-                    r["dupstr_paths"] = set(r.get("dupstr_paths", [None]))
                     r["struct_no"] = None
 
             target_elements = loaded_dict["elements"]

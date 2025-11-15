@@ -59,16 +59,18 @@ class OptimizationMLP:
             c2_set = [None, 0.99, 0.999]
 
             if isinstance(self.pot, list):
-                print("Selected potential:", self.pot)
+                print("Selected potential:", self.pot, flush=True)
             else:
-                print("Selected potential:", [self.pot])
-            print("Pressure (GPa):", self.pressure)
+                print("Selected potential:", [self.pot], flush=True)
+            print("Pressure (GPa):", self.pressure, flush=True)
             unitcell = Poscar(poscar_path).structure
 
             for iteration in range(max_iteration):
                 self.check_opt_str()
                 if self._stop_rss:
-                    print("Number of optimized structures has been reached.")
+                    print(
+                        "Number of optimized structures has been reached.", flush=True
+                    )
                     break
 
                 minobj = self.minimize(unitcell, iteration, c1_set, c2_set)
@@ -82,14 +84,17 @@ class OptimizationMLP:
                     return
 
                 if self.check_convergence(energy_keep):
-                    print("Geometry optimization succeeded")
+                    print("Geometry optimization succeeded", flush=True)
                     break
 
                 energy_keep = self.minobj.energy / len(unitcell.elements)
                 unitcell = Poscar(self.opt_poscar).structure
 
                 if iteration == max_iteration - 1:
-                    print("Maximum number of relaxation iterations has been exceeded")
+                    print(
+                        "Maximum number of relaxation iterations has been exceeded",
+                        flush=True,
+                    )
                     self.log_computation_time()
                     return
 
@@ -103,7 +108,7 @@ class OptimizationMLP:
 
                 self.log_computation_time()
                 with open("rss_result/success.dat", "a") as f:
-                    print(self.poscar_name, file=f)
+                    print(self.poscar_name, file=f, flush=True)
 
     def minimize(self, unitcell, iteration, c1_set, c2_set):
         """Run geometry optimization with different parameters until successful."""
@@ -118,7 +123,7 @@ class OptimizationMLP:
             verbose=True,
         )
         if iteration == 0:
-            print("Initial structure")
+            print("Initial structure", flush=True)
             minobj.print_structure()
 
         maxiter = 300
@@ -138,9 +143,12 @@ class OptimizationMLP:
 
                 energy_per_atom = minobj._energy / len(minobj.structure.elements)
                 if energy_per_atom < -50:
-                    print("Final function value (eV/atom):", energy_per_atom)
                     print(
-                        "Geometry optimization failed: Huge negative or zero energy value."
+                        "Final function value (eV/atom):", energy_per_atom, flush=True
+                    )
+                    print(
+                        "Geometry optimization failed: Huge negative or zero energy value.",
+                        flush=True,
                     )
                     return None
 
@@ -151,20 +159,27 @@ class OptimizationMLP:
                     print(
                         "Final function value (eV/atom):",
                         minobj._energy / len(minobj.structure.elements),
+                        flush=True,
                     )
                     print(
-                        "Geometry optimization failed: Huge negative or zero energy value."
+                        "Geometry optimization failed: Huge negative or zero energy value.",
+                        flush=True,
                     )
                     return None
 
-                print("Change [c1, c2] to", c1_set[c_count + 1], c2_set[c_count + 1])
+                print(
+                    "Change [c1, c2] to",
+                    c1_set[c_count + 1],
+                    c2_set[c_count + 1],
+                    flush=True,
+                )
                 maxiter = 100
 
     def write_refine_structure(self, poscar_path):
         """Refine the crystal structure with increasing symmetry precision."""
         self.minobj.write_poscar(filename=self.opt_poscar)
         if not wait_for_file_lines(self.opt_poscar):
-            print("Reading file failed.")
+            print("Reading file failed.", flush=True)
             return False
 
         symprec_list = [1e-5, 1e-4, 1e-3, 1e-2, 1e-1]
@@ -176,31 +191,35 @@ class OptimizationMLP:
                 refine_success = True
                 break
             except TypeError:
-                print("TypeError: Change symprec to", sp * 10)
+                print("TypeError: Change symprec to", sp * 10, flush=True)
             except IndexError:
-                print("IndexError: Change symprec to", sp * 10)
+                print("IndexError: Change symprec to", sp * 10, flush=True)
 
         if not refine_success:
             # Failed structure refinement for all tested symmetry tolerances
-            print("Refining cell failed.")
+            print("Refining cell failed.", flush=True)
             return False
         else:
             self.minobj.write_poscar(filename=self.opt_poscar)
             if not wait_for_file_lines(self.opt_poscar):
-                print("Reading file failed.")
+                print("Reading file failed.", flush=True)
                 return False
             return True
 
     def check_convergence(self, energy_keep):
         """Check if the energy difference is below the threshold."""
         energy_per_atom = self.minobj.energy / len(self.minobj.structure.elements)
-        print("Energy (eV/atom):", energy_per_atom)
+        print("Energy (eV/atom):", energy_per_atom, flush=True)
 
         if energy_keep is not None:
             energy_convergence = energy_per_atom - energy_keep
-            print("Energy difference from the previous iteration:", energy_convergence)
+            print(
+                "Energy difference from the previous iteration:",
+                energy_convergence,
+                flush=True,
+            )
             if abs(energy_convergence) < 1e-8:
-                print("Final function value (eV/atom):", energy_per_atom)
+                print("Final function value (eV/atom):", energy_per_atom, flush=True)
                 return True
         return False
 
@@ -212,14 +231,14 @@ class OptimizationMLP:
                 sym = SymCell(poscar_name=poscar_path, symprec=tol)
                 spg = sym.get_spacegroup()
                 spg_sets.append(spg)
-                print(f"Space group ({tol}):", spg)
+                print(f"Space group ({tol}):", spg, flush=True)
             except TypeError:
                 continue
             except IndexError:
                 continue
 
         if spg_sets == []:
-            print("Analyzing space group failed.")
+            print("Analyzing space group failed.", flush=True)
             return False
 
         print("Space group set:")
@@ -234,18 +253,20 @@ class OptimizationMLP:
             print(
                 "Maximum absolute value in Residuals (force):",
                 np.max(np.abs(self.minobj.residual_forces.T)),
+                flush=True,
             )
         else:
             res_f, res_s = self.minobj.residual_forces
-            print("Residuals (force):")
-            print(res_f.T)
+            print("Residuals (force):", flush=True)
+            print(res_f.T, flush=True)
             if res_f.size == 0:
                 print("Maximum absolute value in Residuals (force):", 0.0)
             else:
                 print(
-                    "Maximum absolute value in Residuals (force):", np.max(np.abs(res_f.T))
+                    "Maximum absolute value in Residuals (force):",
+                    np.max(np.abs(res_f.T)),
                 )
-            print("Residuals (stress):")
+            print("Residuals (stress):", flush=True)
             print(res_s)
             print(
                 "Maximum absolute value in Residuals (stress):", np.max(np.abs(res_s))
@@ -256,8 +277,8 @@ class OptimizationMLP:
     def log_computation_time(self):
         """Log computational time."""
         time_fin = time.time() - self.time_initial
-        print("Computational time:", time_fin)
-        print("Finished")
+        print("Computational time:", time_fin, flush=True)
+        print("Finished", flush=True)
         with open("rss_result/finish.dat", "a") as f:
             print(self.poscar_name, file=f)
 
