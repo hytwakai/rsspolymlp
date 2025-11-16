@@ -1,13 +1,13 @@
 import glob
 import os
 
-from rsspolymlp.api.rsspolymlp_plot import plot_binary
 from rsspolymlp.api.rsspolymlp import (
     rss_ghost_minima_cands,
     rss_ghost_minima_validate,
     rss_phase_analysis,
     rss_summarize,
 )
+from rsspolymlp.api.rsspolymlp_plot import plot_binary
 
 pressure_set = [0.0]
 base_dir = os.getcwd()
@@ -18,7 +18,9 @@ for pressure in pressure_set:
     os.chdir(dir_path)
 
     print("- summarize start")
-    result_paths = sorted(glob.glob(f"../../../rss_mlp/Al-Cu/{pressure}GPa/*/rss_result/rss_results.json"))
+    result_paths = sorted(
+        glob.glob(f"../../../rss_mlp/Al-Cu/{pressure}GPa/*/rss_result/rss_results.json")
+    )
     rss_summarize(
         result_paths=result_paths,
     )

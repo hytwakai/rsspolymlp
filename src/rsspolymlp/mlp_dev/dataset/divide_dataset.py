@@ -85,7 +85,7 @@ def divide_dataset(
         if max_stress > threshold_s_large * 10 or (
             threshold_s_small is not None and min_stress < threshold_s_small * 10
         ):
-            if cohe_energy > -5:
+            if cohe_energy > -15:
                 vasprun_dict[f"s_large{e_tag}"].append(vasprun_path)
             continue
 
@@ -99,7 +99,7 @@ def divide_dataset(
         if np.all(np.abs(force) <= threshold_f_large):
             vasprun_dict[f"f_large{e_tag}"].append(vasprun_path)
             continue
-        if cohe_energy > -5:
+        if cohe_energy > -15:
             vasprun_dict[f"f_exlarge{e_tag}"].append(vasprun_path)
 
     return vasprun_dict
