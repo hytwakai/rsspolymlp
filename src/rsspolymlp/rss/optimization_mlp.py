@@ -5,7 +5,7 @@ from contextlib import redirect_stdout
 
 import numpy as np
 
-from pypolymlp.calculator.str_opt.optimization import GeometryOptimization
+from pypolymlp.calculator.opt_geometry import GeometryOptimization
 from pypolymlp.core.interface_vasp import Poscar
 from pypolymlp.utils.spglib_utils import SymCell
 
