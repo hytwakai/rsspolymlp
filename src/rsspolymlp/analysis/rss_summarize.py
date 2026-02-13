@@ -10,6 +10,7 @@ from time import time
 import numpy as np
 
 from pypolymlp.core.interface_vasp import Vasprun
+from pypolymlp.utils.vasp_utils import write_poscar_file
 from rsspolymlp.analysis.ghost_minima import detect_ghost_minima
 from rsspolymlp.analysis.unique_struct import (
     UniqueStructureAnalyzer,
@@ -306,11 +307,15 @@ class RSSResultSummarizer:
         for threshold in thresholds:
             if threshold is None:
                 dir_name = "poscars"
+                dir_name_vasp = "vaspruns"
             else:
                 threshold = float(threshold)
                 dir_name = f"poscars_{threshold}"
+                dir_name_vasp = f"vaspruns_{threshold}"
             if output_poscar:
                 os.makedirs(f"{dir_name}/{logname}", exist_ok=True)
+                if self.parse_vasp:
+                    os.makedirs(f"{dir_name_vasp}/{logname}", exist_ok=True)
 
             print(f"Threshold (meV/atom): {threshold}")
 
@@ -323,19 +328,35 @@ class RSSResultSummarizer:
             for res in rss_results:
                 if not res.get("is_ghost_minima") and e_min is None:
                     e_min = res["energy"]
-                elif res.get("is_ghost_minima") and output_poscar:
-                    dest = f"{dir_name}/{logname}/POSCAR_{logname}_No{res['struct_no']}"
-                    shutil.copy(res["struct_path"], dest)
+                else:
                     continue
 
-                if e_min is not None and threshold is not None:
+            for res in rss_results:
+                if threshold is not None:
                     diff = abs(e_min - res["energy"])
                     if diff * 1000 > threshold:
                         continue
 
                 if output_poscar:
                     dest = f"{dir_name}/{logname}/POSCAR_{logname}_No{res['struct_no']}"
-                    shutil.copy(res["struct_path"], dest)
+                    dest_vasp = (
+                        f"{dir_name_vasp}/{logname}/{logname}_No{res['struct_no']}.xml"
+                    )
+                    if self.parse_vasp:
+                        poscar_path = f'{os.path.dirname(res["struct_path"])}/POSCAR'
+                        if os.path.isfile(poscar_path):
+                            shutil.copy(poscar_path, dest)
+                        else:
+                            try:
+                                vaspobj = Vasprun(res["struct_path"])
+                            except Exception:
+                                print(res["struct_path"], "failed")
+                                continue
+                            polymlp_st = vaspobj.structure
+                            write_poscar_file(polymlp_st, filename=dest)
+                        shutil.copy(res["struct_path"], dest_vasp)
+                    else:
+                        shutil.copy(res["struct_path"], dest)
                 struct_count += 1
 
             struct_counts.append(struct_count)
