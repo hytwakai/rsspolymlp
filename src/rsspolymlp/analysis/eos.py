@@ -40,6 +40,7 @@ class EOSFit:
         sort_idx = np.argsort(-np.array(volumes))
         self._energies = np.array(energies)[sort_idx]
         self._volumes = np.array(volumes)[sort_idx]
+        self._pressure = pressure
 
         self._eos = vinet
         self.parameters = None
@@ -60,8 +61,8 @@ class EOSFit:
         else:
             self._init_parameter = init_parameter
 
-        if pressure is not None:
-            self._energies += pressure * self._volumes / EVtoGPa
+        if self._pressure is not None:
+            self._energies += self._pressure * self._volumes / EVtoGPa
 
         self.fit()
         self.interpolate_gibbs_from_pressure(self._volume_range)
@@ -96,8 +97,12 @@ class EOSFit:
         """Return RMSE between fitted EOS and input energy data."""
         if self.parameters is None:
             raise ValueError("Fit must be performed before calculating RMSE.")
-        predicted = self._eos(self._volumes, *self.parameters)
-        error = predicted - self._energies
+
+        predicted = self.get_energy(self._volumes)
+        observed = self._energies.copy()
+        if self._pressure is not None:
+            observed -= self._pressure * self._volumes / EVtoGPa
+        error = predicted - observed
         return np.sqrt(np.mean(error**2))
 
     def interpolate_gibbs_from_pressure(
@@ -112,7 +117,7 @@ class EOSFit:
         if n_grid is None:
             # Pressure grid is set with ~0.01 GPa resolution.
             pressures, _ = self._get_pressure_and_gibbs_from_volumes(
-                [min(volume_range), max(volume_range)]
+                np.array([min(volume_range), max(volume_range)])
             )
             pressure_range = abs(pressures[1] - pressures[0])
             n_grid = int(round(pressure_range * 100))
@@ -138,13 +143,15 @@ class EOSFit:
         self, volumes: np.ndarray, eps: float = 1e-4
     ) -> tuple[np.ndarray, np.ndarray]:
         """Calculate pressure and Gibbs energy for each volume using numerical derivatives."""
-        gibbs_list = []
-        pressure_list = []
+        volumes = np.asarray(volumes)
         energies = self.get_energy(volumes)
 
+        gibbs_list = []
+        pressure_list = []
         for vol, e in zip(volumes, energies):
-            e_forward, e_backward = self.get_energy([vol + eps, vol - eps])
-            dE_dV = (e_forward - e_backward) / (2 * eps)
+            two_volumes = np.array([vol + eps, vol - eps])
+            two_energies = self.get_energy(two_volumes)
+            dE_dV = (two_energies[0] - two_energies[1]) / (2 * eps)
             pressure_eVA3 = -dE_dV
             gibbs = e + pressure_eVA3 * vol
             pressure_GPa = pressure_eVA3 * EVtoGPa
@@ -155,7 +162,10 @@ class EOSFit:
 
     def get_energy(self, volumes: np.ndarray) -> np.ndarray:
         """Return predicted energy values for given volumes using fitted EOS."""
-        return vinet(np.array(volumes), *self.parameters)
+        energies = vinet(np.array(volumes), *self.parameters)
+        if self._pressure is not None:
+            energies -= self._pressure * volumes / EVtoGPa
+        return energies
 
     def get_gibbs(self, pressures: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
         """Return interpolated Gibbs free energy values at given pressures in GPa."""
@@ -204,11 +214,14 @@ class EOSFit:
         plotter.set_visuality(n_color=4, n_line=4, n_marker=0, color_type="grad")
 
         volumes = np.linspace(min(self._volume_range), max(self._volume_range), 200)
-        energies = self.get_energy(volumes)
+        predicted = self.get_energy(volumes)
+        observed = self._energies.copy()
+        if self._pressure is not None:
+            observed -= self._pressure * self._volumes / EVtoGPa
 
         plotter.ax_plot(
             volumes,
-            energies,
+            predicted,
             plot_type="closed",
             label=None,
             plot_size=0.0,
@@ -217,7 +230,7 @@ class EOSFit:
         )
         plotter.ax_scatter(
             self._volumes,
-            self._energies,
+            observed,
             plot_type="open",
             label=None,
             plot_size=0.7,
