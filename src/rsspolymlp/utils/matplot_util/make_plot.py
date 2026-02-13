@@ -13,6 +13,7 @@ class MakePlot:
         plt: CustomPlt,
         column_size=1.0,
         height_ratio=1.0,
+        height_size=None,
         plot_grid=[(1,), (1,)],
     ):
         """Init method.
@@ -47,6 +48,8 @@ class MakePlot:
             )
         width = 3.375 * column_size
         height = width * height_ratio
+        if height_size is not None:
+            height = 3.375 * height_size
         self.fig.set_size_inches(width, height)
         self.fig.set_dpi(self.dpi)
 
@@ -76,7 +79,7 @@ class MakePlot:
             ]
             color_array = [tuple(np.array(c) / 100) for c in color_array]
             n_color = n_color % 6
-        if color_type == "grad":
+        elif color_type == "grad":
             color_array = [
                 (134, 143, 155),
                 (102, 113, 128),
@@ -86,6 +89,23 @@ class MakePlot:
             ]
             color_array = [tuple(np.array(c) / 255) for c in color_array]
             n_color = n_color % 5
+        elif color_type == "c9":
+            color_array = [
+                "#44AA99",
+                "#999933",
+                "#882255",
+                "#88CCEE",
+                "#117733",
+                "#CC6677",
+                "#332288",
+                "#DDCC77",
+                "#AA4499",
+            ]
+            n_color = n_color % 9
+        else:
+            color_array = [color_type]
+            n_color = 0
+
         line_array = [
             "--",
             "-.",
@@ -93,11 +113,12 @@ class MakePlot:
             ":",
             "-",
         ]
-        marker_array = ["o", "s", "v", "^", "D", "p"]
+
+        marker_array = ["o", "s", "v", "^", "D", "p", "<", ">"]
 
         self.color = color_array[n_color]
         self.line = line_array[n_line % 5]
-        self.marker = marker_array[n_marker % 6]
+        self.marker = marker_array[n_marker % 8]
 
     def initialize_ax(self, index_row=None, index_column=None):
         """Initialize subplot axis if necessary."""
@@ -134,7 +155,8 @@ class MakePlot:
         zorder : int, optional
             Layer order for the plot, by default 1.
         """
-
+        if self.marker == "p":
+            plot_size *= 1.1
         self._plot_size = 4.0 * plot_size
         self._line_size = line_size
         if plot_type in ["open", "closed"]:
@@ -180,7 +202,8 @@ class MakePlot:
         zorder : int, optional
             Layer order for the plot, by default 1.
         """
-
+        if self.marker == "p":
+            plot_size *= 1.1
         self._scatter_size = (4.0 * plot_size) ** 2
         if plot_type in ["open", "closed"]:
             self.ax.scatter(

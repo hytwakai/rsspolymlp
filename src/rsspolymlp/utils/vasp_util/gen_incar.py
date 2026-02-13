@@ -1,4 +1,5 @@
 import argparse
+from pathlib import Path
 
 
 def bool_to_vasp(val: bool) -> str:
@@ -10,6 +11,7 @@ def generate_single_point_incar(
     ISTART: int = 0,
     ENCUT: float = 400,
     KSPACING: float = 0.09,
+    Monkhorst_grid: list = [20, 20, 20],
     PSTRESS: float = 0.0,
     EDIFF: float = 1e-6,
     NELM: int = 100,
@@ -32,7 +34,6 @@ def generate_single_point_incar(
     lines = [
         f"ISTART = {ISTART}",
         f"ENCUT = {ENCUT}",
-        f"KSPACING = {KSPACING}",
         f"PSTRESS = {PSTRESS}",
         f"EDIFF = {EDIFF:.1e}",
         f"NELM = {NELM}",
@@ -46,6 +47,22 @@ def generate_single_point_incar(
 
     if ISMEAR != -5:
         lines.append(f"SIGMA = {SIGMA}")
+
+    if KSPACING is False:
+        if "/" in incar_name:
+            kpoint_path = f"{Path(incar_name).parent}/KPOINTS"
+        else:
+            kpoint_path = "KPOINTS"
+        with open(kpoint_path, "w") as f:
+            print("Automatic generation", file=f)
+            print("0", file=f)
+            print("Monkhorst-Pack", file=f)
+            print(
+                f"{Monkhorst_grid[0]} {Monkhorst_grid[1]} {Monkhorst_grid[2]}", file=f
+            )
+            print("0 0 0", file=f)
+    else:
+        lines.append(f"KSPACING = {KSPACING}")
 
     lines += [
         f"NCORE = {NCORE}",

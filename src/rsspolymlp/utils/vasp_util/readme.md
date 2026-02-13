@@ -51,7 +51,7 @@ prepare_vasp_inputs(
     EDIFF=1e-6,
     EDIFFG=-0.01,
     ISIF=3,
-    PSTRESS=100, # GPa unit
+    PSTRESS=100,
 )
 subprocess.run(["zsh", "run_vasp.sh"], check=True)
 
