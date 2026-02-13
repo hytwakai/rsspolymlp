@@ -69,7 +69,7 @@ def gen_mlp_data(
         str_rand = strgen.random_single_structure(disp, vol_ratio=per_volume)
 
         _str_name = poscar.split("/")[str_name]
-        poscar_path = f"poscar/{_str_name}_d{disp_ratio}_v{per_volume}"
+        poscar_path = f"poscar/{_str_name}_d{round(disp_ratio, 5)}_v{per_volume}"
 
         if not os.path.isfile(poscar_path):
             write_poscar_file(str_rand, poscar_path)
