@@ -41,7 +41,7 @@ def run():
     parser.add_argument(
         "--rmse_path",
         type=str,
-        default="test/minima-close",
+        default="test/f_small",
         help="A part of the path name of the dataset used to compute the energy RMSE "
         "for identifying Pareto-optimal MLPs.",
     )

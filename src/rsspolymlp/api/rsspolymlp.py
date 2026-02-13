@@ -73,6 +73,11 @@ def rss_run_parallel(
     if len(poscar_path_all) == 0:
         return
 
+    if num_process == 1:
+        not_stop_rss = True
+    elif num_process == -1:
+        num_process = multiprocessing.cpu_count()
+
     rssobj = OptimizationMLP(
         pot=pot,
         pressure=pressure,
@@ -82,8 +87,6 @@ def rss_run_parallel(
         n_opt_str=n_opt_str,
         not_stop_rss=not_stop_rss,
     )
-    if num_process == -1:
-        num_process = multiprocessing.cpu_count()
 
     time_start = time.time()
     if num_process == 1:

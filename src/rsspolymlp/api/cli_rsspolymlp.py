@@ -275,7 +275,6 @@ def run():
             c_maxiter=args.c_maxiter,
             n_opt_str=args.n_opt_str,
             not_stop_rss=args.not_stop_rss,
-            parallel_method=args.parallel_method,
             num_process=args.num_process,
             backend=args.backend,
         )
