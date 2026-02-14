@@ -1,3 +1,5 @@
+import multiprocessing
+
 from joblib import Parallel, delayed
 from joblib.externals.loky import get_reusable_executor
 
@@ -60,6 +62,8 @@ def geometry_opt(
     num_process=-1,
     backend="loky",
 ):
+    if num_process == -1:
+        num_process = multiprocessing.cpu_count()
 
     rssobj = OptimizationMLP(
         pot=pot,
