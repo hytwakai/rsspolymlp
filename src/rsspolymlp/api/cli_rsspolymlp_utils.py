@@ -1,6 +1,6 @@
 import argparse
 
-from rsspolymlp.api.rsspolymlp_utils import struct_matcher
+from rsspolymlp.api.rsspolymlp_utils import geometry_opt, struct_matcher
 
 
 def run():
@@ -9,6 +9,11 @@ def run():
         "--struct_matcher",
         action="store_true",
         help="Mode: struct_matcher",
+    )
+    parser.add_argument(
+        "--geometry_opt",
+        action="store_true",
+        help="Mode: geometry_optimizations",
     )
 
     # --struct_matcher mode
@@ -46,6 +51,32 @@ def run():
         help="Output file name (default: unique_struct.yaml).",
     )
 
+    # --geometry_opt mode
+    parser.add_argument(
+        "--pot",
+        nargs="*",
+        type=str,
+        default=["polymlp.yaml"],
+        help="Potential file for polynomial MLP",
+    )
+    parser.add_argument(
+        "--pressure", type=float, default=0.0, help="Pressure term (in GPa)"
+    )
+    parser.add_argument(
+        "--symmetry",
+        action="store_true",
+        help="If enabled, the optimization is comducted with using symmetry constraints.",
+    )
+    parser.add_argument(
+        "--solver_method", type=str, default="CG", help="Type of solver"
+    )
+    parser.add_argument(
+        "--c_maxiter",
+        type=int,
+        default=100,
+        help="Maximum number of iterations when c1 and c2 values are changed",
+    )
+
     args = parser.parse_args()
 
     if args.struct_matcher:
@@ -55,4 +86,16 @@ def run():
             backend=args.backend,
             symprec_set=args.symprec_set,
             output_file=args.output_file,
+        )
+
+    if args.geometry_opt:
+        geometry_opt(
+            poscar_paths=args.poscar,
+            pot=args.pot,
+            pressure=args.pressure,
+            with_symmetry=args.symmetry,
+            solver_method=args.solver_method,
+            c_maxiter=args.c_maxiter,
+            num_process=args.num_process,
+            backend=args.backend,
         )

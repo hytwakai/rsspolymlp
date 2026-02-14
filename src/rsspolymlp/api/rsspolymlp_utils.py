@@ -1,8 +1,12 @@
+from joblib import Parallel, delayed
+from joblib.externals.loky import get_reusable_executor
+
 from rsspolymlp.analysis.unique_struct import (
     UniqueStructureAnalyzer,
     generate_unique_structs,
     log_unique_structures,
 )
+from rsspolymlp.rss.optimization_mlp import OptimizationMLP
 
 
 def struct_matcher(
@@ -44,3 +48,36 @@ def struct_matcher(
         output_file,
         unique_structs_sorted,
     )
+
+
+def geometry_opt(
+    poscar_paths,
+    pot="polymlp.yaml",
+    pressure=0.0,
+    with_symmetry=False,
+    solver_method="CG",
+    c_maxiter=100,
+    num_process=-1,
+    backend="loky",
+):
+
+    rssobj = OptimizationMLP(
+        pot=pot,
+        pressure=pressure,
+        with_symmetry=with_symmetry,
+        solver_method=solver_method,
+        c_maxiter=c_maxiter,
+        n_opt_str=10**6,
+        not_stop_rss=True,
+    )
+
+    if num_process == 1:
+        for poscar in poscar_paths:
+            rssobj.run_optimization(poscar)
+    else:
+        # Perform parallel optimization with joblib
+        Parallel(n_jobs=num_process, backend=backend, verbose=100)(
+            delayed(rssobj.run_optimization)(poscar) for poscar in poscar_paths
+        )
+        executor = get_reusable_executor(max_workers=num_process)
+        executor.shutdown(wait=True)
