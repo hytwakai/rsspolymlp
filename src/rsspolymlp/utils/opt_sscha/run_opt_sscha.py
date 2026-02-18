@@ -27,7 +27,8 @@ def run_opt_sscha(
     tol: float = 0.01,
     dtol: float = 0.01,
     gtol: float = 0.01,
-    n_samples: int = 1000,
+    n_samples_fc: Optional[int] = None,
+    n_samples_go: int = 1000,
     max_iter: int = 15,
     mixing: float = 0.5,
     mesh: list = [10, 10, 10],
@@ -69,17 +70,19 @@ def run_opt_sscha(
                 mesh=mesh,
                 max_iter=max_iter,
                 mixing=mixing,
-                n_samples=n_samples,
+                n_samples=n_samples_fc,
                 threshold_disp=dtol,
             )
             if judge == "success":
                 break
 
             print("---- increasing the number of sample structures ----", flush=True)
-            n_samples = n_samples * 2
+            n_samples_fc = n_samples_fc * 2
             fc2file = "./fc2.hdf5"
-            if n_samples > 50000:
-                print("<< n_samples exceeds 50,000 >>")
+            if n_samples_fc > 50000:
+                print(
+                    "<< Number of sample stuctures for FC optimization exceeds 50,000 >>"
+                )
                 return
 
         sscha_dir = glob.glob("./sscha/*")[0]
@@ -101,14 +104,13 @@ def run_opt_sscha(
             sscha_opt=True,
             pressure=pressure,
             pot=pot,
-            n_samples=n_samples,
+            n_samples=n_samples_go,
             yamlfile=yamlfile,
             fc2file=fc2file,
             verbose=True,
         )
 
         minobj.run(
-            n_samples=n_samples,
             method=method,
             gtol=gtol,
             maxiter=10,
@@ -164,7 +166,7 @@ def run_opt_sscha(
 
         if iter_n == 4:
             print("---- increasing the number of sample structures ----", flush=True)
-            n_samples = n_samples * 2
+            n_samples_go = n_samples_go * 2
 
     shutil.copy(poscar, "./POSCAR_eqm.refine")
     print("------ final sscha calculation ------", flush=True)
@@ -175,8 +177,8 @@ def run_opt_sscha(
 
     sscha = sscha.run(
         temp=temperature,
-        n_samples_init=n_samples,
-        n_samples_final=n_samples * 2,
+        n_samples_init=n_samples_go,
+        n_samples_final=n_samples_go * 2,
         tol=tol,
         mesh=mesh,
         max_iter=max_iter,

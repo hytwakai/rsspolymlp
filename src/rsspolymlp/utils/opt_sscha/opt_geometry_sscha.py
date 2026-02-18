@@ -83,7 +83,6 @@ class GeometryOptimization:
         self._n_samples = n_samples
         self._yamlfile = yamlfile
         self._fc2file = fc2file
-        self._steps = []
 
         self._basis_axis, cell_update = self._set_basis_axis(cell)
         self._basis_f = self._set_basis_positions(cell)
@@ -312,7 +311,6 @@ class GeometryOptimization:
 
     def run(
         self,
-        n_samples: int = 1000,
         method: Literal["BFGS", "CG", "L-BFGS-B", "SLSQP"] = "BFGS",
         gtol: float = 1e-4,
         maxiter: int = 100,
@@ -330,9 +328,6 @@ class GeometryOptimization:
         c1: c1 parameter in scipy optimization.
         c2: c2 parameter in scipy optimization.
         """
-        self._gtol = gtol
-        self._n_samples = n_samples
-
         if self._relax_cell and not self._relax_volume:
             method = "SLSQP"
 
@@ -378,7 +373,6 @@ class GeometryOptimization:
                 jac=jac,
                 options=options,
                 constraints=[nlc],
-                callback=self.save_step,
             )
         else:
             self._res = minimize(
@@ -387,16 +381,9 @@ class GeometryOptimization:
                 method=method,
                 jac=jac,
                 options=options,
-                callback=self.save_step,
             )
         self._x0 = self._res.x
         return self
-
-    def save_step(self, x):
-        x_positions, x_cells = self.split(x)
-        axis = self._basis_axis @ x_cells
-        axis = axis.reshape((3, 3))
-        self._steps.append([axis, x_positions])
 
     @property
     def relax_cell(self):
