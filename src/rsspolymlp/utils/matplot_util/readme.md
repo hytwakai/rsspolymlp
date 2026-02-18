@@ -6,7 +6,7 @@
 
 ```python
 import numpy as np
-from rsspolymlp.utils.rsspolymlp.utils.matplot_util.custom_plt import CustomPlt
+from rsspolymlp.utils.matplot_util.custom_plt import CustomPlt
 from rsspolymlp.utils.matplot_util.make_plot import MakePlot
 
 x = np.linspace(0, 10, 100)

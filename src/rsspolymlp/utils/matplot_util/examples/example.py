@@ -1,6 +1,6 @@
 import numpy as np
-from matplot_util.custom_plt import CustomPlt
-from matplot_util.make_plot import MakePlot
+from rsspolymlp.utils.matplot_util.custom_plt import CustomPlt
+from rsspolymlp.utils.matplot_util.make_plot import MakePlot
 
 x = np.linspace(0, 10, 100)
 y = np.sin(x)
