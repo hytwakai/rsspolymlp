@@ -2,23 +2,22 @@ import numpy as np
 import scipy
 
 from phonopy import Phonopy
-from pypolymlp.core.data_format import PolymlpStructure
 from pypolymlp.calculator.properties import Properties
 from pypolymlp.calculator.sscha.harmonic_reciprocal import HarmonicReciprocal
 from pypolymlp.calculator.sscha.sscha_restart import Restart
+from pypolymlp.core.data_format import PolymlpStructure
+from pypolymlp.core.units import EVtoGPa, EVtoKJmol
 from pypolymlp.utils.phonopy_utils import structure_to_phonopy_cell
+from pypolymlp.utils.spglib_utils import construct_basis_cell
+from pypolymlp.utils.symfc_utils import construct_basis_fractional_coordinates
 from rsspolymlp.utils.opt_sscha.harmonic_real import HarmonicReal
-
-EV = 1.60217733e-19  # [J]
-EVAngstromToGPa = EV * 1e21
-kj_to_ev = 96.485332
 
 
 class SSCHAProperty:
 
     def __init__(
         self,
-        cell: PolymlpStructure, 
+        cell: PolymlpStructure,
         pot: str,
         n_samples: int = 1000,
         yamlfile: str = "./sscha_results.yaml",
@@ -27,8 +26,9 @@ class SSCHAProperty:
         self._structure = cell
         self._res = Restart(yamlfile, fc2hdf5=fc2file, pot=pot)
         self._fc2 = self._res.force_constants
-        prop = Properties(pot=self._res.polymlp)
+        self._ev_to_kjmol = EVtoKJmol / self._res.n_unitcells
 
+        prop = Properties(pot=self._res.polymlp)
         self._ph_real = HarmonicReal(
             self._structure,
             prop,
@@ -55,8 +55,10 @@ class SSCHAProperty:
         free_energy = (
             self._ph_recip.free_energy + self._ph_real.average_anharmonic_potential
         )
-        sscha_energy = (free_energy + self._ph_real.static_potential) / kj_to_ev
-        sscha_energy += pressure * self._structure.volume / EVAngstromToGPa
+        sscha_energy = (
+            free_energy + self._ph_real.static_potential
+        ) / self._ev_to_kjmol
+        sscha_energy += pressure * self._structure.volume / EVtoGPa
         return sscha_energy
 
     def sscha_force(self):
@@ -151,3 +153,42 @@ class SSCHAProperty:
         fc2 = np.transpose(self._fc2, (0, 2, 1, 3))
         fc2 = np.reshape(fc2, (N3, N3))
         return -fc2 @ disp
+
+    def estimate_derivatives_standard_deviation(self):
+        e = self._ph_real.full_potentials / self._ev_to_kjmol
+        f = self._ph_real.forces  # (n_samples, 3, n_atom)
+        s = self._ph_real.stresses  # (n_samples, 6)
+
+        sd_e = np.sqrt(np.var(e))
+        sd_f = np.sqrt(np.var(f, axis=0))
+        sd_s = np.sqrt(np.var(s, axis=0))
+
+        basis_f = construct_basis_fractional_coordinates(self._structure)
+        if basis_f is not None:
+            prod = (
+                -sd_f.transpose(0, 2, 1) @ self._structure.axis
+            )  # (n_samples, n_atom, 3)
+            derivatives_f = basis_f.T @ prod.reshape(prod.shape[0], -1).T
+        else:
+            derivatives_f = None
+
+        sigma = np.zeros((s.shape[0], 3, 3), dtype=s.dtype)
+        sigma[:, 0, 0] = s[:, 0]  # xx
+        sigma[:, 1, 1] = s[:, 1]  # yy
+        sigma[:, 2, 2] = s[:, 2]  # zz
+        sigma[:, 0, 1] = sigma[:, 1, 0] = s[:, 3]  # xy
+        sigma[:, 1, 2] = sigma[:, 2, 1] = s[:, 4]  # yz
+        sigma[:, 0, 2] = sigma[:, 2, 0] = s[:, 5]  # zx
+
+        basis_axis, _ = construct_basis_cell(self._structure)
+        self._structure.axis_inv = np.linalg.inv(self._structure.axis)
+        prod = -sigma @ self._structure.axis_inv.T
+        derivatives_s = basis_axis.T @ prod.reshape(prod.shape[0], -1).T
+
+        if derivatives_f is None:
+            sd_derivatives_f = None
+        else:
+            sd_derivatives_f = np.sqrt(np.var(derivatives_f, axis=1))
+        sd_derivatives_s = np.sqrt(np.var(derivatives_s, axis=1))
+
+        return sd_e, sd_f, sd_s, sd_derivatives_f, sd_derivatives_s

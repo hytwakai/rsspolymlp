@@ -35,9 +35,6 @@ class GeometryOptimization:
         params: Optional[Union[PolymlpParams, list[PolymlpParams]]] = None,
         coeffs: Optional[np.ndarray] = None,
         properties: Optional[Properties] = None,
-        n_samples: int = 1000,
-        yamlfile: str = "./sscha_results.yaml",
-        fc2file: str = "./fc2.hdf5",
         verbose: bool = False,
     ):
         """Init method.
@@ -80,9 +77,6 @@ class GeometryOptimization:
         self._sscha_opt = sscha_opt
         self._pressure = pressure
         self._verbose = verbose
-        self._n_samples = n_samples
-        self._yamlfile = yamlfile
-        self._fc2file = fc2file
 
         self._basis_axis, cell_update = self._set_basis_axis(cell)
         self._basis_f = self._set_basis_positions(cell)
@@ -193,14 +187,14 @@ class GeometryOptimization:
             self._force = prp_sscha.sscha_force()
             self._stress = prp_sscha.sscha_stress()
             if self._verbose:
-                print("Axis:", flush=True)
+                print("Axis :", flush=True)
                 print(self._structure.axis, flush=True)
-                print("Free energy:", flush=True)
+                print("Free energy :", flush=True)
                 print(self._energy, flush=True)
                 if self._relax_positions:
-                    print("Forces:", flush=True)
+                    print("Forces :", flush=True)
                     print(self._force, flush=True)
-                print("Stress tensors:", flush=True)
+                print("Stress tensors :", flush=True)
                 print(self._stress * EVtoGPa / self._structure.volume, flush=True)
 
             self._derivatives = self.jac_relax_cell(x)
@@ -316,6 +310,9 @@ class GeometryOptimization:
         maxiter: int = 100,
         c1: Optional[float] = None,
         c2: Optional[float] = None,
+        n_samples: int = 1000,
+        yamlfile: str = "./sscha_results.yaml",
+        fc2file: str = "./fc2.hdf5",
     ):
         """Run geometry optimization.
 
@@ -328,6 +325,10 @@ class GeometryOptimization:
         c1: c1 parameter in scipy optimization.
         c2: c2 parameter in scipy optimization.
         """
+        self._n_samples = n_samples
+        self._yamlfile = yamlfile
+        self._fc2file = fc2file
+
         if self._relax_cell and not self._relax_volume:
             method = "SLSQP"
 
