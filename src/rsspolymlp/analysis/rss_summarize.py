@@ -80,9 +80,7 @@ class RSSResultSummarizer:
             parent_path_ref[composition_tag] = json_path
 
         if not self.parse_vasp:
-            paths_same_comp, results_same_comp = self._parse_json_result(
-                parse_rss_result=True
-            )
+            paths_same_comp, results_same_comp = self._parse_json_result()
             axis_tol = 0.03
             pos_tol = 0.03
         else:
@@ -187,10 +185,12 @@ class RSSResultSummarizer:
         paths_same_comp, results_same_comp = self._parse_json_result()
 
         for composition_tag, res_paths in paths_same_comp.items():
+            print(f"Composition {composition_tag}: summarizing...")
             self.analyzer = UniqueStructureAnalyzer()
 
             time_start = time()
             for res_path in res_paths:
+                print(f" - Processing result file (parent): {res_path}")
                 self.remove_duplicates_in_comp(
                     results_same_comp[composition_tag][res_path],
                     standardize_axis=True,
@@ -364,7 +364,7 @@ class RSSResultSummarizer:
 
         return struct_counts
 
-    def _parse_json_result(self, parse_rss_result=False):
+    def _parse_json_result(self):
 
         def resolve_path(base: Path, p):
             cwd = Path.cwd()
@@ -382,15 +382,12 @@ class RSSResultSummarizer:
             with open(path_name) as f:
                 loaded_dict = json.load(f)
 
-            if parse_rss_result:
-                base = Path(path_name).parents[1]
-                for r in loaded_dict["rss_results"]:
-                    r["struct_path"] = resolve_path(base, r["struct_path"])
-                    r["dupstr_paths"] = {
-                        resolve_path(base, p) for p in r["dupstr_paths"]
-                    }
-                    r["structure"] = polymlp_struct_from_dict(r["structure"])
-                    r["struct_no"] = None
+            base = Path(path_name).parents[1]
+            for r in loaded_dict["rss_results"]:
+                r["struct_path"] = resolve_path(base, r["struct_path"])
+                r["dupstr_paths"] = {resolve_path(base, p) for p in r["dupstr_paths"]}
+                r["structure"] = polymlp_struct_from_dict(r["structure"])
+                r["struct_no"] = None
 
             target_elements = loaded_dict["elements"]
             comp_ratio = tuple(loaded_dict["comp_ratio"])

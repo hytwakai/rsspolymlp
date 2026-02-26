@@ -22,20 +22,29 @@ class SSCHAProperty:
         n_samples: int = 1000,
         yamlfile: str = "./sscha_results.yaml",
         fc2file: str = "./fc2.hdf5",
+        pressure: float = 0,
     ):
         self._structure = cell
+        self._n_samples = n_samples
+        self._pressure = pressure
+
         self._res = Restart(yamlfile, fc2hdf5=fc2file, pot=pot)
         self._fc2 = self._res.force_constants
         self._ev_to_kjmol = EVtoKJmol / self._res.n_unitcells
+        self._prop = Properties(pot=self._res.polymlp)
 
-        prop = Properties(pot=self._res.polymlp)
+        self._sscha_enegies = None
+        self._sscha_forces = None
+        self._sscha_stress_tensors = None
+
+    def run(self):
         self._ph_real = HarmonicReal(
             self._structure,
-            prop,
+            self._prop,
             n_unitcells=self._res.n_unitcells,
             fc2=self._fc2,
         )
-        self._ph_real.run(temp=self._res.temperature, n_samples=n_samples)
+        self._ph_real.run(temp=self._res.temperature, n_samples=self._n_samples)
 
         self._phonopy = Phonopy(
             structure_to_phonopy_cell(self._structure),
@@ -44,24 +53,25 @@ class SSCHAProperty:
         )
         self._ph_recip = HarmonicReciprocal(
             self._phonopy,
-            prop,
+            self._prop,
             fc2=self._fc2,
         )
         self._ph_recip.compute_thermal_properties(
             temp=self._res.temperature, qmesh=(10, 10, 10)
         )
 
-    def sscha_energy(self, pressure):
-        free_energy = (
-            self._ph_recip.free_energy + self._ph_real.average_anharmonic_potential
-        )
-        sscha_energy = (
-            free_energy + self._ph_real.static_potential
-        ) / self._ev_to_kjmol
-        sscha_energy += pressure * self._structure.volume / EVtoGPa
-        return sscha_energy
+        self.calc_sscha_energies()
+        self.calc_sscha_forces()
+        self.calc_sscha_stress_tensors()
 
-    def sscha_force(self):
+    def calc_sscha_energies(self):
+        free_energies = self._ph_recip.free_energy + self._ph_real.anharmonic_potentials
+        self._sscha_enegies = (
+            free_energies + self._ph_real.static_potential
+        ) / self._ev_to_kjmol
+        self._sscha_enegies += self._pressure * self._structure.volume / EVtoGPa
+
+    def calc_sscha_forces(self):
         forces_from_fc2 = [
             self._forces_from_fc2(d.T.reshape(-1)) for d in self._ph_real.displacements
         ]
@@ -71,30 +81,26 @@ class SSCHAProperty:
             _sample_forces.shape[0], _sample_forces.shape[1] * _sample_forces.shape[2]
         )
         res_forces = sample_forces - forces_from_fc2
-        sscha_force = np.mean(res_forces, axis=0)
-        sscha_force = sscha_force.reshape(-1, 3).transpose(1, 0)
-        return sscha_force
+        self._sscha_forces = res_forces.reshape(res_forces.shape[0], -1, 3).transpose(
+            0, 2, 1
+        )
 
-    def sscha_stress(self):
+    def calc_sscha_stress_tensors(self):
         stress_indices = [(0, 0), (1, 1), (2, 2), (0, 1), (1, 2), (2, 0)]
-        sscha_stress = []
-        _sample_forces = self._ph_real.forces
-        _stresses = self._ph_real._stresses
+
+        sample_forces = self._ph_real.forces
+        sample_stresses = self._ph_real.stresses
         disps = self._ph_real.displacements
-        positions_cartesian = self._structure.axis @ self._structure.positions
-        disps += positions_cartesian
-        for i, j in stress_indices:
-            sscha_stress.append(
-                np.mean(
-                    _stresses[:, stress_indices.index((i, j))]
-                    - 0.5
-                    * (
-                        np.sum(_sample_forces[:, i, :] * disps[:, j, :], axis=1)
-                        + np.sum(_sample_forces[:, j, :] * disps[:, i, :], axis=1)
-                    )
-                )
+        # positions_cartesian = self._structure.axis @ self._structure.positions
+        # disps += positions_cartesian
+
+        self._sscha_stress_tensors = np.zeros((sample_stresses.shape[0], 6))
+        for k, (i, j) in enumerate(stress_indices):
+            correction = 0.5 * (
+                np.sum(sample_forces[:, i, :] * disps[:, j, :], axis=1)
+                + np.sum(sample_forces[:, j, :] * disps[:, i, :], axis=1)
             )
-        return np.array(sscha_stress)
+            self._sscha_stress_tensors[:, k] = sample_stresses[:, k] - correction
 
     def position_opt(self, basis_f):
         # sample_forces.shape = (N_samp, 3, N_atom)
@@ -155,9 +161,11 @@ class SSCHAProperty:
         return -fc2 @ disp
 
     def estimate_derivatives_standard_deviation(self):
-        e = self._ph_real.full_potentials / self._ev_to_kjmol
-        f = self._ph_real.forces  # (n_samples, 3, n_atom)
-        s = self._ph_real.stresses  # (n_samples, 6)
+        self.run()
+
+        e = self._sscha_enegies
+        f = self._sscha_forces  # (n_samples, 3, n_atom)
+        s = self._sscha_stress_tensors  # (n_samples, 6)
 
         sd_e = np.sqrt(np.var(e))
         sd_f = np.sqrt(np.var(f, axis=0))
@@ -192,3 +200,24 @@ class SSCHAProperty:
         sd_derivatives_s = np.sqrt(np.var(derivatives_s, axis=1))
 
         return sd_e, sd_f, sd_s, sd_derivatives_f, sd_derivatives_s
+
+    @property
+    def sscha_energy(self):
+        if self._sscha_enegies is None:
+            return None
+        sscha_energy = np.average(self._sscha_enegies)
+        return sscha_energy
+
+    @property
+    def sscha_force(self):
+        if self._sscha_forces is None:
+            return None
+        sscha_force = np.mean(self._sscha_forces, axis=0)
+        return sscha_force
+
+    @property
+    def sscha_stress_tensor(self):
+        if self._sscha_stress_tensors is None:
+            return None
+        sscha_stress_tensor = np.mean(self._sscha_stress_tensors, axis=0)
+        return sscha_stress_tensor

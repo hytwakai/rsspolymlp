@@ -20,7 +20,7 @@ def struct_matcher(
 ):
     rss_results = []
     for poscar_path in poscar_paths:
-        rss_results.append({"poscar": poscar_path})
+        rss_results.append({"struct_path": poscar_path})
 
     unique_structs = generate_unique_structs(
         rss_results,

@@ -182,19 +182,23 @@ class GeometryOptimization:
                 n_samples=self._n_samples,
                 yamlfile=self._yamlfile,
                 fc2file=self._fc2file,
+                pressure=self._pressure,
             )
-            self._energy = prp_sscha.sscha_energy(self._pressure)
-            self._force = prp_sscha.sscha_force()
-            self._stress = prp_sscha.sscha_stress()
+
+            prp_sscha.run()
+            self._energy = prp_sscha.sscha_energy
+            self._force = prp_sscha.sscha_force
+            self._stress = prp_sscha.sscha_stress_tensor
+
             if self._verbose:
-                print("Axis :", flush=True)
+                print("Axis :",)
                 print(self._structure.axis, flush=True)
-                print("Free energy :", flush=True)
+                print("Free energy :")
                 print(self._energy, flush=True)
                 if self._relax_positions:
-                    print("Forces :", flush=True)
+                    print("Forces :")
                     print(self._force, flush=True)
-                print("Stress tensors :", flush=True)
+                print("Stress tensors (GPa):")
                 print(self._stress * EVtoGPa / self._structure.volume, flush=True)
 
             self._derivatives = self.jac_relax_cell(x)
@@ -325,6 +329,7 @@ class GeometryOptimization:
         c1: c1 parameter in scipy optimization.
         c2: c2 parameter in scipy optimization.
         """
+        self._gtol = gtol
         self._n_samples = n_samples
         self._yamlfile = yamlfile
         self._fc2file = fc2file

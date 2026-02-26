@@ -23,6 +23,7 @@ def estimate_n_samples(
     yamlfile: str,
     fc2file: str,
     gtol: float,
+    se_ratio: float = 0.2,
     n_samples: Optional[int] = None,
 ):
     if n_samples is None:
@@ -34,6 +35,7 @@ def estimate_n_samples(
         n_samples=n_samples,
         yamlfile=yamlfile,
         fc2file=fc2file,
+        pressure=0,
     )
     sd_e, sd_f, sd_s, sd_derivatives_f, sd_derivatives_s = (
         prp_sscha.estimate_derivatives_standard_deviation()
@@ -43,7 +45,7 @@ def estimate_n_samples(
     else:
         max_dirivative = np.max((np.max(sd_derivatives_f), np.max(sd_derivatives_s)))
 
-    target_n_samples = int((max_dirivative * 5 / gtol) ** 2)
+    target_n_samples = int((max_dirivative / (gtol * se_ratio)) ** 2)
     max_sd_f = np.max(sd_f)
     max_sd_s = np.max(sd_s)
     se_e_average = sd_e / (target_n_samples**0.5)
@@ -51,26 +53,36 @@ def estimate_n_samples(
     se_s_average = max_sd_s / (target_n_samples**0.5)
     n_atoms = cell.n_atoms[0]
 
-    print("units:")
-    print("  sd_derivatives_f: meV/cell")
-    print("  sd_derivatives_s: meV/Ang.")
-    print("  sd_e: meV/cell")
-    print("  max_sd_f: meV/Ang.")
-    print("  max_sd_s: meV/cell")
-    print("  se_e_average: meV/cell")
-    print("  se_f_average: meV/Ang.")
-    print("  se_s_average: meV/cell")
-    print("properties:")
-    print("  target_n_samples:", target_n_samples)
-    if sd_derivatives_f is not None:
-        print("  sd_derivatives_f:", sd_derivatives_f * 1000)
-    print("  sd_derivatives_s:", sd_derivatives_s * 1000)
-    print("  sd_e:", sd_e * 1000 / n_atoms)
-    print("  max_sd_f:", max_sd_f * 1000 / n_atoms)
-    print("  max_sd_s:", max_sd_s * 1000 / n_atoms)
-    print("  se_e_average:", se_e_average * 1000 / n_atoms)
-    print("  se_f_average:", se_f_average * 1000 / n_atoms)
-    print("  se_s_average:", se_s_average * 1000 / n_atoms)
+    with open("estimate_n_samples.yaml", "w") as f:
+        print("inputs:", file=f)
+        print("  potentials:", pot, file=f)
+        print("  yamlfile:", yamlfile, file=f)
+        print("  fc2file:", fc2file, file=f)
+        print("  gtol:", gtol, file=f)
+        print("  se_ratio:", se_ratio, file=f)
+        print("  n_samples:", n_samples, file=f)
+        print("units:", file=f)
+        print("  sd_derivatives_f: meV/cell", file=f)
+        print("  sd_derivatives_s: meV/Ang.", file=f)
+        print("  sd_e: meV/atom", file=f)
+        print("  max_sd_f: meV/Ang.", file=f)
+        print("  max_sd_s: meV/atom", file=f)
+        print("  se_e_average: meV/atom", file=f)
+        print("  se_f_average: meV/Ang.", file=f)
+        print("  se_s_average: meV/atom", file=f)
+        print("properties:", file=f)
+        print("  target_n_samples:", target_n_samples, file=f)
+        if sd_derivatives_f is not None:
+            print("  sd_derivatives_f:", sd_derivatives_f * 1000, file=f)
+        print("  sd_derivatives_s:", sd_derivatives_s * 1000, file=f)
+        print("  sd_e:", sd_e * 1000 / n_atoms, file=f)
+        print("  max_sd_f:", max_sd_f * 1000, file=f)
+        print("  max_sd_s:", max_sd_s * 1000 / n_atoms, file=f)
+        print("  se_e_average:", se_e_average * 1000 / n_atoms, file=f)
+        print("  se_f_average:", se_f_average * 1000, file=f)
+        print("  se_s_average:", se_s_average * 1000 / n_atoms, file=f)
+
+    return target_n_samples
 
 
 def run_opt_sscha(
@@ -85,6 +97,7 @@ def run_opt_sscha(
     tol: float = 0.01,
     dtol: float = 0.01,
     gtol: float = 0.01,
+    se_ratio: float = 0.2,
     n_samples: Optional[int] = None,
     max_iter: int = 15,
     mixing: float = 0.5,
@@ -144,6 +157,23 @@ def run_opt_sscha(
             print("No degree of freedom to be optimized.")
             break
 
+        if iter_n == 0:
+            _gtol = gtol * 10
+        else:
+            _gtol = gtol
+        _n_samples = estimate_n_samples(
+            cell=cell,
+            pot=pot,
+            yamlfile=yamlfile,
+            fc2file=fc2file,
+            gtol=_gtol,
+            se_ratio=se_ratio,
+        )
+        if _n_samples > n_samples:
+            print(f"Updating number of samples: {n_samples} -> {_n_samples}")
+            n_samples = _n_samples
+        shutil.copy("estimate_n_samples.yaml", f"iteration_{iter_n+1}")
+
         minobj = GeometryOptimization(
             cell=cell,
             relax_cell=relax_cell,
@@ -154,9 +184,10 @@ def run_opt_sscha(
             pot=pot,
             verbose=True,
         )
+        reliable_gtol = _gtol * (1 - 1.96 * se_ratio)
         minobj.run(
             method=method,
-            gtol=gtol,
+            gtol=reliable_gtol,
             maxiter=10,
             n_samples=n_samples,
             yamlfile=yamlfile,
@@ -213,7 +244,7 @@ def run_opt_sscha(
 
         if iter_n == 4:
             print("---- increasing the number of sample structures ----", flush=True)
-            n_samples_go = n_samples * 2
+            n_samples = n_samples * 2
 
     shutil.copy(poscar, "./POSCAR_eqm.refine")
     print("------ final sscha calculation ------", flush=True)
@@ -224,7 +255,7 @@ def run_opt_sscha(
 
     sscha = sscha.run(
         temp=temperature,
-        n_samples_init=n_samples_go,
+        n_samples_init=n_samples,
         n_samples_final=n_samples * 2,
         tol=tol,
         mesh=mesh,
@@ -302,7 +333,8 @@ if __name__ == "__main__":
         help="q-mesh for phonon calculation",
     )
     # Parameters for geometry optimization
-    parser.add_argument("--gtol", type=float, default=0.1, help="Tolerance parameter")
+    parser.add_argument("--gtol", type=float, default=0.02, help="Tolerance parameter")
+    parser.add_argument("--se_ratio", type=float, default=0.1, help="")
     parser.add_argument("--fix_cell", action="store_true", help="Fix cell parameters")
     parser.add_argument("--fix_volume", action="store_true", help="Fix volume")
     parser.add_argument(
@@ -340,6 +372,7 @@ if __name__ == "__main__":
             tol=args.tol,
             dtol=args.dtol,
             gtol=args.gtol,
+            se_ratio=args.se_ratio,
             n_samples=args.n_samples,
             max_iter=args.max_iter,
             mixing=args.mixing,
