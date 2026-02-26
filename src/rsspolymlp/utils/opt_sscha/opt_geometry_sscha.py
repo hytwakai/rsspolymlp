@@ -4,6 +4,7 @@ Copyright (c) 2026, rsspolymlp, Hayato Wakai
 """
 
 import copy
+import os
 from typing import Literal, Optional, Union
 
 import numpy as np
@@ -177,21 +178,24 @@ class GeometryOptimization:
             (self._energy, self._force, self._stress) = self._prop.eval(self._structure)
         else:
             prp_sscha = SSCHAProperty(
-                self._structure,
-                self._pot,
+                self._yamlfile,
+                self._fc2file,
+                cell=self._structure,
+                pot=self._pot,
                 n_samples=self._n_samples,
-                yamlfile=self._yamlfile,
-                fc2file=self._fc2file,
                 pressure=self._pressure,
             )
 
-            prp_sscha.run()
+            os.makedirs("sscha_log", exist_ok=True)
+            num_log = len(os.listdir("sscha_log"))
+            prp_sscha.run(save_data_file=f"sscha_log/sscha_property_{num_log+1}.yaml")
+
             self._energy = prp_sscha.sscha_energy
             self._force = prp_sscha.sscha_force
             self._stress = prp_sscha.sscha_stress_tensor
 
             if self._verbose:
-                print("Axis :",)
+                print("Axis :")
                 print(self._structure.axis, flush=True)
                 print("Free energy :")
                 print(self._energy, flush=True)

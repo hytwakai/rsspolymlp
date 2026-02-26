@@ -1,13 +1,21 @@
+from typing import Optional
+
 import numpy as np
 import scipy
 
 from phonopy import Phonopy
 from pypolymlp.calculator.properties import Properties
 from pypolymlp.calculator.sscha.harmonic_reciprocal import HarmonicReciprocal
+from pypolymlp.calculator.sscha.sscha_data import SSCHAData
+from pypolymlp.calculator.sscha.sscha_io import save_sscha_yaml
+from pypolymlp.calculator.sscha.sscha_params import SSCHAParams
 from pypolymlp.calculator.sscha.sscha_restart import Restart
 from pypolymlp.core.data_format import PolymlpStructure
 from pypolymlp.core.units import EVtoGPa, EVtoKJmol
-from pypolymlp.utils.phonopy_utils import structure_to_phonopy_cell
+from pypolymlp.utils.phonopy_utils import (
+    phonopy_cell_to_structure,
+    structure_to_phonopy_cell,
+)
 from pypolymlp.utils.spglib_utils import construct_basis_cell
 from pypolymlp.utils.symfc_utils import construct_basis_fractional_coordinates
 from rsspolymlp.utils.opt_sscha.harmonic_real import HarmonicReal
@@ -17,52 +25,94 @@ class SSCHAProperty:
 
     def __init__(
         self,
-        cell: PolymlpStructure,
-        pot: str,
-        n_samples: int = 1000,
-        yamlfile: str = "./sscha_results.yaml",
-        fc2file: str = "./fc2.hdf5",
-        pressure: float = 0,
+        yamlfile: str,  # ./sscha_results.yaml
+        fc2file: str,  # ./fc2.hdf5
+        cell: Optional[PolymlpStructure] = None,
+        pot: Optional[list] = None,
+        n_samples: Optional[int] = 1000,
+        pressure: Optional[float] = 0,
     ):
-        self._structure = cell
+        self._fc2file = fc2file
         self._n_samples = n_samples
         self._pressure = pressure
 
-        self._res = Restart(yamlfile, fc2hdf5=fc2file, pot=pot)
+        self._res = Restart(yamlfile, fc2hdf5=self._fc2file, pot=pot)
+        if cell is None:
+            self._structure = self._res.unitcell
+        else:
+            self._structure = cell
         self._fc2 = self._res.force_constants
+        self._parameters = self._res.parameters
+        self._supercell_matrix = self._res.supercell_matrix
+        self._n_unitcells = int(round(np.linalg.det(self._supercell_matrix)))
+        self._temperature = self._res.temperature
         self._ev_to_kjmol = EVtoKJmol / self._res.n_unitcells
-        self._prop = Properties(pot=self._res.polymlp)
 
+        self._prop = Properties(pot=self._res.polymlp)
         self._sscha_enegies = None
         self._sscha_forces = None
         self._sscha_stress_tensors = None
 
-    def run(self):
-        self._ph_real = HarmonicReal(
-            self._structure,
-            self._prop,
-            n_unitcells=self._res.n_unitcells,
-            fc2=self._fc2,
-        )
-        self._ph_real.run(temp=self._res.temperature, n_samples=self._n_samples)
-
+    def run(self, save_data_file: Optional[str] = None):
         self._phonopy = Phonopy(
             structure_to_phonopy_cell(self._structure),
-            self._res.supercell_matrix,
-            nac_params=None,
+            self._supercell_matrix,
         )
+        supercell_polymlp = phonopy_cell_to_structure(self._phonopy.supercell)
+        supercell_polymlp.masses = self._phonopy.supercell.masses
+        supercell_polymlp.supercell_matrix = self._supercell_matrix
+        supercell_polymlp.n_unitcells = self._n_unitcells
+
+        self._ph_real = HarmonicReal(
+            supercell_polymlp,
+            self._prop,
+            n_unitcells=self._n_unitcells,
+            fc2=self._fc2,
+        )
+        self._ph_real.run(temp=self._temperature, n_samples=self._n_samples)
+
         self._ph_recip = HarmonicReciprocal(
             self._phonopy,
             self._prop,
             fc2=self._fc2,
         )
         self._ph_recip.compute_thermal_properties(
-            temp=self._res.temperature, qmesh=(10, 10, 10)
+            temp=self._temperature, qmesh=(10, 10, 10)
         )
 
         self.calc_sscha_energies()
         self.calc_sscha_forces()
         self.calc_sscha_stress_tensors()
+
+        if save_data_file is not None:
+            sscha_data = SSCHAData(
+                temperature=self._temperature,
+                static_potential=self._ph_real.static_potential,  # kJ/mol
+                harmonic_potential=self._ph_real.average_harmonic_potential,  # kJ/mol
+                harmonic_free_energy=self._ph_recip.free_energy,  # kJ/mol
+                average_potential=self._ph_real.average_full_potential,  # kJ/mol
+                anharmonic_free_energy=self._ph_real.average_anharmonic_potential,
+                entropy=self._ph_recip.entropy,  # J/K/mol
+                harmonic_heat_capacity=self._ph_recip.heat_capacity,  # J/K/mol
+                static_forces=self._ph_real.static_forces,  # eV/ang
+                average_forces=self._ph_real.average_forces,  # eV/ang
+            )
+            sscha_params = SSCHAParams(
+                unitcell=self._structure,
+                supercell_matrix=self._supercell_matrix,
+                supercell=supercell_polymlp,
+                pot=self._res.polymlp,
+                temp=self._parameters["temperature"],
+                n_samples_init=self._n_samples,
+                n_samples_final=None,
+                tol=None,
+                max_iter=None,
+                mixing=None,
+                mesh=self._parameters["mesh_phonon"],
+                init_fc_algorithm="file",
+                init_fc_file=self._fc2file,
+            )
+            save_sscha_yaml(sscha_params, [sscha_data], filename=save_data_file)
 
     def calc_sscha_energies(self):
         free_energies = self._ph_recip.free_energy + self._ph_real.anharmonic_potentials
@@ -102,13 +152,13 @@ class SSCHAProperty:
             )
             self._sscha_stress_tensors[:, k] = sample_stresses[:, k] - correction
 
-    def position_opt(self, basis_f):
-        # sample_forces.shape = (N_samp, 3, N_atom)
-        # fc2.shape = (N_atom, N_atom, 3, 3)
-        _sample_forces = self.self._ph_real.forces.transpose(0, 2, 1)
+    def position_opt(self):
+        # sample_forces.shape: (N_samp, 3, N_atom)
+        # basis_f.shape: (N_atom*3, sym)
+        sample_forces = self.self._ph_real.forces.transpose(0, 2, 1)
+        basis_f = construct_basis_fractional_coordinates(self._structure)
 
-        # fc2.shape = (N_atom*3, N_atom*3)
-        # basis_f.shape = (N_atom*3, sym)
+        # fc2.shape: (N_atom, N_atom, 3, 3) -> (N_atom*3, N_atom*3)
         N3 = self._fc2.shape[0] * self._fc2.shape[2]
         fc2 = np.transpose(self._fc2, (0, 2, 1, 3))
         fc2 = np.reshape(fc2, (N3, N3))
@@ -118,8 +168,8 @@ class SSCHAProperty:
             self._forces_from_fc2(d.T.reshape(-1)) for d in self._ph_real.displacements
         ]
         forces_from_fc2 = np.array(forces_from_fc2)
-        sample_forces = _sample_forces.reshape(
-            _sample_forces.shape[0], _sample_forces.shape[1] * _sample_forces.shape[2]
+        sample_forces = sample_forces.reshape(
+            sample_forces.shape[0], sample_forces.shape[1] * sample_forces.shape[2]
         )
         xTx = np.zeros((fc2_sym.shape[1], fc2_sym.shape[1]))
         xTy = np.zeros(fc2_sym.shape[1])
@@ -220,4 +270,5 @@ class SSCHAProperty:
         if self._sscha_stress_tensors is None:
             return None
         sscha_stress_tensor = np.mean(self._sscha_stress_tensors, axis=0)
+        return sscha_stress_tensor
         return sscha_stress_tensor

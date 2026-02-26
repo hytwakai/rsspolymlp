@@ -2,7 +2,6 @@ import argparse
 import glob
 import os
 import shutil
-import subprocess
 from typing import Optional
 
 import numpy as np
@@ -23,18 +22,18 @@ def estimate_n_samples(
     yamlfile: str,
     fc2file: str,
     gtol: float,
-    se_ratio: float = 0.2,
+    se_ratio: float = 0.1,
     n_samples: Optional[int] = None,
 ):
     if n_samples is None:
         n_samples = 2000
 
     prp_sscha = SSCHAProperty(
-        cell,
-        pot,
+        yamlfile,
+        fc2file,
+        cell=cell,
+        pot=pot,
         n_samples=n_samples,
-        yamlfile=yamlfile,
-        fc2file=fc2file,
         pressure=0,
     )
     sd_e, sd_f, sd_s, sd_derivatives_f, sd_derivatives_s = (
@@ -87,7 +86,7 @@ def estimate_n_samples(
 
 def run_opt_sscha(
     poscar: str,
-    supercell: list = [2, 2, 2],
+    supercell_matrix: list = [2, 2, 2],
     pot: str = "polymlp.yaml",
     pressure: float = 0,
     temperature: float = 300,
@@ -108,12 +107,10 @@ def run_opt_sscha(
     method: str = "BFGS",
 ):
     cell = Poscar(poscar).structure
-    supercell_matrix = [
-        [supercell[0], 0, 0],
-        [0, supercell[1], 0],
-        [0, 0, supercell[2]],
-    ]
     cell = get_supercell(cell, supercell_matrix)
+
+    pots = pot if isinstance(pot, list) else [pot]
+    _pot = [os.path.abspath(p) for p in pots]
 
     os.makedirs("init", exist_ok=True)
     if fc2file is not None:
@@ -127,10 +124,10 @@ def run_opt_sscha(
 
     max_iter_go = 10
     for iter_n in range(max_iter_go):
-        os.makedirs(f"iteration_{iter_n+1}", exist_ok=True)
+        os.makedirs(f"iteration_{iter_n}", exist_ok=True)
         judge, cell, n_samples = optimization_fc2_position(
             cell=cell,
-            pot=pot,
+            pot=_pot,
             temperature=temperature,
             init_fc_algorithm=init_fc_algorithm,
             yamlfile=yamlfile,
@@ -147,15 +144,17 @@ def run_opt_sscha(
             return
 
         sscha_dir = glob.glob("./sscha/*")[0]
-        os.makedirs(f"iteration_{iter_n+1}", exist_ok=True)
+        os.makedirs(f"iteration_{iter_n}", exist_ok=True)
         for name in ["fc2.hdf5", "sscha_results.yaml", "total_dos.dat"]:
-            shutil.copy(os.path.join(sscha_dir, name), f"iteration_{iter_n+1}")
-        yamlfile = f"iteration_{iter_n+1}/sscha_results.yaml"
-        fc2file = f"iteration_{iter_n+1}/fc2.hdf5"
+            shutil.copy(os.path.join(sscha_dir, name), f"iteration_{iter_n}")
 
         if not relax_cell and not relax_volume and not relax_positions:
             print("No degree of freedom to be optimized.")
             break
+
+        os.chdir(f"iteration_{iter_n}")
+        yamlfile = os.path.abspath("./sscha_results.yaml")
+        fc2file = os.path.abspath("./fc2.hdf5")
 
         if iter_n == 0:
             _gtol = gtol * 10
@@ -163,7 +162,7 @@ def run_opt_sscha(
             _gtol = gtol
         _n_samples = estimate_n_samples(
             cell=cell,
-            pot=pot,
+            pot=_pot,
             yamlfile=yamlfile,
             fc2file=fc2file,
             gtol=_gtol,
@@ -172,7 +171,6 @@ def run_opt_sscha(
         if _n_samples > n_samples:
             print(f"Updating number of samples: {n_samples} -> {_n_samples}")
             n_samples = _n_samples
-        shutil.copy("estimate_n_samples.yaml", f"iteration_{iter_n+1}")
 
         minobj = GeometryOptimization(
             cell=cell,
@@ -181,7 +179,7 @@ def run_opt_sscha(
             relax_positions=relax_positions,
             sscha_opt=True,
             pressure=pressure,
-            pot=pot,
+            pot=_pot,
             verbose=True,
         )
         reliable_gtol = _gtol * (1 - 1.96 * se_ratio)
@@ -221,16 +219,10 @@ def run_opt_sscha(
         print("Space group set:", flush=True)
         print(spg_sets, flush=True)
 
-        subprocess.run(
-            f"mv POSCAR_eqm POSCAR_eqm.refine iteration_{iter_n+1}", shell=True
-        )
-        poscar = f"iteration_{iter_n+1}/POSCAR_eqm.refine"
+        os.chdir("../")
+
+        poscar = f"iteration_{iter_n}/POSCAR_eqm.refine"
         cell = Poscar(poscar).structure
-        supercell_matrix = [
-            [supercell[0], 0, 0],
-            [0, supercell[1], 0],
-            [0, 0, supercell[2]],
-        ]
         cell = get_supercell(cell, supercell_matrix)
 
         iteration_go = minobj.n_iter
@@ -251,7 +243,7 @@ def run_opt_sscha(
     sscha = PypolymlpSSCHA(verbose=True)
     sscha._unitcell = cell
     sscha._supercell_matrix = np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1]])
-    sscha.set_polymlp(pot)
+    sscha.set_polymlp(_pot)
 
     sscha = sscha.run(
         temp=temperature,
@@ -362,7 +354,7 @@ if __name__ == "__main__":
     else:
         run_opt_sscha(
             poscar=args.poscar,
-            supercell=args.supercell,
+            supercell_matrix=args.supercell,
             pot=args.pot,
             pressure=args.pressure,
             temperature=args.temperature,

@@ -86,15 +86,14 @@ def optimization_fc2_position(
         if _basis_f_withfc is not None:
             for disp_iter in range(10):
                 prp_sscha = SSCHAProperty(
-                    cell,
-                    pot,
+                    yamlfile,
+                    fc2file,
+                    cell=cell,
+                    pot=pot,
                     n_samples=n_samples * 3,
-                    yamlfile=yamlfile,
-                    fc2file=fc2file,
                 )
-                move_eq_position, max_displacement = prp_sscha.position_opt(
-                    _basis_f_withfc
-                )
+                prp_sscha.run()
+                move_eq_position, max_displacement = prp_sscha.position_opt()
                 cell.positions += move_eq_position
                 cell = refine_positions(cell)
                 if max_displacement < threshold_disp:
