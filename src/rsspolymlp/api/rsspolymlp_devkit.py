@@ -140,9 +140,21 @@ def mlp_dataset(
 
 
 def compress_vasprun(
-    vasp_paths: list[str], output_dir: str = "compress_dft_data", num_process: int = 4
+    vasp_paths: list[str],
+    output_dir: str = "compress_dft_data",
+    num_process: int = 4,
+    not_check: bool = False,
 ):
-    valid_paths, vasprun_status = check_convergence(vasp_paths=vasp_paths)
+    if not not_check:
+        valid_paths, vasprun_status = check_convergence(vasp_paths=vasp_paths)
+    else:
+        valid_paths = vasp_paths
+        vasprun_status = {
+            "fail": 0,
+            "fail_iteration": 0,
+            "parse": 0,
+            "success": 0,
+        }
 
     judge_list = Parallel(n_jobs=num_process)(
         delayed(compress)(vasp_path + "/vasprun.xml", output_dir)

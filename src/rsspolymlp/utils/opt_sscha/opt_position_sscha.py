@@ -52,6 +52,7 @@ def optimization_fc2_position(
                 mixing=mixing,
                 init_fc_algorithm=_init_fc_algorithm,
                 init_fc_file=fc2file,
+                precondition=False,
             )
             n_samples = sscha.sscha_params.n_samples_init
             converge_sscha = sscha.logs[-1].converge
@@ -101,6 +102,7 @@ def optimization_fc2_position(
                         "< Convergence of atomic positions is achieved >",
                         flush=True,
                     )
+                    break
         else:
             print("< Convergence of sscha optimization is achieved >", flush=True)
             return "success", cell, n_samples
@@ -111,7 +113,7 @@ def optimization_fc2_position(
                 print("< Convergence of sscha optimization is achieved >", flush=True)
                 print("Positions :", flush=True)
                 print(cell.positions, flush=True)
-            return "success", cell, n_samples
+                return "success", cell, n_samples
 
     if iteration == 9:
         print(

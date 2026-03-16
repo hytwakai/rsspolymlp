@@ -133,7 +133,7 @@ class RSSResultAnalyzer:
                     cutoff_i = model_dict["model"]["cutoff"]
                     if cutoff_i > max_cutoff:
                         max_cutoff = cutoff_i
-                self.cutoff = max_cutoff - 0.5
+                self.cutoff = max_cutoff
 
         polymlp_st = Poscar(poscar_name).structure
         objprop = PropUtil(polymlp_st.axis.T, polymlp_st.positions.T)
@@ -143,7 +143,8 @@ class RSSResultAnalyzer:
 
         positions = polymlp_st.positions.T
         if positions.shape[0] == 1:
-            max_gap = axis_abc[0:3]
+            max_gap = np.array(axis_abc[0:3])
+            return None if np.any(max_gap > self.cutoff - 2.0) else _struct_prop
         else:
             sort_idx = np.argsort(positions, axis=0, kind="mergesort")
             coord_sorted = np.take_along_axis(positions, sort_idx, axis=0)
@@ -151,8 +152,53 @@ class RSSResultAnalyzer:
             gap[-1, :] += 1.0
             gap = gap * axis_abc[0:3]
             max_gap = np.max(gap, axis=0)
-        max_layer_diff = np.max(max_gap)
-        if max_layer_diff > self.cutoff:
+
+        stack_axes = np.where(max_gap > self.cutoff - 2.0)[0]
+        if len(stack_axes) == 0:
+            return _struct_prop
+        dmin = 0
+        for stack_axis in stack_axes:
+            gap_axis = gap[:, stack_axis]
+            i_gap = np.argmax(gap_axis)
+            idx_sorted = sort_idx[:, stack_axis]
+            if len(idx_sorted) == 2:
+                shift = -i_gap
+            else:
+                shift = len(idx_sorted) // 2 - i_gap
+            idx_sorted = np.roll(idx_sorted, shift)
+
+            i_gap_new = (i_gap + shift) % len(idx_sorted)
+            layer1_all = idx_sorted[: i_gap_new + 1]
+            layer2_all = idx_sorted[i_gap_new + 1 :]
+
+            coord_axis = positions[idx_sorted, stack_axis]
+            coord1 = coord_axis[i_gap_new]
+            coord2 = coord_axis[i_gap_new + 1]
+            coord1_all = positions[layer1_all, stack_axis]
+            coord2_all = positions[layer2_all, stack_axis]
+
+            axis_length = axis_abc[stack_axis]
+            surface_width_ang = 0.5
+            surface_width_frac = surface_width_ang / axis_length
+            mask1 = np.abs(coord1 - coord1_all) <= surface_width_frac
+            layer1 = layer1_all[mask1]
+            mask2 = np.abs(coord2_all - coord2) <= surface_width_frac
+            layer2 = layer2_all[mask2]
+
+            pos1 = positions[layer1]  # (n1,)
+            pos2 = positions[layer2]  # (n2,)
+            if i_gap + 1 == gap.shape[0]:
+                pos1[:, stack_axis] -= 1
+            df = pos2[:, None, :] - pos1[None, :, :]  # (n2, n1, 3)
+            inplane_axes = [ax for ax in range(3) if ax != stack_axis]
+            df[:, :, inplane_axes] -= np.rint(df[:, :, inplane_axes])
+
+            dr = df @ polymlp_st.axis.T
+            dist = np.linalg.norm(dr, axis=2)
+            if dmin < np.min(dist):
+                dmin = np.min(dist)
+
+        if dmin > self.cutoff - 0.5:
             return None
 
         return _struct_prop

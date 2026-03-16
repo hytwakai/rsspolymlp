@@ -208,6 +208,10 @@ def run():
         default=4,
         help="Number of processes to use with joblib.",
     )
+    parser.add_argument(
+        "--not_check",
+        action="store_true",
+    )
 
     # --divide_data mode
     parser.add_argument(
@@ -305,6 +309,7 @@ def run():
             vasp_paths=args.paths,
             output_dir=args.output_dir,
             num_process=args.num_process,
+            not_check=args.not_check,
         )
 
     if args.divide_data:

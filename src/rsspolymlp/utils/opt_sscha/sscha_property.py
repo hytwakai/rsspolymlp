@@ -136,26 +136,29 @@ class SSCHAProperty:
         )
 
     def calc_sscha_stress_tensors(self):
-        stress_indices = [(0, 0), (1, 1), (2, 2), (0, 1), (1, 2), (2, 0)]
-
-        sample_forces = self._ph_real.forces
+        f_fc2 = [
+            self._forces_from_fc2(d.T.reshape(-1)) for d in self._ph_real.displacements
+        ]
+        f_fc2 = np.array(f_fc2)
+        f_fc2 = f_fc2.reshape(f_fc2.shape[0], f_fc2.shape[1] // 3, 3).transpose(
+            0, 2, 1
+        )  # (N_samples, 3, N_atom)
         sample_stresses = self._ph_real.stresses
         disps = self._ph_real.displacements
-        # positions_cartesian = self._structure.axis @ self._structure.positions
-        # disps += positions_cartesian
 
         self._sscha_stress_tensors = np.zeros((sample_stresses.shape[0], 6))
+        stress_indices = [(0, 0), (1, 1), (2, 2), (0, 1), (1, 2), (2, 0)]
         for k, (i, j) in enumerate(stress_indices):
             correction = 0.5 * (
-                np.sum(sample_forces[:, i, :] * disps[:, j, :], axis=1)
-                + np.sum(sample_forces[:, j, :] * disps[:, i, :], axis=1)
+                np.sum(f_fc2[:, i, :] * disps[:, j, :], axis=1)
+                + np.sum(f_fc2[:, j, :] * disps[:, i, :], axis=1)
             )
             self._sscha_stress_tensors[:, k] = sample_stresses[:, k] - correction
 
     def position_opt(self):
-        # sample_forces.shape: (N_samp, 3, N_atom)
-        # basis_f.shape: (N_atom*3, sym)
-        sample_forces = self.self._ph_real.forces.transpose(0, 2, 1)
+        # sample_forces.shape: (N_samples, 3, N_atom)
+        # basis_f.shape: (N_atom*3, N_sym)
+        sample_forces = self._ph_real.forces.transpose(0, 2, 1)
         basis_f = construct_basis_fractional_coordinates(self._structure)
 
         # fc2.shape: (N_atom, N_atom, 3, 3) -> (N_atom*3, N_atom*3)
@@ -208,14 +211,14 @@ class SSCHAProperty:
         N3 = self._fc2.shape[0] * self._fc2.shape[2]
         fc2 = np.transpose(self._fc2, (0, 2, 1, 3))
         fc2 = np.reshape(fc2, (N3, N3))
-        return -fc2 @ disp
+        return -fc2 @ disp  # (N_samples, N_atom*3)
 
     def estimate_derivatives_standard_deviation(self):
         self.run()
 
         e = self._sscha_enegies
-        f = self._sscha_forces  # (n_samples, 3, n_atom)
-        s = self._sscha_stress_tensors  # (n_samples, 6)
+        f = self._sscha_forces  # (N_samples, 3, N_atom)
+        s = self._sscha_stress_tensors  # (N_samples, 6)
 
         sd_e = np.sqrt(np.var(e))
         sd_f = np.sqrt(np.var(f, axis=0))
@@ -224,8 +227,8 @@ class SSCHAProperty:
         basis_f = construct_basis_fractional_coordinates(self._structure)
         if basis_f is not None:
             prod = (
-                -sd_f.transpose(0, 2, 1) @ self._structure.axis
-            )  # (n_samples, n_atom, 3)
+                -f.transpose(0, 2, 1) @ self._structure.axis
+            )  # (N_samples, N_atom, 3)
             derivatives_f = basis_f.T @ prod.reshape(prod.shape[0], -1).T
         else:
             derivatives_f = None
@@ -270,5 +273,4 @@ class SSCHAProperty:
         if self._sscha_stress_tensors is None:
             return None
         sscha_stress_tensor = np.mean(self._sscha_stress_tensors, axis=0)
-        return sscha_stress_tensor
         return sscha_stress_tensor

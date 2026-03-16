@@ -24,6 +24,7 @@ def estimate_n_samples(
     gtol: float,
     se_ratio: float = 0.1,
     n_samples: Optional[int] = None,
+    relax_positions: bool = False,
 ):
     if n_samples is None:
         n_samples = 2000
@@ -39,7 +40,7 @@ def estimate_n_samples(
     sd_e, sd_f, sd_s, sd_derivatives_f, sd_derivatives_s = (
         prp_sscha.estimate_derivatives_standard_deviation()
     )
-    if sd_derivatives_f is None:
+    if relax_positions is False or sd_derivatives_f is None:
         max_dirivative = np.max(sd_derivatives_s)
     else:
         max_dirivative = np.max((np.max(sd_derivatives_f), np.max(sd_derivatives_s)))
@@ -167,6 +168,7 @@ def run_opt_sscha(
             fc2file=fc2file,
             gtol=_gtol,
             se_ratio=se_ratio,
+            relax_positions=relax_positions,
         )
         if _n_samples > n_samples:
             print(f"Updating number of samples: {n_samples} -> {_n_samples}")
@@ -255,9 +257,12 @@ def run_opt_sscha(
         mixing=mixing,
         init_fc_algorithm="file",
         init_fc_file=fc2file,
+        precondition=False,
     )
     for name in ["fc2.hdf5", "sscha_results.yaml", "total_dos.dat"]:
         shutil.copy(os.path.join(sscha_dir, name), "./")
+    with open("optimization_status.dat", "a") as f:
+        print("success", file=f)
     print("<<< Finished >>>")
 
 
@@ -350,6 +355,7 @@ if __name__ == "__main__":
             fc2file=args.fc2file,
             gtol=args.gtol,
             n_samples=args.n_samples,
+            relax_positions=args.relax_positions,
         )
     else:
         run_opt_sscha(
