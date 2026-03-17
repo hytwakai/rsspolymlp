@@ -158,7 +158,7 @@ class HarmonicReal:
         self._mesh_dict["eigenvectors"] = eigvecs
         return self._mesh_dict
 
-    def _hide_imaginary_modes(self, freq: np.ndarray, freq_threshold: float = 0.1):
+    def _hide_imaginary_modes(self, freq: np.ndarray, freq_threshold: float = 0.5):
         """Mask branches with imaginary frequencies."""
         freq_rev = np.array(freq)
         freq_rev[np.where(freq_rev < freq_threshold)] = 0.0

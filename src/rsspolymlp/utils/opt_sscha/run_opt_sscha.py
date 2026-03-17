@@ -12,7 +12,10 @@ from pypolymlp.core.interface_vasp import Poscar
 from pypolymlp.utils.spglib_utils import SymCell
 from pypolymlp.utils.supercell_utils import get_supercell
 from rsspolymlp.utils.opt_sscha.opt_geometry_sscha import GeometryOptimization
-from rsspolymlp.utils.opt_sscha.opt_position_sscha import optimization_fc2_position
+from rsspolymlp.utils.opt_sscha.opt_position_sscha import (
+    fc2_optimization,
+    position_optimization,
+)
 from rsspolymlp.utils.opt_sscha.sscha_property import SSCHAProperty
 
 
@@ -62,7 +65,7 @@ def estimate_n_samples(
         print("  se_ratio:", se_ratio, file=f)
         print("  n_samples:", n_samples, file=f)
         print("units:", file=f)
-        print("  sd_derivatives_f: meV/cell", file=f)
+        print("  sd_derivatives_f: meV/Ang.", file=f)
         print("  sd_derivatives_s: meV/Ang.", file=f)
         print("  sd_e: meV/atom", file=f)
         print("  max_sd_f: meV/Ang.", file=f)
@@ -113,36 +116,58 @@ def run_opt_sscha(
     pots = pot if isinstance(pot, list) else [pot]
     _pot = [os.path.abspath(p) for p in pots]
 
+    base_dir = os.getcwd()
     os.makedirs("init", exist_ok=True)
     if fc2file is not None:
-        fc2file = "./init/fc2.hdf5"
-        if not os.path.samefile(fc2file, "./init/fc2.hdf5"):
-            shutil.copy(fc2file, "./init/fc2.hdf5")
+        fc2file = f"{base_dir}/init/fc2.hdf5"
+        if not os.path.samefile(fc2file, f"{base_dir}/init/fc2.hdf5"):
+            shutil.copy(fc2file, f"{base_dir}/init/fc2.hdf5")
     if yamlfile is not None:
-        yamlfile = "./init/sscha_results.yaml"
-        if not os.path.samefile(yamlfile, "./init/sscha_results.yaml"):
-            shutil.copy(yamlfile, "./init/sscha_results.yaml")
+        yamlfile = f"{base_dir}/init/sscha_results.yaml"
+        if not os.path.samefile(yamlfile, f"{base_dir}/init/sscha_results.yaml"):
+            shutil.copy(yamlfile, f"{base_dir}/init/sscha_results.yaml")
 
     max_iter_go = 10
+    success_iteration = 0
     for iter_n in range(max_iter_go):
         os.makedirs(f"iteration_{iter_n}", exist_ok=True)
-        judge, cell, n_samples = optimization_fc2_position(
-            cell=cell,
-            pot=_pot,
-            temperature=temperature,
-            init_fc_algorithm=init_fc_algorithm,
-            yamlfile=yamlfile,
-            fc2file=fc2file,
-            tol=tol,
-            mesh=mesh,
-            max_iter=max_iter,
-            mixing=mixing,
-            n_samples=n_samples,
-            threshold_disp=dtol,
-        )
-        if judge == "not converged":
-            print("< Convergence of fc optimization is failed >", flush=True)
-            return
+        if iter_n > 0:
+            judge, cell, n_samples = position_optimization(
+                cell=cell,
+                pot=_pot,
+                temperature=temperature,
+                init_fc_algorithm=init_fc_algorithm,
+                yamlfile=yamlfile,
+                fc2file=fc2file,
+                tol=tol,
+                mesh=mesh,
+                max_iter=max_iter,
+                mixing=mixing,
+                n_samples=n_samples,
+                threshold_disp=dtol,
+            )
+            if judge == "not converged":
+                with open("optimization_status.dat", "a") as f:
+                    print("fail", file=f)
+                return
+        else:
+            judge, n_samples = fc2_optimization(
+                cell=cell,
+                pot=pot,
+                temperature=temperature,
+                init_fc_algorithm=init_fc_algorithm,
+                fc2file=fc2file,
+                tol=tol,
+                mesh=mesh,
+                max_iter=max_iter,
+                mixing=mixing,
+                n_samples=n_samples,
+                verbose=True,
+            )
+            if not judge:
+                with open("optimization_status.dat", "a") as f:
+                    print("fail", file=f)
+                return
 
         sscha_dir = glob.glob("./sscha/*")[0]
         os.makedirs(f"iteration_{iter_n}", exist_ok=True)
@@ -159,8 +184,12 @@ def run_opt_sscha(
 
         if iter_n == 0:
             _gtol = gtol * 10
+            _relax_positions = True
         else:
             _gtol = gtol
+            _relax_positions = relax_positions
+
+        print("-------- geometry optimization runs start --------", flush=True)
         _n_samples = estimate_n_samples(
             cell=cell,
             pot=_pot,
@@ -168,23 +197,24 @@ def run_opt_sscha(
             fc2file=fc2file,
             gtol=_gtol,
             se_ratio=se_ratio,
-            relax_positions=relax_positions,
+            relax_positions=_relax_positions,
         )
         if _n_samples > n_samples:
             print(f"Updating number of samples: {n_samples} -> {_n_samples}")
             n_samples = _n_samples
 
+        reliable_gtol = _gtol * (1 - 1.96 * se_ratio)
+
         minobj = GeometryOptimization(
             cell=cell,
             relax_cell=relax_cell,
             relax_volume=relax_volume,
-            relax_positions=relax_positions,
+            relax_positions=_relax_positions,
             sscha_opt=True,
             pressure=pressure,
             pot=_pot,
             verbose=True,
         )
-        reliable_gtol = _gtol * (1 - 1.96 * se_ratio)
         minobj.run(
             method=method,
             gtol=reliable_gtol,
@@ -193,6 +223,9 @@ def run_opt_sscha(
             yamlfile=yamlfile,
             fc2file=fc2file,
         )
+
+        if iter_n > 0 and minobj.max_residual < reliable_gtol:
+            success_iteration += 1
 
         if not minobj.relax_cell:
             print("Residuals (force):")
@@ -229,19 +262,19 @@ def run_opt_sscha(
 
         iteration_go = minobj.n_iter
         print("itaration_go =", iteration_go, flush=True)
-        if minobj.max_residual < gtol:
-            if (iteration_go <= 1) and iter_n > 0:
-                print("<< Convergence of sscha geometry optimization is achieved >>")
-                break
+        print("success_iteration =", success_iteration, flush=True)
+        if success_iteration == 2:
+            print("<< Convergence of geometry optimization is achieved >>")
+            break
         if iter_n == max_iter_go - 1:
-            print("<< Maximum number of relaxation iterations has been exceeded >>")
+            print("<< Maximum number of GO iterations has been exceeded >>")
 
         if iter_n == 4:
             print("---- increasing the number of sample structures ----", flush=True)
             n_samples = n_samples * 2
 
     shutil.copy(poscar, "./POSCAR_eqm.refine")
-    print("------ final sscha calculation ------", flush=True)
+    print("------ Final sscha calculation ------", flush=True)
     sscha = PypolymlpSSCHA(verbose=True)
     sscha._unitcell = cell
     sscha._supercell_matrix = np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1]])
@@ -263,7 +296,7 @@ def run_opt_sscha(
         shutil.copy(os.path.join(sscha_dir, name), "./")
     with open("optimization_status.dat", "a") as f:
         print("success", file=f)
-    print("<<< Finished >>>")
+    print("<< Finished >>")
 
 
 if __name__ == "__main__":
@@ -307,7 +340,7 @@ if __name__ == "__main__":
         "--dtol",
         type=float,
         default=0.01,
-        help="Tolerance parameter for atomic position optimization (ang)",
+        help="Tolerance parameter for atomic position optimization",
     )
     parser.add_argument(
         "--n_samples",

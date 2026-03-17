@@ -11,7 +11,7 @@ from pypolymlp.calculator.sscha.sscha_io import save_sscha_yaml
 from pypolymlp.calculator.sscha.sscha_params import SSCHAParams
 from pypolymlp.calculator.sscha.sscha_restart import Restart
 from pypolymlp.core.data_format import PolymlpStructure
-from pypolymlp.core.units import EVtoGPa, EVtoKJmol
+from pypolymlp.core.units import EVtoKJmol
 from pypolymlp.utils.phonopy_utils import (
     phonopy_cell_to_structure,
     structure_to_phonopy_cell,
@@ -119,9 +119,9 @@ class SSCHAProperty:
         self._sscha_enegies = (
             free_energies + self._ph_real.static_potential
         ) / self._ev_to_kjmol
-        self._sscha_enegies += self._pressure * self._structure.volume / EVtoGPa
 
     def calc_sscha_forces(self):
+        # displacements.shape = (N_samples, 3, N_atom)
         forces_from_fc2 = [
             self._forces_from_fc2(d.T.reshape(-1)) for d in self._ph_real.displacements
         ]
@@ -156,62 +156,59 @@ class SSCHAProperty:
             self._sscha_stress_tensors[:, k] = sample_stresses[:, k] - correction
 
     def position_opt(self):
-        # sample_forces.shape: (N_samples, 3, N_atom)
         # basis_f.shape: (N_atom*3, N_sym)
-        sample_forces = self._ph_real.forces.transpose(0, 2, 1)
-        basis_f = construct_basis_fractional_coordinates(self._structure)
-
         # fc2.shape: (N_atom, N_atom, 3, 3) -> (N_atom*3, N_atom*3)
+        basis_f = construct_basis_fractional_coordinates(self._structure)
         N3 = self._fc2.shape[0] * self._fc2.shape[2]
         fc2 = np.transpose(self._fc2, (0, 2, 1, 3))
         fc2 = np.reshape(fc2, (N3, N3))
         fc2_sym = fc2 @ basis_f
 
+        # sample_forces.shape: (N_samples, 3, N_atom)
+        sample_forces = self._ph_real.forces.transpose(0, 2, 1)
+        sample_forces = sample_forces.reshape(
+            sample_forces.shape[0], sample_forces.shape[1] * sample_forces.shape[2]
+        )
         forces_from_fc2 = [
             self._forces_from_fc2(d.T.reshape(-1)) for d in self._ph_real.displacements
         ]
         forces_from_fc2 = np.array(forces_from_fc2)
-        sample_forces = sample_forces.reshape(
-            sample_forces.shape[0], sample_forces.shape[1] * sample_forces.shape[2]
-        )
-        xTx = np.zeros((fc2_sym.shape[1], fc2_sym.shape[1]))
-        xTy = np.zeros(fc2_sym.shape[1])
-        l2_norm = 0
-        for i in range(forces_from_fc2.shape[0]):
-            res_force = sample_forces[i] - forces_from_fc2[i]
-            l2_norm += np.sum(res_force**2)
-            xTx += fc2_sym.T @ fc2_sym
-            xTy += fc2_sym.T @ res_force
+
+        res_force = np.mean(sample_forces - forces_from_fc2, axis=0)
+        l2_norm = np.sum(res_force**2)
         print("L2 norm =", l2_norm**0.5, flush=True)
 
-        move_eq_position, _, _, _ = scipy.linalg.lstsq(xTx, xTy, check_finite=True)
-        move_eq_position = (move_eq_position.reshape(1, -1) @ basis_f.T).reshape(-1)
+        xTx = fc2_sym.T @ fc2_sym
+        xTy = fc2_sym.T @ res_force
+
+        pos_coeff, _, _, _ = scipy.linalg.lstsq(xTx, xTy, check_finite=True)
+        mv_poseq_ang = (pos_coeff @ basis_f.T).reshape(-1)
 
         forces_from_fc2 = [
-            self._forces_from_fc2(d.T.reshape(-1) - move_eq_position)
+            self._forces_from_fc2(d.T.reshape(-1) - mv_poseq_ang)
             for d in self._ph_real.displacements
         ]
         forces_from_fc2 = np.array(forces_from_fc2)
-        l2_norm = 0
-        for i in range(forces_from_fc2.shape[0]):
-            res_force = sample_forces[i] - forces_from_fc2[i]
-            l2_norm += np.sum(res_force**2)
+        res_force = np.mean(sample_forces - forces_from_fc2, axis=0)
+        l2_norm = np.sum(res_force**2)
         print("L2 norm (after optimization) =", l2_norm**0.5, flush=True)
 
-        max_displacement = np.max(np.abs(move_eq_position))
-        print("max_displecement =", max_displacement, "(Ang.)", flush=True)
-        move_eq_position = move_eq_position.reshape(-1, 3).transpose(1, 0)
-        move_eq_position = self._structure.axis_inv @ move_eq_position
-        move_eq_position[np.abs(move_eq_position) < 1e-8] = 0
+        max_disp_ang = np.max(np.abs(mv_poseq_ang))
+        print("max_displecement =", max_disp_ang, "(Ang.)", flush=True)
 
-        return move_eq_position, max_displacement
+        mv_poseq_ang = mv_poseq_ang.reshape(-1, 3).transpose(1, 0)
+        mv_poseq_frac = self._structure.axis_inv @ mv_poseq_ang
+        mv_poseq_frac[np.abs(mv_poseq_ang) < 1e-8] = 0
+        print("mv_poseq_frac:")
+        print(mv_poseq_frac)
+
+        return mv_poseq_frac, max_disp_ang
 
     def _forces_from_fc2(self, disp):
-        # disp.shape = (3, N_atom)
         N3 = self._fc2.shape[0] * self._fc2.shape[2]
         fc2 = np.transpose(self._fc2, (0, 2, 1, 3))
         fc2 = np.reshape(fc2, (N3, N3))
-        return -fc2 @ disp  # (N_samples, N_atom*3)
+        return -fc2 @ disp  # (N_atom*3,)
 
     def estimate_derivatives_standard_deviation(self):
         self.run()
@@ -226,9 +223,7 @@ class SSCHAProperty:
 
         basis_f = construct_basis_fractional_coordinates(self._structure)
         if basis_f is not None:
-            prod = (
-                -f.transpose(0, 2, 1) @ self._structure.axis
-            )  # (N_samples, N_atom, 3)
+            prod = -f.transpose(0, 2, 1)  # (N_samples, N_atom, 3)
             derivatives_f = basis_f.T @ prod.reshape(prod.shape[0], -1).T
         else:
             derivatives_f = None

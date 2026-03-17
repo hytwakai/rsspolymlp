@@ -165,7 +165,7 @@ class GeometryOptimization:
     def jac_fix_cell(self, x, args=None):
         """Target Jacobian function when performing no cell optimization."""
         if self._basis_f is not None:
-            prod = -self._force.T @ self._structure.axis
+            prod = -self._force.T
             derivatives = self._basis_f.T @ prod.reshape(-1)
             return derivatives
         return []
@@ -196,7 +196,7 @@ class GeometryOptimization:
 
             if self._verbose:
                 print("Axis :")
-                print(self._structure.axis, flush=True)
+                print(self._structure.axis.T, flush=True)
                 print("Free energy :")
                 print(self._energy, flush=True)
                 if self._relax_positions:
@@ -260,7 +260,8 @@ class GeometryOptimization:
         """Convert x to structure."""
         if self._basis_f is not None:
             disps_f = (self._basis_f @ x).reshape(-1, 3).T
-            self._change_positions(self._positions_f0 + disps_f)
+            disps_f_frac = self._structure.axis_inv @ disps_f
+            self._change_positions(self._positions_f0 + disps_f_frac)
         return self._structure
 
     def _to_structure_relax_cell(self, x):
