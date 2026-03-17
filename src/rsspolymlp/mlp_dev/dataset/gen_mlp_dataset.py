@@ -74,7 +74,7 @@ def gen_mlp_data(
     objprop = PropUtil(polymlp_st.axis.T, polymlp_st.positions.T)
     least_distance = objprop.least_distance
 
-    disp_list = np.arange(disp_grid, disp_max + 0.0001, disp_grid)
+    disp_list = np.arange(0, disp_max + 0.0001, disp_grid)
     for disp_ratio in disp_list:
         disp = least_distance * disp_ratio / 100
         str_rand = strgen.sample_random_single_structure(disp, vol_ratio=per_volume)
