@@ -6,7 +6,7 @@ import numpy as np
 
 from pypolymlp.core.interface_vasp import Vasprun
 from pypolymlp.core.units import EVtoGPa
-from rsspolymlp.analysis.load_plot_data import load_plot_data
+from rsspolymlp.analysis.phase_analysis import load_convexhull_data
 from rsspolymlp.common.atomic_energy import atomic_energy
 from rsspolymlp.mlp_dev.pareto_opt_mlp import pareto_front, parse_mlp_property
 from rsspolymlp.utils.matplot_util.custom_plt import CustomPlt
@@ -33,7 +33,7 @@ def plot_binary(threshold=None):
 
     plotter.set_visuality(n_color=4, n_line=4, n_marker=1, color_type="grad")
 
-    phase_res = load_plot_data(threshold=threshold)
+    phase_res = load_convexhull_data(threshold=threshold)
     plotter.ax_plot(
         phase_res["hull_comp"][:, 1],
         phase_res["hull_e"],

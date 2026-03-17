@@ -1,3 +1,4 @@
+import ast
 import json
 import os
 from collections import defaultdict
@@ -18,6 +19,7 @@ class ConvexHullAnalyzer:
         self.elements = np.array(elements)
         # Initialize per-composition storage
         self._composition_data = {}
+        self.endmember_energies = None
         # Convex hull object
         self.hull = None
         # Results for global minima on the hull
@@ -33,9 +35,9 @@ class ConvexHullAnalyzer:
     def composition_data(self, data):
         """
         composition_data maps each composition ratio (tuple) to a dict with keys:
-            'energy': np.ndarray of energies,
-            'input_path': np.ndarray of file paths,
-            'struct_tag': np.ndarray of structure tags.
+            - 'energy': np.ndarray of energies,
+            - 'input_path': np.ndarray of file paths,
+            - 'struct_tag': np.ndarray of structure tags.
         """
         if not isinstance(data, dict):
             raise TypeError("composition_data must be a dictionary.")
@@ -60,53 +62,53 @@ class ConvexHullAnalyzer:
         self._composition_data = data
 
     def run_analysis(self):
-        """Compute formation energies, build convex hull, and evaluate energies above hull."""
+        """
+        Construct the convex hull, compute formation energies, and evaluate energies above the hull.
+        The convex-hull results are stored in the following attributes:
+            - 'self.hull_energies': formation energies of structures on the hull
+            - 'self.hull_compositions': compositions of structures on the hull
+            - 'self.hull_paths': paths corresponding to structures on the hull
+        self._composition_data maps each composition ratio to a dictionary containing:
+            - 'formation_e': np.ndarray of formation energies
+            - 'fe_above_ch': np.ndarray of energies above the convex hull
+        """
         if len(self.elements) == 0:
             raise ValueError("elements is none. Please set elements.")
         if not self._composition_data:
             raise ValueError("composition_data is empty. Please set results first.")
-        self.compute_formation_energies()
+
+        self.set_endmember_energies()
         self.compute_convex_hull()
+        self.compute_formation_energies()
         self.compute_fe_above_ch()
 
-    def compute_formation_energies(self):
-        """Compute formation energy for each structure relative to pure elements."""
+    def set_endmember_energies(self):
+        # Reference energies from pure elements (where any ratio == 1)
+        os.makedirs("phase_analysis/data", exist_ok=True)
+        comps = np.array(list(self._composition_data.keys()))
+        pure = comps[np.any(comps == 1, axis=1)]
+        pure_sorted = sorted(pure, key=lambda x: np.argmax(x))
+        self.endmember_energies = [
+            np.min(self._composition_data[tuple(r)]["energy"]) for r in pure_sorted
+        ]
+        self.endmember_energies = np.array(self.endmember_energies)
+
+    def compute_convex_hull(self):
+        """Build the convex hull and extract vertex compositions and energies."""
+        os.makedirs("phase_analysis/data", exist_ok=True)
         # Sort compositions for reproducible output
         comps = np.array(list(self._composition_data.keys()))
         order = np.lexsort(comps.T)
         sorted_keys = [tuple(comps[i].tolist()) for i in order]
         self._composition_data = {k: self._composition_data[k] for k in sorted_keys}
 
-        # Reference energies from pure elements (where any ratio == 1)
-        pure = comps[np.any(comps == 1, axis=1)]
-        pure_sorted = sorted(pure, key=lambda x: np.argmax(x))
-        ref_energies = [
-            np.min(self._composition_data[tuple(r)]["energy"]) for r in pure_sorted
-        ]
-        ref_energies = np.array(ref_energies)
-
-        # Calculate and store formation energies
-        for ratio, data in self._composition_data.items():
-            formation = data["energy"] - np.dot(ref_energies, np.array(ratio))
-            data["formation_e"] = formation
-
-        # Save JSON and elements
-        os.makedirs("phase_analysis/data", exist_ok=True)
-        serial = {
-            str(r): {k: v.tolist() for k, v in d.items()}
-            for r, d in self._composition_data.items()
-        }
-        with open("phase_analysis/data/composition_data.json", "w") as f:
-            json.dump(serial, f)
-        np.save("phase_analysis/data/elements.npy", self.elements)
-
-    def compute_convex_hull(self):
-        """Build the convex hull and extract vertex compositions and energies."""
         comps, min_e, paths = [], [], []
         for ratio, data in self._composition_data.items():
             comps.append(ratio)
-            idx = np.argmin(data["formation_e"])
-            min_e.append(data["formation_e"][idx])
+            idx = np.argmin(data["energy"])
+            min_e.append(
+                data["energy"][idx] - np.dot(self.endmember_energies, np.array(ratio))
+            )
             paths.append(data["input_path"][idx])
 
         comp_arr = np.array(comps)
@@ -140,9 +142,27 @@ class ConvexHullAnalyzer:
                 f.write(f"    formation_e: {energy}\n")
 
         # Save NumPy arrays
-        os.makedirs("phase_analysis/data", exist_ok=True)
         np.save("phase_analysis/data/hull_e.npy", self.hull_energies)
         np.save("phase_analysis/data/hull_comp.npy", self.hull_compositions)
+
+    def compute_formation_energies(self, json_output=True):
+        """Compute formation energy for each structure relative to pure elements."""
+        # Calculate and store formation energies
+        for ratio, data in self._composition_data.items():
+            formation = data["energy"] - np.dot(
+                self.endmember_energies, np.array(ratio)
+            )
+            data["formation_e"] = formation
+
+        # Save JSON and elements
+        if json_output:
+            serial = {
+                str(r): {k: v.tolist() for k, v in d.items()}
+                for r, d in self._composition_data.items()
+            }
+            with open("phase_analysis/data/composition_data.json", "w") as f:
+                json.dump(serial, f)
+            np.save("phase_analysis/data/elements.npy", self.elements)
 
     def compute_fe_above_ch(self):
         """Compute each structure's energy above the convex hull."""
@@ -309,6 +329,9 @@ class ConvexHullAnalyzer:
             for element in structure.elements:
                 energy_dft -= atomic_energy(element)
             energy_dft /= len(structure.elements)
+            if energy_dft < -15:
+                print(vasprun_path, "exhibits very low energy:", energy_dft, "eV/atom")
+                continue
 
             comp_res = compute_composition(structure.elements, self.elements)
             comp_ratio = tuple(
@@ -338,3 +361,35 @@ class ConvexHullAnalyzer:
             }
 
         self._composition_data = dft_dict_array
+
+
+def load_convexhull_data(path="./phase_analysis", threshold=None):
+    res = {}
+
+    res["elements"] = np.load(f"{path}/data/elements.npy")
+    res["hull_comp"] = np.load(f"{path}/data/hull_comp.npy")
+    res["hull_e"] = np.load(f"{path}/data/hull_e.npy")
+    with open(f"{path}/data/composition_data.json", "r") as f:
+        data = json.load(f)
+    res["composition_data"] = convert_json_to_ndarray(data)
+
+    res["not_near_ch"] = None
+    res["near_ch"] = None
+    if threshold is not None:
+        thre = float(threshold)
+        with open(f"{path}/threshold_{thre}meV/not_near_ch.json", "r") as f:
+            data1 = json.load(f)
+        with open(f"{path}/threshold_{thre}meV/near_ch.json", "r") as f:
+            data2 = json.load(f)
+        res["not_near_ch"] = convert_json_to_ndarray(data1)
+        res["near_ch"] = convert_json_to_ndarray(data2)
+
+    return res
+
+
+def convert_json_to_ndarray(data):
+    converted = {
+        ast.literal_eval(k): {key: np.array(val) for key, val in v.items()}
+        for k, v in data.items()
+    }
+    return converted

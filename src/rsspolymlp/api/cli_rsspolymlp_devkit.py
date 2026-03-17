@@ -215,6 +215,12 @@ def run():
 
     # --divide_data mode
     parser.add_argument(
+        "--target_pressure",
+        type=float,
+        default=0.0,
+        help="",
+    )
+    parser.add_argument(
         "--th_e_high",
         type=float,
         default=10.0,
@@ -314,7 +320,9 @@ def run():
 
     if args.divide_data:
         divide_dft_dataset(
+            elements=args.elements,
             target_dirs=args.paths,
+            target_pressure=args.target_pressure,
             threshold_e_high=args.th_e_high,
             threshold_e_low=args.th_e_low,
             threshold_f_small=args.th_f_small,
