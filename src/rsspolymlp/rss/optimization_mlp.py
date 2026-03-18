@@ -6,6 +6,7 @@ from contextlib import redirect_stdout
 import numpy as np
 
 from pypolymlp.calculator.opt_geometry import GeometryOptimization
+from pypolymlp.calculator.properties import Properties
 from pypolymlp.core.interface_vasp import Poscar
 from pypolymlp.utils.spglib_utils import SymCell
 
@@ -23,6 +24,7 @@ class OptimizationMLP:
         not_stop_rss=False,
     ):
         self.pot = pot
+        self.properties = Properties(pot=self.pot)
         self.pressure = pressure
         self.with_symmetry = with_symmetry
         self.solver_method = solver_method
@@ -114,7 +116,7 @@ class OptimizationMLP:
         """Run geometry optimization with different parameters until successful."""
         minobj = GeometryOptimization(
             unitcell,
-            pot=self.pot,
+            properties=self.properties,
             relax_cell=True,
             relax_volume=True,
             relax_positions=True,

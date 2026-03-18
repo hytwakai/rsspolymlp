@@ -1,6 +1,6 @@
 import argparse
 
-from rsspolymlp.api.rsspolymlp_utils import geometry_opt, struct_matcher
+from rsspolymlp.api.rsspolymlp_utils import geometry_opt, struct_compare, struct_matcher
 
 
 def run():
@@ -11,6 +11,11 @@ def run():
         help="Mode: struct_matcher",
     )
     parser.add_argument(
+        "--struct_compare",
+        action="store_true",
+        help="Mode: struct_compare",
+    )
+    parser.add_argument(
         "--geometry_opt",
         action="store_true",
         help="Mode: geometry_optimizations",
@@ -18,7 +23,7 @@ def run():
 
     # --struct_matcher mode
     parser.add_argument(
-        "--poscar",
+        "--poscars",
         type=str,
         nargs="+",
         default=None,
@@ -38,7 +43,7 @@ def run():
         help="Backend for joblib parallelization",
     )
     parser.add_argument(
-        "--symprec_set",
+        "--primitive_symprecs",
         nargs="*",
         type=float,
         default=[1e-5, 1e-4, 1e-3, 1e-2],
@@ -50,6 +55,37 @@ def run():
         default="unique_struct.yaml",
         help="Output file name (default: unique_struct.yaml).",
     )
+
+    # --struct_compare mode
+    parser.add_argument(
+        "--refine_symprec",
+        type=float,
+        default=1e-3,
+        help="Symmetry tolerance used to identify refine structure.",
+    )
+    parser.add_argument(
+        "--reduced_symprecs",
+        nargs="*",
+        type=float,
+        default=None,
+        help="List of symmetry tolerances used to identify reduced structure representation.",
+    )
+    parser.add_argument(
+        "--axis_tol",
+        type=float,
+        default=1e-2,
+        help="",
+    )
+    parser.add_argument(
+        "--pos_tol",
+        type=float,
+        default=1e-2,
+        help="",
+    )
+    parser.add_argument("--standardize_axis", action="store_true", help="")
+    parser.add_argument("--original_axis", action="store_true", help="")
+    parser.add_argument("--frac_coords", action="store_true", help="")
+    parser.add_argument("--not_verbose", action="store_true", help="")
 
     # --geometry_opt mode
     parser.add_argument(
@@ -81,21 +117,32 @@ def run():
 
     if args.struct_matcher:
         struct_matcher(
-            poscar_paths=args.poscar,
+            poscar_paths=args.poscars,
             num_process=args.num_process,
             backend=args.backend,
-            symprec_set=args.symprec_set,
+            primitive_symprecs=args.primitive_symprecs,
             output_file=args.output_file,
+        )
+
+    if args.struct_compare:
+        struct_compare(
+            poscar_paths=args.poscars,
+            refine_symprec=args.refine_symprec,
+            reduced_symprecs=args.reduced_symprecs,
+            axis_tol=args.axis_tol,
+            pos_tol=args.pos_tol,
+            standardize_axis=args.standardize_axis,
+            original_axis=args.original_axis,
+            frac_coords=args.frac_coords,
+            verbose=not args.not_verbose,
         )
 
     if args.geometry_opt:
         geometry_opt(
-            poscar_paths=args.poscar,
+            poscar_paths=args.poscars,
             pot=args.pot,
             pressure=args.pressure,
             with_symmetry=args.symmetry,
             solver_method=args.solver_method,
             c_maxiter=args.c_maxiter,
-            num_process=args.num_process,
-            backend=args.backend,
         )

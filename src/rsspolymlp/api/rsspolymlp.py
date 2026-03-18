@@ -1,10 +1,6 @@
 import glob
-import multiprocessing
 import os
 import time
-
-from joblib import Parallel, delayed
-from joblib.externals.loky import get_reusable_executor
 
 from rsspolymlp.analysis.ghost_minima import (
     detect_actual_ghost_minima,
@@ -43,8 +39,6 @@ def rss_run_parallel(
     c_maxiter=100,
     n_opt_str=1000,
     not_stop_rss=False,
-    num_process=-1,
-    backend="loky",
 ):
     """
     Performing Random Structure Search (RSS) on multiple tasks in parallel
@@ -73,11 +67,6 @@ def rss_run_parallel(
     if len(poscar_path_all) == 0:
         return
 
-    if num_process == 1:
-        not_stop_rss = True
-    elif num_process == -1:
-        num_process = multiprocessing.cpu_count()
-
     rssobj = OptimizationMLP(
         pot=pot,
         pressure=pressure,
@@ -89,36 +78,22 @@ def rss_run_parallel(
     )
 
     time_start = time.time()
-    if num_process == 1:
-        for poscar in poscar_path_all:
-            rssobj.run_optimization(poscar)
-    else:
-        # Perform parallel optimization with joblib
-        time_start = time.time()
-        Parallel(n_jobs=num_process, backend=backend, verbose=100)(
-            delayed(rssobj.run_optimization)(poscar) for poscar in poscar_path_all
-        )
-        executor = get_reusable_executor(max_workers=num_process)
-        executor.shutdown(wait=True)
+    for poscar in poscar_path_all:
+        rssobj.run_optimization(poscar)
     elapsed = time.time() - time_start
 
-    with open("rss_result/parallel_time.log", "a") as f:
-        print("Number of CPU cores:", num_process, file=f)
-        print("Number of the structures:", len(glob.glob("log/*")), file=f)
+    with open("rss_result/elapsed_time.log", "a") as f:
+        print("Number of structures:", len(glob.glob("log/*")), file=f)
         print("Computational time:", elapsed, file=f)
         print("", file=f)
 
 
 def rss_uniq_struct(
     num_str=-1,
-    cutoff=None,
     num_process=-1,
     backend="loky",
 ):
     analyzer = RSSResultAnalyzer()
-    if cutoff is not None:
-        analyzer.cutoff = cutoff
-
     analyzer.run_rss_uniq_struct(
         num_str=num_str,
         num_process=num_process,
@@ -182,8 +157,6 @@ def rss_polymlp(
             c_maxiter=c_maxiter,
             n_opt_str=n_opt_str,
             not_stop_rss=not_stop_rss,
-            num_process=num_process,
-            backend=backend,
         )
 
         with open("rss_result/success.dat") as f:
@@ -192,7 +165,10 @@ def rss_polymlp(
             print("Target number of optimized structures reached. Exiting.")
             break
 
-    rss_uniq_struct()
+    rss_uniq_struct(
+        num_process=num_process,
+        backend=backend,
+    )
 
 
 def rss_summarize(

@@ -165,12 +165,6 @@ def run():
         default=-1,
         help="Number of optimized structures to analyze (-1 means all)",
     )
-    parser.add_argument(
-        "--cutoff",
-        type=float,
-        default=None,
-        help="Cutoff radius used in the MLP model (optional)",
-    )
 
     # Target paths for rsspolymlp postprocessing
     parser.add_argument(
@@ -275,14 +269,11 @@ def run():
             c_maxiter=args.c_maxiter,
             n_opt_str=args.n_opt_str,
             not_stop_rss=args.not_stop_rss,
-            num_process=args.num_process,
-            backend=args.backend,
         )
 
     if args.uniq_struct:
         rss_uniq_struct(
             num_str=args.num_str,
-            cutoff=args.cutoff,
             num_process=args.num_process,
             backend=args.backend,
         )
