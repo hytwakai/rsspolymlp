@@ -56,7 +56,7 @@ def prepare_polymlp_input_file(
     """
 
     # Copy polymlp input files and append element info
-    for src in glob.glob(input_path + "/polymlp*"):
+    for src in glob.glob(input_path + "/polymlp*.in"):
         dst = os.path.basename(src)
         shutil.copyfile(src, dst)
         with open(dst, "a") as f:
