@@ -5,14 +5,14 @@ Copyright (c) 2026, rsspolymlp, Hayato Wakai
 
 import copy
 import os
-from typing import Literal, Optional, Union
+from typing import Literal, Optional
 
 import numpy as np
 from scipy.optimize import NonlinearConstraint, minimize
 
 from pypolymlp.calculator.compute_features import update_types
 from pypolymlp.calculator.properties import Properties
-from pypolymlp.core.data_format import PolymlpParams, PolymlpStructure
+from pypolymlp.core.data_format import PolymlpStructure
 from pypolymlp.core.units import EVtoGPa
 from pypolymlp.utils.spglib_utils import construct_basis_cell
 from pypolymlp.utils.structure_utils import refine_positions
@@ -33,8 +33,6 @@ class GeometryOptimization:
         sscha_opt: bool = True,
         pressure: float = 0.0,
         pot: str = None,
-        params: Optional[Union[PolymlpParams, list[PolymlpParams]]] = None,
-        coeffs: Optional[np.ndarray] = None,
         properties: Optional[Properties] = None,
         verbose: bool = False,
     ):
@@ -59,7 +57,7 @@ class GeometryOptimization:
         if properties is not None:
             self._prop = properties
         else:
-            self._prop = Properties(pot=self._pot, params=params, coeffs=coeffs)
+            self._prop = Properties(pot=self._pot)
 
         params = self._prop.params
         if isinstance(params, list):
@@ -468,4 +466,5 @@ class GeometryOptimization:
 
     def write_poscar(self, filename: str = "POSCAR_eqm"):
         """Save structure to a POSCAR file."""
+        write_poscar_file(self._structure, filename=filename)
         write_poscar_file(self._structure, filename=filename)

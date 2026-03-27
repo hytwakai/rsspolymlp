@@ -49,12 +49,14 @@ def run():
         default=[1e-5, 1e-4, 1e-3, 1e-2],
         help="List of symmetry tolerances used to identify distinct primitive cells.",
     )
+    parser.add_argument("--keep_unique", action="store_true", help="")
     parser.add_argument(
         "--output_file",
         type=str,
         default="unique_struct.yaml",
         help="Output file name (default: unique_struct.yaml).",
     )
+    parser.add_argument("--log_all", action="store_true", help="")
 
     # --struct_compare mode
     parser.add_argument(
@@ -85,6 +87,7 @@ def run():
     parser.add_argument("--standardize_axis", action="store_true", help="")
     parser.add_argument("--original_axis", action="store_true", help="")
     parser.add_argument("--frac_coords", action="store_true", help="")
+    parser.add_argument("--refine_cell", action="store_true", help="")
     parser.add_argument("--not_verbose", action="store_true", help="")
 
     # --geometry_opt mode
@@ -106,6 +109,7 @@ def run():
     parser.add_argument(
         "--solver_method", type=str, default="CG", help="Type of solver"
     )
+    parser.add_argument("--gtol", type=float, default=1e-6, help="")
     parser.add_argument(
         "--c_maxiter",
         type=int,
@@ -121,7 +125,13 @@ def run():
             num_process=args.num_process,
             backend=args.backend,
             primitive_symprecs=args.primitive_symprecs,
+            axis_tol=args.axis_tol,
+            pos_tol=args.pos_tol,
+            standardize_axis=args.standardize_axis,
+            frac_coords=args.frac_coords,
+            keep_unique=args.keep_unique,
             output_file=args.output_file,
+            log_all=args.log_all,
         )
 
     if args.struct_compare:
@@ -134,6 +144,7 @@ def run():
             standardize_axis=args.standardize_axis,
             original_axis=args.original_axis,
             frac_coords=args.frac_coords,
+            refine_cell=args.refine_cell,
             verbose=not args.not_verbose,
         )
 
@@ -144,5 +155,6 @@ def run():
             pressure=args.pressure,
             with_symmetry=args.symmetry,
             solver_method=args.solver_method,
+            gtol=args.gtol,
             c_maxiter=args.c_maxiter,
         )

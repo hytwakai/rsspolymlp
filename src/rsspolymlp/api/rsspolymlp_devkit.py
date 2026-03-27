@@ -215,7 +215,7 @@ def divide_dft_dataset(
     with open(f"{output_dir}/dataset.yaml", "w") as f:
         print("arguments:", file=f)
         print("  elements:", elements, file=f)
-        print("  path:", target_dir, file=f)
+        print("  path:", target_dirs, file=f)
         print("  target_pressure:", target_pressure, file=f)
         print("  threshold_e_high:", threshold_e_high, file=f)
         print("  threshold_e_low:", threshold_e_low, file=f)

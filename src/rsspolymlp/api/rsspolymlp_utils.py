@@ -7,6 +7,7 @@ from rsspolymlp.analysis.struct_matcher.struct_match import (
 from rsspolymlp.analysis.unique_struct import (
     UniqueStructureAnalyzer,
     generate_unique_structs,
+    log_all_unique_structures,
     log_unique_structures,
 )
 from rsspolymlp.rss.optimization_mlp import OptimizationMLP
@@ -17,7 +18,13 @@ def struct_matcher(
     num_process: int = -1,
     backend: str = "loky",
     primitive_symprecs: list[float] = [1e-5, 1e-4, 1e-3, 1e-2],
+    axis_tol: float = 0.05,
+    pos_tol: float = 0.03,
+    standardize_axis: bool = False,
+    frac_coords: bool = False,
+    keep_unique: bool = False,
     output_file: str = "unique_struct.yaml",
+    log_all: bool = False,
 ):
     rss_results = []
     for poscar_path in poscar_paths:
@@ -28,29 +35,44 @@ def struct_matcher(
         num_process=num_process,
         backend=backend,
         symprec_set1=primitive_symprecs,
+        standardize_axis=standardize_axis,
+        cartesian_coords=not frac_coords,
     )
 
     analyzer = UniqueStructureAnalyzer()
     for unique_struct in unique_structs:
         analyzer.identify_duplicate_struct(
             unique_struct=unique_struct,
-            axis_tol=0.05,
-            pos_tol=0.03,
+            keep_unique=keep_unique,
+            axis_tol=axis_tol,
+            pos_tol=pos_tol,
         )
 
-    unique_structs = analyzer.unique_str
-    unique_structs_sorted = sorted(
-        unique_structs,
-        key=lambda x: len(x.original_structure.positions.T),
-        reverse=False,
-    )
+    if log_all:
+        unique_structs = analyzer.unique_str_keep
+        unique_structs_sorted = sorted(
+            unique_structs, key=lambda x: len(x), reverse=True
+        )
+    else:
+        unique_structs = analyzer.unique_str
+        unique_structs_sorted = sorted(
+            unique_structs,
+            key=lambda x: len(x.original_structure.positions.T),
+            reverse=False,
+        )
 
     with open(output_file, "w"):
         pass
-    log_unique_structures(
-        output_file,
-        unique_structs_sorted,
-    )
+    if log_all:
+        log_all_unique_structures(
+            output_file,
+            unique_structs_sorted,
+        )
+    else:
+        log_unique_structures(
+            output_file,
+            unique_structs_sorted,
+        )
 
 
 def struct_compare(
@@ -62,6 +84,7 @@ def struct_compare(
     standardize_axis: bool = False,
     original_axis: bool = False,
     frac_coords: bool = False,
+    refine_cell: bool = False,
     verbose: bool = True,
 ):
     sym = SymCell(poscar_name=poscar_paths[0], symprec=refine_symprec)
@@ -89,6 +112,7 @@ def struct_compare(
 
     primitive_st_set, spg_number_set = generate_primitive_cells(
         polymlp_st=polymlp_st1,
+        refine_cell=refine_cell,
     )
     reduced_struct_set1 = []
     for i, primitive_st in enumerate(primitive_st_set):
@@ -104,6 +128,7 @@ def struct_compare(
 
     primitive_st_set, spg_number_set = generate_primitive_cells(
         polymlp_st=polymlp_st2,
+        refine_cell=refine_cell,
     )
     reduced_struct_set2 = []
     for i, primitive_st in enumerate(primitive_st_set):
@@ -134,6 +159,7 @@ def geometry_opt(
     pressure=0.0,
     with_symmetry=False,
     solver_method="CG",
+    gtol=1e-6,
     c_maxiter=100,
 ):
     rssobj = OptimizationMLP(
@@ -141,6 +167,7 @@ def geometry_opt(
         pressure=pressure,
         with_symmetry=with_symmetry,
         solver_method=solver_method,
+        gtol=gtol,
         c_maxiter=c_maxiter,
         n_opt_str=10**6,
         not_stop_rss=True,

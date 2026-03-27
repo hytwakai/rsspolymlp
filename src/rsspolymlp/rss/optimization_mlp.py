@@ -19,6 +19,7 @@ class OptimizationMLP:
         pressure=0.0,
         with_symmetry=False,
         solver_method="CG",
+        gtol=1e-6,
         c_maxiter=100,
         n_opt_str=1000,
         not_stop_rss=False,
@@ -28,6 +29,7 @@ class OptimizationMLP:
         self.pressure = pressure
         self.with_symmetry = with_symmetry
         self.solver_method = solver_method
+        self.gtol = gtol
         self.c_maxiter = c_maxiter
         self.n_opt_str = n_opt_str
         self.not_stop_rss = not_stop_rss
@@ -136,7 +138,7 @@ class OptimizationMLP:
 
             try:
                 minobj.run(
-                    gtol=1e-6,
+                    gtol=self.gtol,
                     method=self.solver_method,
                     maxiter=maxiter,
                     c1=c1_set[c_count],

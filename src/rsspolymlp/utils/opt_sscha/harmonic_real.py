@@ -70,7 +70,7 @@ class HarmonicReal:
         self._energies_full = None
         self._average_forces = None
         self._forces = None
-        self._stresses = None
+        self._stress_tensors = None
         self._disps = None
 
         self._set_mass()

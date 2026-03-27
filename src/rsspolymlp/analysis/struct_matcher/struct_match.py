@@ -1,5 +1,7 @@
+import math
 import re
 from collections import Counter
+from contextlib import redirect_stdout
 from dataclasses import dataclass
 from typing import Optional
 
@@ -30,6 +32,7 @@ def struct_match(
     pos_tol: float = 0.01,
     spg_match: bool = True,
     verbose: bool = False,
+    output_file: str = "struct_matcher.yaml",
 ) -> bool:
     """
     Determine whether two sets of ReducedStructRep objects are structurally
@@ -111,40 +114,55 @@ def struct_match(
 
     if verbose:
 
-        def log_axis_positions(symprec, axis, positions):
+        def log_axis_positions(symprec, axis, positions, round_axis=4, round_pos=3):
             print("    - symprec:", np.round(symprec, 5).tolist())
-            print("      metric_tensor:", np.round(axis, 4).tolist())
+            print("      metric_tensor:", np.round(axis, round_axis).tolist())
             print("      positions:")
-            for axis_tag, p in zip(
-                ["a", "b", "c"], np.round(positions.reshape(3, -1), 3).tolist()
-            ):
-                formatted = ",".join(f"{val:6.3f}" for val in p)
+            for p in positions.reshape(3, -1).tolist():
+                formatted = ",".join(f"{val:{round_pos+3}.{round_pos}f}" for val in p)
                 print(f"      - [{formatted}]")
 
-        print("--- results of rsspolymlp.analysis.struct_matcher ---")
-        print("tolerance:")
-        print("  axis_tol:", axis_tol)
-        print("  pos_tol:", pos_tol)
-        print("structures:")
-        for i, st_set in enumerate([st_1_set, st_2_set]):
-            print(f"  - struct_No: {i+1}")
-            for st in st_set:
-                print("    spg_number:", st.spg_number)
-                print("    representations:")
-                for h, pos in enumerate(st.positions):
-                    log_axis_positions(st.symprec_set[h], st.axis[h], pos)
-        print("min_axis_l2_norm:", np.round(min_axis_l2_norm, 3))
-        if axis_d_min is not None:
-            print("difference_log:")
-            print("  - axis_l2_norm:", np.round(axis_d_min[0], 3))
-            print("    pos_max_abs:", np.round(pos_d_min[0], 3))
-            print("    structure_1:")
-            log_axis_positions(pos_d_min[1][0], axis_d_min[1][0], pos_d_min[1][1])
-            print("    structure_2:")
-            log_axis_positions(pos_d_min[1][2], axis_d_min[1][1], pos_d_min[1][3])
-            print("    diffs:")
-            log_axis_positions([], axis_d_min[1][2], pos_d_min[1][4])
-        print("Match:", struct_match)
+        with open(output_file, "w") as f, redirect_stdout(f):
+            print("tolerance:")
+            print("  axis_tol:", axis_tol)
+            print("  pos_tol:", pos_tol)
+            print("structures:")
+            for i, st_set in enumerate([st_1_set, st_2_set]):
+                print(f"  - struct_No: {i+1}")
+                for st in st_set:
+                    print("    spg_number:", st.spg_number)
+                    print("    representations:")
+                    for h, pos in enumerate(st.positions):
+                        log_axis_positions(st.symprec_set[h], st.axis[h], pos)
+            print("min_axis_l2_norm:", np.round(min_axis_l2_norm, 3))
+            if axis_d_min is not None:
+                round_axis = min(-math.floor(math.log10(abs(axis_d_min[0]))) + 1, 6)
+                round_pos = min(-math.floor(math.log10(abs(pos_d_min[0]))) + 1, 6)
+                print("difference_log:")
+                print("  - axis_l2_norm:", np.round(axis_d_min[0], round_axis))
+                print("    pos_max_abs:", np.round(pos_d_min[0], round_pos))
+                print("    structure_1:")
+                log_axis_positions(
+                    pos_d_min[1][0],
+                    axis_d_min[1][0],
+                    pos_d_min[1][1],
+                    round_axis,
+                    round_pos,
+                )
+                print("    structure_2:")
+                log_axis_positions(
+                    pos_d_min[1][2],
+                    axis_d_min[1][1],
+                    pos_d_min[1][3],
+                    round_axis,
+                    round_pos,
+                )
+                print("    diffs:")
+                log_axis_positions(
+                    [], axis_d_min[1][2], pos_d_min[1][4], round_axis, round_pos
+                )
+            print("Match:", struct_match)
+        print(f"{output_file} is generated.")
 
     return struct_match
 
@@ -153,6 +171,7 @@ def generate_primitive_cells(
     poscar_name: Optional[str] = None,
     polymlp_st: Optional[PolymlpStructure] = None,
     symprec_set: list[float] = [1e-5, 1e-4, 1e-3, 1e-2],
+    refine_cell: bool = False,
 ) -> tuple[list[PolymlpStructure], list[int]]:
     """
     Generate primitive cells of a given structure under different symmetry tolerances.
@@ -189,7 +208,10 @@ def generate_primitive_cells(
             continue
         else:
             try:
-                primitive_st = symutil.primitive_cell()
+                if not refine_cell:
+                    primitive_st = symutil.primitive_cell()
+                else:
+                    primitive_st = symutil.refine_cell()
             except TypeError:
                 continue
             primitive_st_set.append(primitive_st)
