@@ -63,8 +63,13 @@ def prepare_polymlp_input_file(
             f.write("\n")
             f.write(f"n_type {len(element_list)}\n")
             f.write("elements " + " ".join(element_list) + "\n")
-    if os.path.isfile(input_path + "/polymlp_cost.yaml"):
+
+    if len(element_list) == 1 and os.path.isfile(input_path + "/polymlp_cost.yaml"):
         shutil.copyfile(input_path + "/polymlp_cost.yaml", "./polymlp_cost.yaml")
+    elif len(element_list) == 2 and os.path.isfile(
+        input_path + "/polymlp_cost_binary.yaml"
+    ):
+        shutil.copyfile(input_path + "/polymlp_cost_binary.yaml", "./polymlp_cost.yaml")
 
     main_input = "polymlp.in" if os.path.isfile("polymlp.in") else "polymlp1.in"
 
