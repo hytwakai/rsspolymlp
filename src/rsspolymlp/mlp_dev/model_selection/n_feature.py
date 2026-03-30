@@ -1,7 +1,7 @@
+import argparse
 import glob
 import os
 import shutil
-import argparse
 
 import numpy as np
 
@@ -13,6 +13,12 @@ parser.add_argument(
     type=str,
     default=None,
     help="Directory path including model parameter candidates",
+)
+parser.add_argument(
+    "--n_elements",
+    type=int,
+    default=1,
+    help="Number of element symbols",
 )
 args = parser.parse_args()
 
@@ -35,9 +41,15 @@ for path in path_all:
             shutil.copy(polymlp_in, "./polymlp.in")
         else:
             continue
-        with open("./polymlp.in", "a") as f:
-            print("n_type 1", file=f)
-            print("elements Ca", file=f)
+
+        if args.n_elements == 1:
+            with open("./polymlp.in", "a") as f:
+                print("n_type 1", file=f)
+                print("elements Ca", file=f)
+        elif args.n_elements == 2:
+            with open("./polymlp.in", "a") as f:
+                print("n_type 2", file=f)
+                print("elements Ca Bi", file=f)
 
         polymlp.run_features(
             develop_infile="./polymlp.in",

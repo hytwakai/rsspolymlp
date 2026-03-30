@@ -244,7 +244,7 @@ class PolymlpGridSearch:
                 max_l=0,
                 feature_type="pair",
                 pair_params_in1=(1.0, 1.0, 1),
-                pair_params_in2=(0.0, gauss_maxr, n_gauss),
+                pair_params_in2=(0.0, np.round(gauss_maxr, 2), n_gauss),
             )
             params = PolymlpParams(
                 n_type=len(self._elements),
@@ -288,7 +288,7 @@ class PolymlpGridSearch:
                     self._grid.gaussian_width,
                     1,
                 ),
-                pair_params_in2=(0, gauss_maxr, n_gauss),
+                pair_params_in2=(0, np.round(gauss_maxr, 2), n_gauss),
             )
             params = PolymlpParams(
                 n_type=len(self._elements),
@@ -319,7 +319,7 @@ class PolymlpGridSearch:
                     self._grid.gaussian_width,
                     1,
                 ),
-                pair_params_in2=(0, gauss_maxr, 15),
+                pair_params_in2=(0, np.round(gauss_maxr, 2), 15),
             )
             params = PolymlpParams(
                 n_type=len(self._elements),

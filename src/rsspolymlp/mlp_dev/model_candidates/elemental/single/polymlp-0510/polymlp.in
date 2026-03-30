@@ -1,0 +1,13 @@
+feature_type gtinv
+cutoff 7.0
+gaussian_params1 1.0 1.0 1
+gaussian_params2 0 6.0 10
+reg_alpha_params -4 3 8
+
+model_type 2
+max_p 2
+gtinv_order 4
+gtinv_maxl 6 2 1
+
+include_force True
+include_stress True
