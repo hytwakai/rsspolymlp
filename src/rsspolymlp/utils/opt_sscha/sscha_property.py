@@ -5,6 +5,7 @@ import scipy
 
 from phonopy import Phonopy
 from pypolymlp.calculator.properties import Properties
+from pypolymlp.calculator.sscha.harmonic_real import HarmonicReal
 from pypolymlp.calculator.sscha.harmonic_reciprocal import HarmonicReciprocal
 from pypolymlp.calculator.sscha.sscha_data import SSCHAData
 from pypolymlp.calculator.sscha.sscha_io import save_sscha_yaml
@@ -18,7 +19,6 @@ from pypolymlp.utils.phonopy_utils import (
 )
 from pypolymlp.utils.spglib_utils import construct_basis_cell
 from pypolymlp.utils.symfc_utils import construct_basis_fractional_coordinates
-from rsspolymlp.utils.opt_sscha.harmonic_real import HarmonicReal
 
 
 class SSCHAProperty:
@@ -96,6 +96,8 @@ class SSCHAProperty:
                 harmonic_heat_capacity=self._ph_recip.heat_capacity,  # J/K/mol
                 static_forces=self._ph_real.static_forces,  # eV/ang
                 average_forces=self._ph_real.average_forces,  # eV/ang
+                static_stress_tensor=self._ph_real.static_stress_tensor,  # eV/supercell
+                average_stress_tensor=self._ph_real.average_stress_tensor,  # eV/supercell
             )
             sscha_params = SSCHAParams(
                 unitcell=self._structure,
@@ -143,7 +145,7 @@ class SSCHAProperty:
         f_fc2 = f_fc2.reshape(f_fc2.shape[0], f_fc2.shape[1] // 3, 3).transpose(
             0, 2, 1
         )  # (N_samples, 3, N_atom)
-        sample_stresses = self._ph_real.stresses
+        sample_stresses = self._ph_real.stress_tensors
         disps = self._ph_real.displacements
 
         self._sscha_stress_tensors = np.zeros((sample_stresses.shape[0], 6))
@@ -209,6 +211,12 @@ class SSCHAProperty:
         fc2 = np.transpose(self._fc2, (0, 2, 1, 3))
         fc2 = np.reshape(fc2, (N3, N3))
         return -fc2 @ disp  # (N_atom*3,)
+
+    def _pair_forces_from_fc2(self, disp):
+        N3 = self._fc2.shape[0] * self._fc2.shape[2]
+        fc2 = np.transpose(self._fc2, (0, 2, 1, 3))
+        fc2 = np.reshape(fc2, (N3, N3))
+        return -fc2 * disp[None, :]  # (N_atom*3, N_atom*3)
 
     def estimate_derivatives_standard_deviation(self):
         self.run()
