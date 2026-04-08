@@ -11,7 +11,6 @@ from collections import Counter, defaultdict
 from time import time
 
 import numpy as np
-
 from pypolymlp.core.interface_vasp import Poscar
 from pypolymlp.core.io_polymlp import load_mlps
 from rsspolymlp.analysis.ghost_minima import detect_ghost_minima
