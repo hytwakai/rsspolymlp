@@ -181,8 +181,8 @@ def compress_vasprun(
 
 def divide_dft_dataset(
     elements: list[str],
-    target_dirs: str,
-    target_pressure: float = 0.0,
+    target_dirs: list[str],
+    prototype_paths: list[str],
     threshold_e_high: float = 10.0,  # in eV/atom
     threshold_e_low: Optional[float] = None,
     threshold_f_small: float = 3.0,  # in eV/ang
@@ -199,7 +199,7 @@ def divide_dft_dataset(
     vasprun_dict = divide_dataset(
         elements=elements,
         vasprun_paths=vasprun_paths,
-        target_pressure=target_pressure,
+        prototype_paths=prototype_paths,
         threshold_e_high=threshold_e_high,
         threshold_e_low=threshold_e_low,
         threshold_f_small=threshold_f_small,
@@ -216,7 +216,7 @@ def divide_dft_dataset(
         print("arguments:", file=f)
         print("  elements:", elements, file=f)
         print("  path:", target_dirs, file=f)
-        print("  target_pressure:", target_pressure, file=f)
+        print("  prototype_paths:", prototype_paths, file=f)
         print("  threshold_e_high:", threshold_e_high, file=f)
         print("  threshold_e_low:", threshold_e_low, file=f)
         print("  threshold_f_small:", threshold_f_small, file=f)

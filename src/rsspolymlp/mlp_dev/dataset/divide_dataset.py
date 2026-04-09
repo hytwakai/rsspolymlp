@@ -14,7 +14,7 @@ from rsspolymlp.common.atomic_energy import atomic_energy
 from rsspolymlp.common.composition import compute_composition
 
 
-def parse_vasp_results(elements, vasprun_paths, target_pressure: float = 0.0):
+def parse_vasp_results(elements, vasprun_paths):
 
     def convert_dict(d):
         result = {}
@@ -30,7 +30,6 @@ def parse_vasp_results(elements, vasprun_paths, target_pressure: float = 0.0):
         return result
 
     dft_dict = defaultdict(list)
-    dft_dict_local = defaultdict(list)
     for vasprun_path in vasprun_paths:
         try:
             vaspobj = Vasprun(vasprun_path)
@@ -71,29 +70,15 @@ def parse_vasp_results(elements, vasprun_paths, target_pressure: float = 0.0):
             }
         )
 
-        stress_sub = stress / 10
-        stress_sub[np.diag_indices_from(stress)] -= target_pressure
-        if np.all((stress_sub > -0.5) & (stress_sub < 0.5)):
-            dft_dict_local[comp_ratio].append(
-                {
-                    "energy": energy,
-                    "force": force,
-                    "stress": stress,
-                    "input_path": vasprun_path,
-                    "struct_tag": vasprun_path.split("/")[-1],
-                }
-            )
-
     dft_dict_array = convert_dict(dft_dict)
-    dft_dict_array_local = convert_dict(dft_dict_local)
 
-    return dft_dict_array, dft_dict_array_local
+    return dft_dict_array
 
 
 def divide_dataset(
     elements: list[str],
     vasprun_paths: list[str],
-    target_pressure: float = 0.0,
+    prototype_paths: list[str],
     threshold_e_high: float = 10.0,  # in eV/atom
     threshold_e_low: Optional[float] = None,
     threshold_f_small: float = 3.0,  # in eV/ang
@@ -132,12 +117,10 @@ def divide_dataset(
         "s_large-e_high": [],
     }
 
-    dft_dict_array, dft_dict_array_local = parse_vasp_results(
-        elements=elements, vasprun_paths=vasprun_paths, target_pressure=target_pressure
-    )
+    dft_dict_array = parse_vasp_results(elements=elements, vasprun_paths=vasprun_paths)
 
     ch_analyzer = ConvexHullAnalyzer(elements=elements)
-    ch_analyzer.composition_data = dft_dict_array_local
+    ch_analyzer.parse_results(input_paths=prototype_paths, parse_vasp=True)
     ch_analyzer.set_endmember_energies()
     ch_analyzer.compute_convex_hull()
 

@@ -215,10 +215,11 @@ def run():
 
     # --divide_data mode
     parser.add_argument(
-        "--target_pressure",
-        type=float,
-        default=0.0,
-        help="",
+        "--prototype_paths",
+        type=str,
+        nargs="+",
+        default=None,
+        help="Directories containing vasprun.xml files for prototype structures",
     )
     parser.add_argument(
         "--th_e_high",
@@ -322,7 +323,7 @@ def run():
         divide_dft_dataset(
             elements=args.elements,
             target_dirs=args.paths,
-            target_pressure=args.target_pressure,
+            prototype_paths=args.prototype_paths,
             threshold_e_high=args.th_e_high,
             threshold_e_low=args.th_e_low,
             threshold_f_small=args.th_f_small,

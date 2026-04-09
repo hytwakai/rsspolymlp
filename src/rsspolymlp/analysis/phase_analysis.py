@@ -247,9 +247,9 @@ class ConvexHullAnalyzer:
     def parse_results(self, input_paths, ghost_minima_file=None, parse_vasp=False):
         """
         Populate composition_data by parsing RSS JSON or VASP vasprun.xml outputs.
-        :param input_paths: List of RSS JSON files or VASP directories.
-        :param ghost_minima_file: YAML file listing ghost minima to exclude (RSS only).
-        :param parse_vasp: If True, parse VASP outputs; otherwise parse RSS JSON.
+        input_paths: List of RSS JSON files or VASP directories.
+        ghost_minima_file: YAML file listing ghost minima to exclude (RSS only).
+        parse_vasp: If True, parse VASP outputs; otherwise parse RSS JSON.
         """
         if parse_vasp:
             self._parse_vasp_results(input_paths)
