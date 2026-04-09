@@ -70,10 +70,10 @@ def parse_vasp_results(elements, vasprun_paths, target_pressure: float = 0.0):
                 "struct_tag": vasprun_path.split("/")[-1],
             }
         )
-        if np.all(
-            (stress / 10 > target_pressure - 0.5)
-            & (stress / 10 < target_pressure + 0.5)
-        ):
+
+        stress_sub = stress / 10
+        stress_sub[np.diag_indices_from(stress)] -= target_pressure
+        if np.all((stress_sub > -0.5) & (stress_sub < 0.5)):
             dft_dict_local[comp_ratio].append(
                 {
                     "energy": energy,
