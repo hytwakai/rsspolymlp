@@ -14,15 +14,11 @@
 rsspolymlp --init_struct --elements Al Cu --atom_counts 4 4 --n_init_str 2000
 ```
 
-#### 2. Perform parallel geometry optimization using the polynomial MLP
+#### 2. Perform geometry optimization using the polynomial MLP
 
 ```shell
-rsspolymlp --rss_parallel --pot polymlp.yaml --pressure 0.0 --n_opt_str 1000
+rsspolymlp --rss_opt --pot polymlp.yaml --pressure 0.0 --n_opt_str 1000
 ```
-
-**Note:**
-Parallel execution uses `joblib` by default and utilizes all available CPU cores. 
-Alternatively, you can specify `--num_process 1` to disable the parallel execution with `joblib`, which may be more suitable for certain computing environments.
 
 #### 3. Eliminate duplicate structures
 

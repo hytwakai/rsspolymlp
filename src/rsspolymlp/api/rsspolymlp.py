@@ -31,7 +31,7 @@ def rss_init_struct(
     gen_str.random_structure(max_init_struct=n_init_str)
 
 
-def rss_run_parallel(
+def rss_opt(
     pot="polymlp.yaml",
     pressure=0.0,
     with_symmetry=False,
@@ -40,10 +40,7 @@ def rss_run_parallel(
     n_opt_str=1000,
     not_stop_rss=False,
 ):
-    """
-    Performing Random Structure Search (RSS) on multiple tasks in parallel
-    using polynomial machine learinig potentials (MLPs).
-    """
+    "Performing Random Structure Search (RSS) using polynomial MLPs."
     os.makedirs("rss_result", exist_ok=True)
     for file in ["rss_result/finish.dat", "rss_result/success.dat"]:
         open(file, "a").close()
@@ -55,16 +52,16 @@ def rss_run_parallel(
         return
 
     # Check which structures have already been optimized
-    poscar_path_all = sorted(
+    poscar_paths = sorted(
         glob.glob("initial_struct/*"), key=lambda x: int(x.split("_")[-1])
     )
     with open("rss_result/finish.dat") as f:
         finished_set = set(line.strip() for line in f)
-    poscar_path_all = [
-        p for p in poscar_path_all if os.path.basename(p) not in finished_set
+    poscar_paths_rev = [
+        p for p in poscar_paths if os.path.basename(p) not in finished_set
     ]
 
-    if len(poscar_path_all) == 0:
+    if len(poscar_paths_rev) == 0:
         return
 
     rssobj = OptimizationMLP(
@@ -78,7 +75,7 @@ def rss_run_parallel(
     )
 
     time_start = time.time()
-    for poscar in poscar_path_all:
+    for poscar in poscar_paths_rev:
         rssobj.run_optimization(poscar)
     elapsed = time.time() - time_start
 
@@ -149,7 +146,7 @@ def rss_polymlp(
             least_distance=least_distance,
         )
 
-        rss_run_parallel(
+        rss_opt(
             pot=pot,
             pressure=pressure,
             with_symmetry=with_symmetry,

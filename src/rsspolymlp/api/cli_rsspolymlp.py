@@ -6,7 +6,7 @@ from rsspolymlp.api.rsspolymlp import (
     rss_init_struct,
     rss_phase_analysis,
     rss_polymlp,
-    rss_run_parallel,
+    rss_opt,
     rss_summarize,
     rss_uniq_struct,
 )
@@ -21,9 +21,9 @@ def run():
         help="Mode: Initial random structure generation",
     )
     parser.add_argument(
-        "--rss_parallel",
+        "--rss_opt",
         action="store_true",
-        help="Mode: RSS using the polynomial MLP in parallel",
+        help="Mode: RSS using the polynomial MLP",
     )
     parser.add_argument(
         "--rss_single",
@@ -100,7 +100,7 @@ def run():
         help="Minimum interatomic distance in initial structure (angstrom)",
     )
 
-    # --rss_parallel mode
+    # --rss_opt mode
     parser.add_argument(
         "--pot",
         nargs="*",
@@ -261,7 +261,7 @@ def run():
         )
 
     if args.rss_parallel:
-        rss_run_parallel(
+        rss_opt(
             pot=args.pot,
             pressure=args.pressure,
             with_symmetry=args.symmetry,

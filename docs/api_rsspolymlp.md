@@ -14,32 +14,25 @@ gen_str = GenerateRandomStructure(
 gen_str.random_structure(max_init_struct=2000)
 ```
 
-
 ## Global RSS with polynomial MLPs
 ```python
 import glob
-import multiprocessing
 import os
 
-from joblib import Parallel, delayed
-
-from rsspolymlp.rss.optimization_mlp import RandomStructureSearch
+from rsspolymlp.rss.optimization_mlp import OptimizationMLP
 
 # Check which structures have already been optimized
-poscar_path_all = sorted(
+poscar_paths = sorted(
     glob.glob("initial_struct/*"), key=lambda x: int(x.split("_")[-1])
 )
 if os.path.isfile("rss_result/finish.dat"):
     with open("rss_result/finish.dat") as f:
         finished_set = set(line.strip() for line in f)
-    poscar_path_all = [
-        p for p in poscar_path_all if os.path.basename(p) not in finished_set
+    poscar_paths_rev = [
+        p for p in poscar_paths if os.path.basename(p) not in finished_set
     ]
 
-num_process = multiprocessing.cpu_count()
-backend = "loky"
-
-rssobj = RandomStructureSearch(
+rssobj = OptimizationMLP(
     pot="polymlp.yaml",
     pressure=0.0,
     solver_method="CG",
@@ -47,15 +40,8 @@ rssobj = RandomStructureSearch(
     n_opt_str=1000,
 )
 
-use_joblib = True
-if not use_joblib:
-    for poscar in poscar_path_all:
-        rssobj.run_optimization(poscar)
-else:
-    # Perform parallel optimization with joblib
-    Parallel(n_jobs=num_process, backend=backend)(
-        delayed(rssobj.run_optimization)(poscar) for poscar in poscar_path_all
-    )
+for poscar in poscar_paths_rev:
+    rssobj.run_optimization(poscar)
 ```
 
 ## Unique structure identification and RSS summary generation
@@ -79,7 +65,7 @@ from rsspolymlp.analysis.rss_summarize import RSSResultSummarizer
 os.makedirs("rss_summary", exist_ok=True)
 os.chdir("rss_summary")
 
-target_paths = glob.glob("../rss_mlp/Al-Cu/0.0GPa/*")
+target_paths = glob.glob("~/Al-Cu/0.0GPa/*/rss_result/rss_results.json")
 analyzer = RSSResultSummarizer(
     result_paths=paths,
     num_process=-1,
