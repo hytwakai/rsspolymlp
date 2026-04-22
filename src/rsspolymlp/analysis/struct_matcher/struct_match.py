@@ -136,8 +136,17 @@ def struct_match(
                         log_axis_positions(st.symprec_set[h], st.axis[h], pos)
             print("min_axis_l2_norm:", np.round(min_axis_l2_norm, 3))
             if axis_d_min is not None:
-                round_axis = min(-math.floor(math.log10(abs(axis_d_min[0]))) + 1, 6)
-                round_pos = min(-math.floor(math.log10(abs(pos_d_min[0]))) + 1, 6)
+                x_axis = abs(float(axis_d_min[0]))
+                if x_axis <= 1e-12:
+                    round_axis = 6
+                else:
+                    round_axis = min(-math.floor(math.log10(x_axis)) + 1, 6)
+                x_pos = abs(float(pos_d_min[0]))
+                if x_pos <= 1e-12:
+                    round_pos = 6
+                else:
+                    round_pos = min(-math.floor(math.log10(x_pos)) + 1, 6)
+
                 print("difference_log:")
                 print("  - axis_l2_norm:", np.round(axis_d_min[0], round_axis))
                 print("    pos_max_abs:", np.round(pos_d_min[0], round_pos))

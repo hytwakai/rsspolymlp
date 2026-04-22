@@ -260,7 +260,7 @@ def run():
             max_volume=args.max_volume,
         )
 
-    if args.rss_parallel:
+    if args.rss_opt:
         rss_opt(
             pot=args.pot,
             pressure=args.pressure,
