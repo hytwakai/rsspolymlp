@@ -38,8 +38,7 @@ def make_supercell(
     strgen._supercell.axis_inv = np.linalg.inv(strgen._supercell.axis)
 
     if np.array(strgen._size).tolist() == [1, 1, 1]:
-        n_atoms = int(strgen._supercell.n_atoms[0])
-        if n_atoms * 8 <= natom_ub:
+        if total_n_atoms * 8 <= natom_ub:
             strgen._size = np.array([2, 2, 2])
             strgen._supercell = supercell_diagonal(strgen._unitcell, strgen._size)
             strgen._supercell.axis_inv = np.linalg.inv(strgen._supercell.axis)

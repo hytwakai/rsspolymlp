@@ -333,7 +333,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--tol",
         type=float,
-        default=0.01,
+        default=0.05,
         help="Tolerance parameter for FC optimization",
     )
     parser.add_argument(

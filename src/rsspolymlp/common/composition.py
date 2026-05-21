@@ -26,7 +26,7 @@ def compute_composition(
         List of element symbols (e.g., ['Bi', 'Bi', 'Ba']).
     element_order : list of str, optional
         List of elements to use in specified order.
-        If None, elements are ordered by first appearance.
+        If None, elements are ordered in lexicographical (dictionary) order.
 
     Returns
     -------
@@ -37,8 +37,7 @@ def compute_composition(
     if element_order is not None:
         sorted_elements = np.array(element_order)
     else:
-        unique_elements, first_indices = np.unique(_elements, return_index=True)
-        sorted_elements = unique_elements[np.argsort(first_indices)]
+        sorted_elements = np.unique(_elements)
 
     label_to_type = {el: i for i, el in enumerate(sorted_elements)}
     types = np.array([label_to_type[el] for el in elements])

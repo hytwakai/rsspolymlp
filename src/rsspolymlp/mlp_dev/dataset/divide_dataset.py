@@ -136,13 +136,10 @@ def divide_dataset(
 
             min_stress = min([stress[0][0], stress[1][1], stress[2][2]])
             max_stress = np.max(np.abs(stress))
-            pressure = np.mean([(stress / 10).tolist()[i][i] for i in range(3)])  # GPa
 
             # Filter by energy value
             if fe_above_ch > threshold_e_high or (
-                threshold_e_low is not None
-                and pressure > 0
-                and fe_above_ch < threshold_e_low
+                threshold_e_low is not None and fe_above_ch < threshold_e_low
             ):
                 e_tag = "-e_high"
             else:

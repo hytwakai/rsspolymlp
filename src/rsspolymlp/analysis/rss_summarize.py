@@ -333,7 +333,7 @@ class RSSResultSummarizer:
 
             for res in rss_results:
                 if threshold is not None:
-                    diff = abs(e_min - res["energy"])
+                    diff = res["energy"] - e_min
                     if diff * 1000 > threshold:
                         continue
 
