@@ -116,27 +116,23 @@ def pareto_opt_mlp(
 
 
 def mlp_dataset(
-    poscars=list[str],
+    poscar=str,
     per_volume: float = 1.0,
     disp_max: float = 30,
     disp_grid: float = 1,
     natom_lb: int = 30,
     natom_ub: int = 150,
-    str_name: int = -1,
+    str_name: str = "mlp_data",
 ):
-    with open("struct_size.yaml", "w"):
-        pass
-
-    for poscar in poscars:
-        gen_mlp_data(
-            poscar=poscar,
-            per_volume=per_volume,
-            disp_max=disp_max,
-            disp_grid=disp_grid,
-            natom_lb=natom_lb,
-            natom_ub=natom_ub,
-            str_name=str_name,
-        )
+    gen_mlp_data(
+        poscar=poscar,
+        per_volume=per_volume,
+        disp_max=disp_max,
+        disp_grid=disp_grid,
+        natom_lb=natom_lb,
+        natom_ub=natom_ub,
+        str_name=str_name,
+    )
 
 
 def compress_vasprun(
@@ -187,7 +183,6 @@ def divide_dft_dataset(
     threshold_e_low: Optional[float] = None,
     threshold_f_small: float = 3.0,  # in eV/ang
     threshold_f_normal: float = 10.0,
-    threshold_f_large: float = 100.0,
     threshold_s_large: float = 200.0,  # in GPa
     threshold_s_small: Optional[float] = None,
     divide_ratio: float = 0.1,
@@ -204,7 +199,6 @@ def divide_dft_dataset(
         threshold_e_low=threshold_e_low,
         threshold_f_small=threshold_f_small,
         threshold_f_normal=threshold_f_normal,
-        threshold_f_large=threshold_f_large,
         threshold_s_large=threshold_s_large,
         threshold_s_small=threshold_s_small,
     )
@@ -221,7 +215,6 @@ def divide_dft_dataset(
         print("  threshold_e_low:", threshold_e_low, file=f)
         print("  threshold_f_small:", threshold_f_small, file=f)
         print("  threshold_f_normal:", threshold_f_normal, file=f)
-        print("  threshold_f_large:", threshold_f_large, file=f)
         print("  threshold_s_large:", threshold_s_large, file=f)
         print("  threshold_s_small:", threshold_s_small, file=f)
         print("", file=f)

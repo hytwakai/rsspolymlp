@@ -152,11 +152,9 @@ def run():
 
     # --gen_data mode
     parser.add_argument(
-        "--poscars",
+        "--poscar",
         type=str,
-        nargs="+",
-        default=None,
-        help="Input POSCAR file(s) for structure generation",
+        help="Input POSCAR file for structure generation",
     )
     parser.add_argument(
         "--per_volume",
@@ -190,9 +188,9 @@ def run():
     )
     parser.add_argument(
         "--str_name",
-        type=int,
-        default=-1,
-        help="Index for extracting structure name from POSCAR path",
+        type=str,
+        default="mlp_data",
+        help="Name of the generated POSCAR file",
     )
 
     # --compress_data mode
@@ -246,12 +244,6 @@ def run():
         help="Force threshold (eV/ang.) for structures with normal forces (f_normal).",
     )
     parser.add_argument(
-        "--th_f_large",
-        type=float,
-        default=100.0,
-        help="Force threshold (eV/ang.) for structures with large forces (f_large).",
-    )
-    parser.add_argument(
         "--th_s_large",
         type=float,
         default=200.0,
@@ -302,7 +294,7 @@ def run():
 
     if args.gen_data:
         mlp_dataset(
-            poscars=args.poscars,
+            poscar=args.poscar,
             per_volume=args.per_volume,
             disp_max=args.disp_max,
             disp_grid=args.disp_grid,
@@ -328,7 +320,6 @@ def run():
             threshold_e_low=args.th_e_low,
             threshold_f_small=args.th_f_small,
             threshold_f_normal=args.th_f_normal,
-            threshold_f_large=args.th_f_large,
             threshold_s_large=args.th_s_large,
             threshold_s_small=args.th_s_small,
             divide_ratio=args.divide_ratio,

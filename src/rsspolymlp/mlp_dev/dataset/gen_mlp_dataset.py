@@ -27,8 +27,11 @@ def make_supercell(
     size = [1, 1, 1]
     for c in cand:
         size_trial = np.maximum(np.round(ratio * c).astype(int), [1, 1, 1])
+        ratio_min = min(ratio * c)
         n_total = total_n_atoms * np.prod(size_trial)
-        if n_total >= natom_lb:
+        if n_total >= natom_ub:
+            break
+        if n_total >= natom_lb and ratio_min > 0.5:
             if n_total <= natom_ub:
                 size = size_trial
             break
@@ -53,9 +56,9 @@ def gen_mlp_data(
     disp_grid=1,
     natom_lb=30,
     natom_ub=150,
-    str_name=-1,
+    str_name="mlp_data",
 ):
-    os.makedirs("poscar", exist_ok=True)
+    os.makedirs("mlp_data", exist_ok=True)
 
     try:
         polymlp_st = Poscar(poscar).structure
@@ -78,8 +81,7 @@ def gen_mlp_data(
         disp = least_distance * disp_ratio / 100
         str_rand = strgen.sample_random_single_structure(disp, vol_ratio=per_volume)
 
-        _str_name = poscar.split("/")[str_name]
-        poscar_path = f"poscar/{_str_name}_d{round(disp_ratio, 5)}_v{per_volume}"
+        poscar_path = f"mlp_data/{str_name}_d{round(disp_ratio, 5)}_v{per_volume}"
 
         if not os.path.isfile(poscar_path):
             write_poscar_file(str_rand, poscar_path)

@@ -83,7 +83,6 @@ def divide_dataset(
     threshold_e_low: Optional[float] = None,
     threshold_f_small: float = 3.0,  # in eV/ang
     threshold_f_normal: float = 10.0,
-    threshold_f_large: float = 100.0,
     threshold_s_large: float = 200.0,  # in GPa
     threshold_s_small: Optional[float] = None,
 ):
@@ -96,24 +95,20 @@ def divide_dataset(
             - "f_small"
             - "f_normal"
             - "f_large"
-            - "f_exlarge"
             - "s_large"
             - "f_small-e_high"
             - "f_normal-e_high"
             - "f_large-e_high"
-            - "f_exlarge-e_high"
             - "s_large-e_high"
     """
     vasprun_dict = {
         "f_small": [],
         "f_normal": [],
         "f_large": [],
-        "f_exlarge": [],
         "s_large": [],
         "f_small-e_high": [],
         "f_normal-e_high": [],
         "f_large-e_high": [],
-        "f_exlarge-e_high": [],
         "s_large-e_high": [],
     }
 
@@ -159,10 +154,7 @@ def divide_dataset(
             if np.all(np.abs(force) <= threshold_f_normal):
                 vasprun_dict[f"f_normal{e_tag}"].append(vasprun_path)
                 continue
-            if np.all(np.abs(force) <= threshold_f_large):
-                vasprun_dict[f"f_large{e_tag}"].append(vasprun_path)
-                continue
-            vasprun_dict[f"f_exlarge{e_tag}"].append(vasprun_path)
+            vasprun_dict[f"f_large{e_tag}"].append(vasprun_path)
 
     return vasprun_dict
 
