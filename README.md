@@ -4,17 +4,21 @@
 
 If you use `rsspolymlp` in your study, please cite the following articles.
 
-“Efficient global crystal structure prediction using polynomial machine learning potential in the binary Al–Cu alloy system”, [J. Ceram. Soc. Jpn. 131, 762 (2023)](https://www.jstage.jst.go.jp/article/jcersj2/131/10/131_23053/_article/-char/ja/)
+“Systematic global structure search of bismuth-based binary systems under pressure using machine learning potentials”, [Phys. Rev. Materials 10, 093801 (2026)](https://doi.org/10.1103/k9sg-v7hl)
 ```
-@article{HayatoWakai202323053,
-  title="{Efficient global crystal structure prediction using polynomial machine learning potential in the binary Al–Cu alloy system}",
-  author={Hayato Wakai and Atsuto Seko and Isao Tanaka},
-  journal={J. Ceram. Soc. Jpn.},
-  volume={131},
-  number={10},
-  pages={762-766},
-  year={2023},
-  doi={10.2109/jcersj2.23053}
+@article{Phys.Rev.Mater.10.093801,
+  title = {Systematic global structure search of bismuth-based binary systems under pressure using machine learning potentials},
+  author = {Wakai, Hayato and Ishiwata, Shintaro and Seko, Atsuto},
+  journal = {Phys. Rev. Mater.},
+  volume = {10},
+  issue = {9},
+  pages = {093801},
+  numpages = {28},
+  year = {2026},
+  month = {Sep},
+  publisher = {American Physical Society},
+  doi = {10.1103/k9sg-v7hl},
+  url = {https://link.aps.org/doi/10.1103/k9sg-v7hl}
 }
 ```
 
