@@ -1,5 +1,5 @@
-from matplot_util.custom_plt import CustomPlt
-from matplot_util.make_plot import MakePlot
+from rsspolymlp.utils.matplot_util.custom_plt import CustomPlt
+from rsspolymlp.utils.matplot_util.make_plot import MakePlot
 
 # initiarize plt and fig objects
 custom_template = CustomPlt(

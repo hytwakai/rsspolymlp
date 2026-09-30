@@ -430,11 +430,11 @@ def log_all_unique_structures(
     with open(file_name, "a") as f:
         print("unique_structures:", file=f)
         for idx1, _str in enumerate(unique_structs):
-            print(f"  - struct_No: {idx1+1}", file=f)
+            print(f"  - struct_No: {idx1 + 1}", file=f)
             print("    structures:", file=f)
             for idx2, _str in enumerate(unique_structs[idx1]):
-                print(f"    - sub_struct_No: '{idx1+1}_{idx2+1}'", file=f)
-                print(f"      poscar_name: {_str.struct_path}", file=f)
+                print(f"    - sub_struct_No: '{idx1 + 1}_{idx2 + 1}'", file=f)
+                print(f"      struct_path: {_str.struct_path}", file=f)
                 print(f"      pressure: {_str.pressure}", file=f)
                 print(f"      enthalpy: {_str.energy}", file=f)
                 print(f"      axis: {_str.axis_abc}", file=f)
@@ -460,7 +460,7 @@ def log_all_unique_structures(
                 _res["energy"] = _str.energy
                 _res["pressure"] = None
                 _res["spg_list"] = _str.spg_list
-                _res["struct_no"] = f"{idx1 + 1}_{idx2+1}"
+                _res["struct_no"] = f"{idx1 + 1}_{idx2 + 1}"
                 _res["is_ghost_minima"] = False
                 rss_results.append(_res)
             if unique_structs_prop is not None:

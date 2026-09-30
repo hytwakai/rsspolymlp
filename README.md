@@ -62,7 +62,7 @@ pip install rsspolymlp
    - Unique structure identification and RSS result summarization
    - Ghost minimum structure elimination
    - Phase stability analysis
- - [Development kit for polynomial MLPs](docs/rsspolymlp_devkit.md)
+ - [Development kit for polynomial MLPs](docs/rsspolymlp_dev.md)
    - MLP dataset generation
    - DFT dataset division
    - Polynomial MLP development

@@ -132,19 +132,22 @@ class RSSResultSummarizer:
             for ustr in unique_structs:
                 num_opt_str += len(list(ustr.dupstr_paths))
 
-            with open(composition_tag + ".yaml", "w") as f:
-                print("general_information:", file=f)
-                print(f"  sorting_time_sec:      {round(time_finish, 2)}", file=f)
-                print(f"  pressure_GPa:          {self.pressure}", file=f)
-                print(f"  num_optimized_structs: {num_opt_str}", file=f)
-                print(f"  num_unique_structs:    {len(unique_structs)}", file=f)
-                print("", file=f)
-
             energies = np.array([s.energy for s in unique_structs])
             distances = np.array([s.least_distance for s in unique_structs])
 
             sort_idx = np.argsort(energies)
             unique_str_sorted = [unique_structs[i] for i in sort_idx]
+            if self.thresholds is not None:
+                e_min = None
+                for idx, u in enumerate(unique_str_sorted):
+                    if e_min is None:
+                        e_min = u.energy
+                    if u.energy - e_min > self.thresholds[0] * 0.001:
+                        unique_str_sorted = unique_str_sorted[:idx]
+                        break
+                output_file = f"{composition_tag}_{self.thresholds[0]}"
+            else:
+                output_file = composition_tag
 
             if not self.parse_vasp:
                 os.makedirs("ghost_minima", exist_ok=True)
@@ -160,19 +163,27 @@ class RSSResultSummarizer:
             else:
                 is_ghost_minima = None
 
+            with open(output_file + ".yaml", "w") as f:
+                print("general_information:", file=f)
+                print(f"  sorting_time_sec:      {round(time_finish, 2)}", file=f)
+                print(f"  pressure_GPa:          {self.pressure}", file=f)
+                print(f"  num_optimized_structs: {num_opt_str}", file=f)
+                print(f"  num_unique_structs:    {len(unique_structs)}", file=f)
+                print("", file=f)
+
             rss_result_all = log_unique_structures(
-                composition_tag + ".yaml",
+                output_file + ".yaml",
                 unique_str_sorted,
                 is_ghost_minima,
                 pressure=self.pressure,
             )
 
-            with open(f"json/{composition_tag}.json", "w") as f:
+            with open(f"json/{output_file}.json", "w") as f:
                 json.dump(rss_result_all, f)
 
             if self.thresholds is not None or self.output_poscar is not False:
                 self.generate_poscars(
-                    f"json/{composition_tag}.json",
+                    f"json/{output_file}.json",
                     thresholds=self.thresholds,
                     output_poscar=self.output_poscar,
                 )
@@ -188,6 +199,13 @@ class RSSResultSummarizer:
             print(f"Composition {composition_tag}: summarizing...")
             self.analyzer = UniqueStructureAnalyzer()
 
+            if not self.parse_vasp:
+                axis_tol = 0.03
+                pos_tol = 0.03
+            else:
+                axis_tol = 0.1
+                pos_tol = 0.1
+
             time_start = time()
             for res_path in res_paths:
                 print(f" - Processing result file (parent): {res_path}")
@@ -195,8 +213,8 @@ class RSSResultSummarizer:
                     results_same_comp[composition_tag][res_path],
                     standardize_axis=True,
                     keep_unique=True,
-                    axis_tol=0.03,
-                    pos_tol=0.03,
+                    axis_tol=axis_tol,
+                    pos_tol=pos_tol,
                 )
             time_finish = time() - time_start
 
@@ -368,12 +386,14 @@ class RSSResultSummarizer:
 
         def resolve_path(base: Path, p):
             cwd = Path.cwd()
+            target = Path(p)
             if p is None:
                 return None
-            p = Path(p)
-            target = (
-                base / p if "opt_struct" in p.parts else base / "opt_struct" / p.name
-            )
+            if not self.parse_vasp:
+                p = Path(p)
+                target = (
+                    base / p if "opt_struct" in p.parts else base / "opt_struct" / p.name
+                )
             return os.path.relpath(target, start=cwd)
 
         paths_same_comp = defaultdict(list)
