@@ -78,13 +78,13 @@ def parse_vasp_results(elements, vasprun_paths):
 def divide_dataset(
     elements: list[str],
     vasprun_paths: list[str],
-    prototype_paths: list[str],
     threshold_e_high: float = 10.0,  # in eV/atom
     threshold_e_low: Optional[float] = None,
     threshold_f_small: float = 3.0,  # in eV/ang
     threshold_f_normal: float = 10.0,
     threshold_s_large: float = 200.0,  # in GPa
     threshold_s_small: Optional[float] = None,
+    vasprun_emin: Optional[list[str]] = None,
 ):
     """
     Classify VASP calculation results into dataset categories based on
@@ -112,49 +112,57 @@ def divide_dataset(
         "s_large-e_high": [],
     }
 
+    def _filtering_vasprun(vasprun_path, energy, force, stress):
+        min_stress = min([stress[0][0], stress[1][1], stress[2][2]])
+        max_stress = np.max(np.abs(stress))
+
+        # Filter by energy value
+        if energy > threshold_e_high or (
+            threshold_e_low is not None and energy < threshold_e_low
+        ):
+            e_tag = "-e_high"
+        else:
+            e_tag = ""
+
+        # Filter by stress tensor components
+        if max_stress > threshold_s_large * 10 or (
+            threshold_s_small is not None and min_stress < threshold_s_small * 10
+        ):
+            vasprun_dict[f"s_large{e_tag}"].append(vasprun_path)
+            return
+
+        # Filter by force components
+        if np.all(np.abs(force) <= threshold_f_small):
+            vasprun_dict[f"f_small{e_tag}"].append(vasprun_path)
+            return
+        if np.all(np.abs(force) <= threshold_f_normal):
+            vasprun_dict[f"f_normal{e_tag}"].append(vasprun_path)
+            return
+        vasprun_dict[f"f_large{e_tag}"].append(vasprun_path)
+
     dft_dict_array = parse_vasp_results(elements=elements, vasprun_paths=vasprun_paths)
 
-    ch_analyzer = ConvexHullAnalyzer(elements=elements)
-    ch_analyzer.parse_results(input_paths=prototype_paths, parse_vasp=True)
-    ch_analyzer.set_endmember_energies()
-    ch_analyzer.compute_convex_hull()
+    if vasprun_emin is None:
+        for data in dft_dict_array:
+            _filtering_vasprun(
+                data["input_path"], data["energy"], data["force"], data["stress"]
+            )
+    else:
+        ch_analyzer = ConvexHullAnalyzer(elements=elements)
+        ch_analyzer.parse_results(input_paths=vasprun_emin, parse_vasp=True)
+        ch_analyzer.set_endmember_energies()
+        ch_analyzer.compute_convex_hull()
 
-    ch_analyzer.composition_data = dft_dict_array
-    ch_analyzer.compute_formation_energies(json_output=False)
-    ch_analyzer.compute_fe_above_ch()
+        ch_analyzer.composition_data = dft_dict_array
+        ch_analyzer.compute_formation_energies(json_output=False)
+        ch_analyzer.compute_fe_above_ch()
 
-    for _, data in ch_analyzer.composition_data.items():
-        for idx, vasprun_path in enumerate(data["input_path"]):
-            fe_above_ch = data["fe_above_ch"][idx]
-            force = data["force"][idx]
-            stress = data["stress"][idx]
-
-            min_stress = min([stress[0][0], stress[1][1], stress[2][2]])
-            max_stress = np.max(np.abs(stress))
-
-            # Filter by energy value
-            if fe_above_ch > threshold_e_high or (
-                threshold_e_low is not None and fe_above_ch < threshold_e_low
-            ):
-                e_tag = "-e_high"
-            else:
-                e_tag = ""
-
-            # Filter by stress tensor components
-            if max_stress > threshold_s_large * 10 or (
-                threshold_s_small is not None and min_stress < threshold_s_small * 10
-            ):
-                vasprun_dict[f"s_large{e_tag}"].append(vasprun_path)
-                continue
-
-            # Filter by force components
-            if np.all(np.abs(force) <= threshold_f_small):
-                vasprun_dict[f"f_small{e_tag}"].append(vasprun_path)
-                continue
-            if np.all(np.abs(force) <= threshold_f_normal):
-                vasprun_dict[f"f_normal{e_tag}"].append(vasprun_path)
-                continue
-            vasprun_dict[f"f_large{e_tag}"].append(vasprun_path)
+        for _, data in ch_analyzer.composition_data.items():
+            for idx, vasprun_path in enumerate(data["input_path"]):
+                f_enthalpy_above_ch = data["fe_above_ch"][idx]
+                force = data["force"][idx]
+                stress = data["stress"][idx]
+                _filtering_vasprun(vasprun_path, f_enthalpy_above_ch, force, stress)
 
     return vasprun_dict
 

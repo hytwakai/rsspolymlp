@@ -178,14 +178,14 @@ def compress_vasprun(
 def divide_dft_dataset(
     elements: list[str],
     target_dirs: list[str],
-    prototype_paths: list[str],
     threshold_e_high: float = 10.0,  # in eV/atom
     threshold_e_low: Optional[float] = None,
     threshold_f_small: float = 3.0,  # in eV/ang
     threshold_f_normal: float = 10.0,
     threshold_s_large: float = 200.0,  # in GPa
-    threshold_s_small: Optional[float] = None,
     divide_ratio: float = 0.1,
+    threshold_s_small: Optional[float] = None,
+    vasprun_emin: Optional[list[str]] = None,
 ):
     vasprun_paths = []
     for target_dir in target_dirs:
@@ -194,13 +194,13 @@ def divide_dft_dataset(
     vasprun_dict = divide_dataset(
         elements=elements,
         vasprun_paths=vasprun_paths,
-        prototype_paths=prototype_paths,
         threshold_e_high=threshold_e_high,
         threshold_e_low=threshold_e_low,
         threshold_f_small=threshold_f_small,
         threshold_f_normal=threshold_f_normal,
         threshold_s_large=threshold_s_large,
         threshold_s_small=threshold_s_small,
+        vasprun_emin=vasprun_emin,
     )
 
     output_dir = "dft_dataset"
@@ -210,13 +210,13 @@ def divide_dft_dataset(
         print("arguments:", file=f)
         print("  elements:", elements, file=f)
         print("  path:", target_dirs, file=f)
-        print("  prototype_paths:", prototype_paths, file=f)
         print("  threshold_e_high:", threshold_e_high, file=f)
         print("  threshold_e_low:", threshold_e_low, file=f)
         print("  threshold_f_small:", threshold_f_small, file=f)
         print("  threshold_f_normal:", threshold_f_normal, file=f)
         print("  threshold_s_large:", threshold_s_large, file=f)
         print("  threshold_s_small:", threshold_s_small, file=f)
+        print("  vasprun_emin:", vasprun_emin, file=f)
         print("", file=f)
 
     with open(f"{output_dir}/n_data.yaml", "w") as f:

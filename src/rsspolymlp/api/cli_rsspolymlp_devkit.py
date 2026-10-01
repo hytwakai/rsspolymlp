@@ -213,13 +213,6 @@ def run():
 
     # --divide_data mode
     parser.add_argument(
-        "--prototype_paths",
-        type=str,
-        nargs="+",
-        default=None,
-        help="Directories containing vasprun.xml files for prototype structures",
-    )
-    parser.add_argument(
         "--th_e_high",
         type=float,
         default=10.0,
@@ -254,6 +247,13 @@ def run():
         type=float,
         default=None,
         help="Stress threshold (GPa) for structures with small stress tensor (s_small)",
+    )
+    parser.add_argument(
+        "--vasprun_emin",
+        type=str,
+        nargs="+",
+        default=None,
+        help="Directories containing vasprun.xml files for structures used as energy references",
     )
     parser.add_argument(
         "--divide_ratio",
@@ -315,7 +315,6 @@ def run():
         divide_dft_dataset(
             elements=args.elements,
             target_dirs=args.paths,
-            prototype_paths=args.prototype_paths,
             threshold_e_high=args.th_e_high,
             threshold_e_low=args.th_e_low,
             threshold_f_small=args.th_f_small,
@@ -323,4 +322,5 @@ def run():
             threshold_s_large=args.th_s_large,
             threshold_s_small=args.th_s_small,
             divide_ratio=args.divide_ratio,
+            vasprun_emin=args.vasprun_emin,
         )
