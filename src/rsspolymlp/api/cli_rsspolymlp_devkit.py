@@ -314,7 +314,7 @@ def run():
     if args.split_data:
         split_dft_dataset(
             elements=args.elements,
-            target_dirs=args.paths,
+            target_paths=args.paths,
             threshold_e_high=args.th_e_high,
             threshold_e_low=args.th_e_low,
             threshold_f_small=args.th_f_small,

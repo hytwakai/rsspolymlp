@@ -177,7 +177,7 @@ def compress_vasprun(
 
 def split_dft_dataset(
     elements: list[str],
-    target_dirs: list[str],
+    target_paths: list[str],
     threshold_e_high: float = 10.0,  # in eV/atom
     threshold_e_low: Optional[float] = None,
     threshold_f_small: float = 3.0,  # in eV/ang
@@ -188,8 +188,8 @@ def split_dft_dataset(
     vasprun_emin: Optional[list[str]] = None,
 ):
     vasprun_paths = []
-    for target_dir in target_dirs:
-        vasprun_paths.extend(sorted(glob.glob(target_dir + "/*")))
+    for target_path in target_paths:
+        vasprun_paths.extend(sorted(glob.glob(target_path + "*")))
 
     vasprun_dict = split_dataset(
         elements=elements,
@@ -209,7 +209,7 @@ def split_dft_dataset(
     with open(f"{output_dir}/dataset.yaml", "w") as f:
         print("arguments:", file=f)
         print("  elements:", elements, file=f)
-        print("  path:", target_dirs, file=f)
+        print("  path:", target_paths, file=f)
         print("  threshold_e_high:", threshold_e_high, file=f)
         print("  threshold_e_low:", threshold_e_low, file=f)
         print("  threshold_f_small:", threshold_f_small, file=f)
