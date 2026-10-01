@@ -8,7 +8,7 @@ from joblib import Parallel, delayed
 
 from pypolymlp.postproc.count_time import PolymlpCost
 from rsspolymlp.mlp_dev.dataset.compress_vasprun import check_convergence, compress
-from rsspolymlp.mlp_dev.dataset.divide_dataset import divide_dataset, divide_train_test
+from rsspolymlp.mlp_dev.dataset.split_dataset import split_dataset, split_train_test
 from rsspolymlp.mlp_dev.dataset.gen_mlp_dataset import gen_mlp_data
 from rsspolymlp.mlp_dev.estimate_cost import make_polymlp_yaml
 from rsspolymlp.mlp_dev.pareto_opt_mlp import pareto_front, parse_mlp_property
@@ -175,7 +175,7 @@ def compress_vasprun(
     print(f"   failed parse:       {vasprun_status['parse']} structure")
 
 
-def divide_dft_dataset(
+def split_dft_dataset(
     elements: list[str],
     target_dirs: list[str],
     threshold_e_high: float = 10.0,  # in eV/atom
@@ -183,7 +183,7 @@ def divide_dft_dataset(
     threshold_f_small: float = 3.0,  # in eV/ang
     threshold_f_normal: float = 10.0,
     threshold_s_large: float = 200.0,  # in GPa
-    divide_ratio: float = 0.1,
+    split_ratio: float = 0.1,
     threshold_s_small: Optional[float] = None,
     vasprun_emin: Optional[list[str]] = None,
 ):
@@ -191,7 +191,7 @@ def divide_dft_dataset(
     for target_dir in target_dirs:
         vasprun_paths.extend(sorted(glob.glob(target_dir + "/*")))
 
-    vasprun_dict = divide_dataset(
+    vasprun_dict = split_dataset(
         elements=elements,
         vasprun_paths=vasprun_paths,
         threshold_e_high=threshold_e_high,
@@ -226,10 +226,10 @@ def divide_dft_dataset(
         if len(vasprun_list) == 0:
             continue
 
-        train_data, test_data = divide_train_test(
+        train_data, test_data = split_train_test(
             data_name=data_name,
             vasprun_list=vasprun_list,
-            divide_ratio=divide_ratio,
+            split_ratio=split_ratio,
             output_dir=output_dir,
         )
 

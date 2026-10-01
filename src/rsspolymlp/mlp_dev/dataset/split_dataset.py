@@ -75,7 +75,7 @@ def parse_vasp_results(elements, vasprun_paths):
     return dft_dict_array
 
 
-def divide_dataset(
+def split_dataset(
     elements: list[str],
     vasprun_paths: list[str],
     threshold_e_high: float = 10.0,  # in eV/atom
@@ -167,11 +167,11 @@ def divide_dataset(
     return vasprun_dict
 
 
-def divide_train_test(
-    data_name, vasprun_list, divide_ratio=0.1, output_dir="dft_dataset"
+def split_train_test(
+    data_name, vasprun_list, split_ratio=0.1, output_dir="dft_dataset"
 ):
     random.shuffle(vasprun_list)
-    split_index = math.floor(len(vasprun_list) * divide_ratio)
+    split_index = math.floor(len(vasprun_list) * split_ratio)
 
     train_data = sorted(vasprun_list[split_index:])
     test_data = sorted(vasprun_list[:split_index])

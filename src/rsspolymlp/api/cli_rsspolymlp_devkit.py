@@ -2,7 +2,7 @@ import argparse
 
 from rsspolymlp.api.rsspolymlp_devkit import (
     compress_vasprun,
-    divide_dft_dataset,
+    split_dft_dataset,
     estimate_cost,
     mlp_dataset,
     pareto_opt_mlp,
@@ -38,7 +38,7 @@ def run():
         help="Mode: Compress vasprun.xml files and check convergence",
     )
     parser.add_argument(
-        "--divide_data",
+        "--split_data",
         action="store_true",
         help="Mode: DFT dataset division",
     )
@@ -124,7 +124,7 @@ def run():
             "  --calc_cost : Contains polymlp.yaml or polymlp.in\n"
             "  --pareto_opt : Contains polymlp_error.yaml and polymlp_cost.yaml\n"
             "  --compress_data : Contains a vasprun.xml file\n"
-            "  --divide_data : Contains vasprun.xml files\n"
+            "  --split_data : Contains vasprun.xml files\n"
         ),
     )
 
@@ -211,7 +211,7 @@ def run():
         action="store_true",
     )
 
-    # --divide_data mode
+    # --split_data mode
     parser.add_argument(
         "--th_e_high",
         type=float,
@@ -256,7 +256,7 @@ def run():
         help="Directories containing vasprun.xml files for structures used as energy references",
     )
     parser.add_argument(
-        "--divide_ratio",
+        "--split_ratio",
         type=float,
         default=0.1,
         help="Ratio of the dataset to be used for testing (e.g., 0.1 for 10 percent test data).",
@@ -311,8 +311,8 @@ def run():
             not_check=args.not_check,
         )
 
-    if args.divide_data:
-        divide_dft_dataset(
+    if args.split_data:
+        split_dft_dataset(
             elements=args.elements,
             target_dirs=args.paths,
             threshold_e_high=args.th_e_high,
@@ -321,6 +321,6 @@ def run():
             threshold_f_normal=args.th_f_normal,
             threshold_s_large=args.th_s_large,
             threshold_s_small=args.th_s_small,
-            divide_ratio=args.divide_ratio,
+            split_ratio=args.split_ratio,
             vasprun_emin=args.vasprun_emin,
         )
