@@ -125,6 +125,7 @@ def run():
             num_process=args.num_process,
             backend=args.backend,
             primitive_symprecs=args.primitive_symprecs,
+            reduced_symprecs=args.reduced_symprecs,
             axis_tol=args.axis_tol,
             pos_tol=args.pos_tol,
             standardize_axis=args.standardize_axis,

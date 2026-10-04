@@ -18,6 +18,7 @@ def struct_matcher(
     num_process: int = -1,
     backend: str = "loky",
     primitive_symprecs: list[float] = [1e-5, 1e-4, 1e-3, 1e-2],
+    reduced_symprecs: list[float] = None,
     axis_tol: float = 0.05,
     pos_tol: float = 0.03,
     standardize_axis: bool = False,
@@ -26,6 +27,12 @@ def struct_matcher(
     output_file: str = "unique_struct.yaml",
     log_all: bool = False,
 ):
+    if reduced_symprecs is None:
+        if not frac_coords:
+            reduced_symprecs = [1e-4, 1e-2, 1e-1]
+        else:
+            reduced_symprecs = [1e-5, 1e-3, 1e-2]
+
     rss_results = []
     for poscar_path in poscar_paths:
         rss_results.append({"struct_path": poscar_path})
@@ -35,6 +42,7 @@ def struct_matcher(
         num_process=num_process,
         backend=backend,
         symprec_set1=primitive_symprecs,
+        symprec_set2=reduced_symprecs,
         standardize_axis=standardize_axis,
         cartesian_coords=not frac_coords,
     )
