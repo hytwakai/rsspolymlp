@@ -158,7 +158,7 @@ class OptimizationMLP:
 
                 return minobj
 
-            except ValueError:
+            except RuntimeError:
                 if c_count == 2:
                     print(
                         "Final function value (eV/atom):",
@@ -251,7 +251,7 @@ class OptimizationMLP:
 
     def print_final_structure_details(self):
         """Print residual forces, stress, and final structure."""
-        if not self.minobj.relax_cell:
+        if not self.minobj._basis._relax_cell:
             print("Residuals (force):")
             print(self.minobj.residual_forces.T)
             print(

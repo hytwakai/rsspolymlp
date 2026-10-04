@@ -2,7 +2,7 @@ import os
 
 import numpy as np
 
-from rsspolymlp.api.rsspolymlp import rss_init_struct, rss_run_parallel, rss_uniq_struct
+from rsspolymlp.api.rsspolymlp import rss_init_struct, rss_opt, rss_uniq_struct
 
 atom_num_set = np.arange(1, 5)
 pressure_set = [0.0]
@@ -25,7 +25,7 @@ for pressure in pressure_set:
 
             print("- rss-parallel")
             potential = "../../../../potential/AlCu_polymlp.lammps"
-            rss_run_parallel(
+            rss_opt(
                 pot=potential,
                 pressure=pressure,
                 n_opt_str=30,

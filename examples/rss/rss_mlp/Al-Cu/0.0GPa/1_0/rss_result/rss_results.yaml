@@ -1,24 +1,24 @@
 general_information:
-  sorting_time_sec:         0.18
+  sorting_time_sec:         0.1
   selected_potential:       ['../../../../potential/AlCu_polymlp.lammps']
   pressure_GPa:             0.0
   max_rss_structures:       30
   num_initial_structures:   30
-  num_optimized_structures: 23
+  num_optimized_structures: 26
   num_unique_structures:    2
   stopping_criterion:       All randomly generated initial structures have been processed. Stopping.
-  optimized_per_initial:    0.77
-  total_rss_time_sec:       52
+  optimized_per_initial:    0.87
+  total_rss_time_sec:       2
 
 evaluation_counts:
-  iteration:            5459
-  function_evaluations: 10317
-  gradient_evaluations: 10313
+  iteration:            5744
+  function_evaluations: 9828
+  gradient_evaluations: 9826
 
 error_counts:
-  total:            7
-  low_energy:       6
-  zero_energy:      1
+  total:            4
+  low_energy:       4
+  zero_energy:      0
   anomalous_struct: 0
   force_conv:       0
   stress_conv:      0
@@ -27,38 +27,38 @@ error_counts:
 
 invalid_layer_structures:
   invalid_struct: 0
-  valid_struct:   23
+  valid_struct:   26
 
 unique_structures:
   - struct_No: 1
     struct_path: POSCAR_26
     energy_diff_meV_per_atom: 0.0
-    n_duplicates: 10
-    enthalpy: -3.4278065007891283
-    axis: [4.03751768888562, 4.03751768888562, 4.03751768888562, 90.0, 90.0, 90.0]
+    n_duplicates: 14
+    enthalpy: -3.427806500789112
+    axis: [4.037517647276908, 4.037517647276908, 4.037517647276908, 90.0, 90.0, 90.0]
     positions: [[0.0, 0.0, 0.0], [0.0, 0.5, 0.5], [0.5, 0.0, 0.5], [0.5, 0.5, 0.0]]
     elements: ['Al', 'Al', 'Al', 'Al']
     space_group: ['Fm-3m (225)', 'Fm-3m (225)', 'Fm-3m (225)', 'Fm-3m (225)']
-    other_info: 4 atom / distance 2.855 (Ang.) / volume 16.45 (A^3/atom) / iteration 201
+    other_info: 4 atom / distance 2.855 (Ang.) / volume 16.45 (A^3/atom) / iteration 212
   - struct_No: 2
-    struct_path: POSCAR_28
+    struct_path: POSCAR_30
     energy_diff_meV_per_atom: 682.71
-    n_duplicates: 13
-    enthalpy: -2.745097717800258
-    axis: [2.764562022155902, 2.7645620221559017, 16.063874143339305, 90.0, 90.0, 120.00000000000001]
+    n_duplicates: 12
+    enthalpy: -2.745097717800189
+    axis: [2.764561847559517, 2.7645618475595177, 16.06387471517136, 90.0, 90.0, 120.00000000000001]
     positions: [[0.0, 0.0, 0.0], [0.666666666666667, 0.333333333333333, 0.333333333333333], [0.333333333333333, 0.666666666666667, 0.666666666666667]]
     elements: ['Al', 'Al', 'Al']
     space_group: ['R-3m (166)', 'R-3m (166)', 'R-3m (166)', 'R-3m (166)']
-    other_info: 3 atom / distance 2.765 (Ang.) / volume 35.44 (A^3/atom) / iteration 224
+    other_info: 3 atom / distance 2.765 (Ang.) / volume 35.44 (A^3/atom) / iteration 215
 
 evaluation_count_per_structure:
-  iteration_list:            [207, 840, 5259]
-  function_evaluations_list: [411, 1641, 9934]
-  gradient_evaluations_list: [411, 1641, 9930]
+  iteration_list:            [222, 428, 5744]
+  function_evaluations_list: [361, 698, 9828]
+  gradient_evaluations_list: [361, 698, 9826]
 
 poscar_names_failed:
-  low_energy:       ['POSCAR_11', 'POSCAR_1', 'POSCAR_19', 'POSCAR_22', 'POSCAR_23', 'POSCAR_24']
-  zero_energy:      ['POSCAR_15']
+  low_energy:       ['POSCAR_5', 'POSCAR_8', 'POSCAR_23', 'POSCAR_24']
+  zero_energy:      []
   anomalous_struct: []
   force_conv:       []
   stress_conv:      []
