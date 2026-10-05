@@ -33,9 +33,11 @@ def rss_init_struct(
 
 def rss_opt(
     pot="polymlp.yaml",
+    init_poscars_dir="initial_struct",
     pressure=0.0,
     with_symmetry=False,
     solver_method="CG",
+    gtol=1e-6,
     c_maxiter=100,
     n_opt_str=1000,
     not_stop_rss=False,
@@ -52,31 +54,34 @@ def rss_opt(
         return
 
     # Check which structures have already been optimized
-    poscar_paths = sorted(
-        glob.glob("initial_struct/*"), key=lambda x: int(x.split("_")[-1])
-    )
+    poscar_paths = glob.glob(f"{init_poscars_dir}/*")
+    try:
+        poscar_paths = sorted(poscar_paths, key=lambda x: int(x.split("_")[-1]))
+    except ValueError:
+        poscar_paths = sorted(poscar_paths)
     with open("rss_result/finish.dat") as f:
         finished_set = set(line.strip() for line in f)
     poscar_paths_rev = [
         p for p in poscar_paths if os.path.basename(p) not in finished_set
     ]
-
     if len(poscar_paths_rev) == 0:
         return
+
+    time_start = time.time()
 
     rssobj = OptimizationMLP(
         pot=pot,
         pressure=pressure,
         with_symmetry=with_symmetry,
         solver_method=solver_method,
+        gtol=gtol,
         c_maxiter=c_maxiter,
         n_opt_str=n_opt_str,
         not_stop_rss=not_stop_rss,
     )
-
-    time_start = time.time()
     for poscar in poscar_paths_rev:
         rssobj.run_optimization(poscar)
+
     elapsed = time.time() - time_start
 
     with open("rss_result/elapsed_time.log", "a") as f:
@@ -111,6 +116,7 @@ def rss_polymlp(
     max_volume=100,
     least_distance=0.0,
     solver_method="CG",
+    gtol=1e-6,
     not_stop_rss=False,
     num_process=-1,
     backend="loky",
@@ -151,6 +157,7 @@ def rss_polymlp(
             pressure=pressure,
             with_symmetry=with_symmetry,
             solver_method=solver_method,
+            gtol=gtol,
             c_maxiter=c_maxiter,
             n_opt_str=n_opt_str,
             not_stop_rss=not_stop_rss,

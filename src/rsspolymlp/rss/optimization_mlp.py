@@ -132,7 +132,9 @@ class OptimizationMLP:
 
         maxiter = 300
         for c_count in range(3):
-            if iteration == 0 and c_count <= 1 or iteration == 1 and c_count == 0:
+            if self.c_maxiter > 0 and (
+                iteration == 0 and c_count <= 1 or iteration == 1 and c_count == 0
+            ):
                 maxiter = self.c_maxiter
                 continue
 
@@ -177,7 +179,7 @@ class OptimizationMLP:
                     c2_set[c_count + 1],
                     flush=True,
                 )
-                maxiter = 100
+                maxiter = self.c_maxiter
 
     def write_refine_structure(self, poscar_path):
         """Refine the crystal structure with increasing symmetry precision."""

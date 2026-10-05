@@ -4,9 +4,9 @@ from rsspolymlp.api.rsspolymlp import (
     rss_ghost_minima_cands,
     rss_ghost_minima_validate,
     rss_init_struct,
+    rss_opt,
     rss_phase_analysis,
     rss_polymlp,
-    rss_opt,
     rss_summarize,
     rss_uniq_struct,
 )
@@ -109,6 +109,12 @@ def run():
         help="Potential file for polynomial MLP",
     )
     parser.add_argument(
+        "--init_poscars_dir",
+        type=str,
+        default="initial_struct",
+        help="Directory containing POSCARs describing initial structures",
+    )
+    parser.add_argument(
         "--n_opt_str",
         type=int,
         default=1000,
@@ -131,6 +137,7 @@ def run():
     parser.add_argument(
         "--solver_method", type=str, default="CG", help="Type of solver"
     )
+    parser.add_argument("--gtol", type=float, default=1e-6, help="")
     parser.add_argument(
         "--c_maxiter",
         type=int,
@@ -263,9 +270,11 @@ def run():
     if args.rss_opt:
         rss_opt(
             pot=args.pot,
+            init_poscars_dir=args.init_poscars_dir,
             pressure=args.pressure,
             with_symmetry=args.symmetry,
             solver_method=args.solver_method,
+            gtol=args.gtol,
             c_maxiter=args.c_maxiter,
             n_opt_str=args.n_opt_str,
             not_stop_rss=args.not_stop_rss,
@@ -292,6 +301,7 @@ def run():
             max_volume=args.max_volume,
             least_distance=args.least_distance,
             solver_method=args.solver_method,
+            gtol=args.gtol,
             not_stop_rss=args.not_stop_rss,
             num_process=args.num_process,
             backend=args.backend,
