@@ -66,8 +66,8 @@ grep "TITEL" ./POTCAR > ./POTCAR_compress
 sed '/band No\\.  band energies     occupation/,/^$/d' ./OUTCAR > ./OUTCAR_compress
 rm ./POTCAR
 rm ./OUTCAR
-if find "$PWD" -type f -name "*std*" -size +50M | grep -q .; then
-    sed -i '/WARNING: Sub-Space-Matrix is not hermitian in DAV/,/DAV:/{{/DAV:/!d}}' "$output"
+if find '$PWD' -type f -name '*std*' -size +50M | grep -q .; then
+    sed -i '/WARNING: Sub-Space-Matrix is not hermitian in DAV/,/DAV:/{{/DAV:/!d}}' '$output'
 fi
 """
     return script.strip()
@@ -167,7 +167,7 @@ if [ $relax_state -eq 1 ]; then
 else
     echo "fail" >> "$status_file"
 fi
-find "$PWD" -type f -name "*std*" -size +50M -exec sed -i '/WARNING: Sub-Space-Matrix is not hermitian in DAV/,/DAV:/{{/DAV:/!d;}}' {{}} +
+find '$PWD' -type f -name '*std*' -size +50M -exec sed -i '/WARNING: Sub-Space-Matrix is not hermitian in DAV/,/DAV:/{{/DAV:/!d;}}' {{}} +
 """
     return script.strip()
 
