@@ -9,7 +9,6 @@ from time import time
 
 import numpy as np
 
-from pypolymlp.core.interface_vasp import Vasprun
 from pypolymlp.utils.vasp_utils import write_poscar_file
 from rsspolymlp.analysis.ghost_minima import detect_ghost_minima
 from rsspolymlp.analysis.unique_struct import (
@@ -18,9 +17,9 @@ from rsspolymlp.analysis.unique_struct import (
     log_all_unique_structures,
     log_unique_structures,
 )
-from rsspolymlp.common.atomic_energy import atomic_energy
 from rsspolymlp.common.composition import compute_composition
 from rsspolymlp.common.convert_dict import polymlp_struct_from_dict
+from rsspolymlp.common.interface_vasp import Vasprun, parse_properties_from_vasprun
 from rsspolymlp.common.property import PropUtil
 
 
@@ -366,11 +365,10 @@ class RSSResultSummarizer:
                             shutil.copy(poscar_path, dest)
                         else:
                             try:
-                                vaspobj = Vasprun(res["struct_path"])
+                                polymlp_st = Vasprun(res["struct_path"]).structure
                             except Exception:
                                 print(res["struct_path"], "failed")
                                 continue
-                            polymlp_st = vaspobj.structure
                             write_poscar_file(polymlp_st, filename=dest)
                         shutil.copy(res["struct_path"], dest_vasp)
                     else:
@@ -392,7 +390,9 @@ class RSSResultSummarizer:
             if not self.parse_vasp:
                 p = Path(p)
                 target = (
-                    base / p if "opt_struct" in p.parts else base / "opt_struct" / p.name
+                    base / p
+                    if "opt_struct" in p.parts
+                    else base / "opt_struct" / p.name
                 )
             return os.path.relpath(target, start=cwd)
 
@@ -438,23 +438,20 @@ class RSSResultSummarizer:
                 "dupstr_paths": None,
             }
             try:
-                vaspobj = Vasprun(path_name + "/vasprun.xml")
+                polymlp_st, (energy_dft, _, _) = parse_properties_from_vasprun(
+                    path_name + "/vasprun.xml",
+                )
             except Exception:
                 print("ParseError:", path_name + "/vasprun.xml")
                 continue
 
-            polymlp_st = vaspobj.structure
-            objprop = PropUtil(polymlp_st.axis.T, polymlp_st.positions.T)
-            spg_list = objprop.analyze_space_group(polymlp_st.elements)
-
-            energy_dft = vaspobj.energy
-            for element in polymlp_st.elements:
-                energy_dft -= atomic_energy(element)
             energy_dft /= len(polymlp_st.elements)
-
             if energy_dft < -10:
                 print(path_name, "exhibits an unphysically low energy. Skipping.")
                 continue
+
+            objprop = PropUtil(polymlp_st.axis.T, polymlp_st.positions.T)
+            spg_list = objprop.analyze_space_group(polymlp_st.elements)
 
             res_dict["struct_path"] = os.path.relpath(
                 path_name + "/vasprun.xml", os.getcwd()

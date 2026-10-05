@@ -90,7 +90,7 @@ class EOSFit:
         else:
             self.parameters = result[0]
 
-        print(f"RMSE of EOS fit (energy): {self.rmse*1000:.6f} meV")
+        print(f"RMSE of EOS fit (energy): {self.rmse * 1000:.6f} meV")
 
     @property
     def rmse(self) -> float:

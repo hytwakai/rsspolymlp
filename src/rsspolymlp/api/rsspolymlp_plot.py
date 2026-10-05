@@ -4,10 +4,9 @@ import os
 
 import numpy as np
 
-from pypolymlp.core.interface_vasp import Vasprun
 from pypolymlp.core.units import EVtoGPa
 from rsspolymlp.analysis.phase_analysis import load_convexhull_data
-from rsspolymlp.common.atomic_energy import atomic_energy
+from rsspolymlp.common.interface_vasp import parse_properties_from_vasprun
 from rsspolymlp.mlp_dev.pareto_opt_mlp import pareto_front, parse_mlp_property
 from rsspolymlp.utils.matplot_util.custom_plt import CustomPlt
 from rsspolymlp.utils.matplot_util.make_plot import MakePlot
@@ -246,15 +245,15 @@ def plot_rss_error(
                 _poscar_name = dft_path.split("/")[-1]
                 if _poscar_name in set(poscar_name):
                     try:
-                        vasprun = Vasprun(dft_path + "/vasprun.xml")
-                        dft_energy = vasprun.energy
+                        polymlp_st, (dft_energy, _, dft_stress) = (
+                            parse_properties_from_vasprun(
+                                dft_path + "/vasprun.xml", units="GPa"
+                            )
+                        )
                     except Exception:
                         print(dft_path + "/vasprun.xml error")
                         continue
 
-                    polymlp_st = vasprun.structure
-                    for element in polymlp_st.elements:
-                        dft_energy -= atomic_energy(element)
                     dft_energy /= len(polymlp_st.elements)
 
                     pstress = 0
@@ -272,9 +271,7 @@ def plot_rss_error(
                             if not pstress == 0:
                                 dft_energy -= pstress * vol_per_atom / EVtoGPa
                             print("add pressure term")
-                            pressure = np.mean(
-                                [(vasprun.stress / 10).tolist()[i][i] for i in range(3)]
-                            )
+                            pressure = np.mean([dft_stress[i][i] for i in range(3)])
                             dft_energy += pressure * vol_per_atom / EVtoGPa
                         np_file = "rss_error/enthalpy.npy"
                     else:

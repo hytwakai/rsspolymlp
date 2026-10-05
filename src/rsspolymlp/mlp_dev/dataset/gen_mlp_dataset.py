@@ -3,10 +3,10 @@ import os
 import numpy as np
 
 from pypolymlp.core.data_format import PolymlpStructure
-from pypolymlp.core.interface_vasp import Poscar
 from pypolymlp.core.strgen import StructureGenerator
 from pypolymlp.utils.structure_utils import supercell_diagonal
 from pypolymlp.utils.vasp_utils import write_poscar_file
+from rsspolymlp.common.interface_vasp import Poscar
 from rsspolymlp.common.property import PropUtil
 
 

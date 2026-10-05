@@ -7,8 +7,8 @@ import numpy as np
 
 from pypolymlp.calculator.opt_geometry import GeometryOptimization
 from pypolymlp.calculator.properties import Properties
-from pypolymlp.core.interface_vasp import Poscar
 from pypolymlp.utils.spglib_utils import SymCell
+from rsspolymlp.common.interface_vasp import Poscar
 
 
 class OptimizationMLP:

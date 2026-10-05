@@ -8,10 +8,10 @@ from typing import Optional
 import numpy as np
 
 from pypolymlp.core.data_format import PolymlpStructure
-from pypolymlp.core.interface_vasp import Poscar
 from pypolymlp.utils.vasp_utils import write_poscar_file
 from rsspolymlp.analysis.struct_matcher.reduced_position import StructRepReducer
 from rsspolymlp.common.composition import compute_composition
+from rsspolymlp.common.interface_vasp import Poscar
 from rsspolymlp.utils.spglib_utils import SymCell
 
 
@@ -119,7 +119,7 @@ def struct_match(
             print("      metric_tensor:", np.round(axis, round_axis).tolist())
             print("      positions:")
             for p in positions.reshape(3, -1).tolist():
-                formatted = ",".join(f"{val:{round_pos+3}.{round_pos}f}" for val in p)
+                formatted = ",".join(f"{val:{round_pos + 3}.{round_pos}f}" for val in p)
                 print(f"      - [{formatted}]")
 
         with open(output_file, "w") as f, redirect_stdout(f):
@@ -128,7 +128,7 @@ def struct_match(
             print("  pos_tol:", pos_tol)
             print("structures:")
             for i, st_set in enumerate([st_1_set, st_2_set]):
-                print(f"  - struct_No: {i+1}")
+                print(f"  - struct_No: {i + 1}")
                 for st in st_set:
                     print("    spg_number:", st.spg_number)
                     print("    representations:")

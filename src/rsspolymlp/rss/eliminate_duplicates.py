@@ -11,7 +11,7 @@ from collections import Counter, defaultdict
 from time import time
 
 import numpy as np
-from pypolymlp.core.interface_vasp import Poscar
+
 from pypolymlp.core.io_polymlp import load_mlps
 from rsspolymlp.analysis.ghost_minima import detect_ghost_minima
 from rsspolymlp.analysis.unique_struct import (
@@ -19,6 +19,7 @@ from rsspolymlp.analysis.unique_struct import (
     generate_unique_structs,
     log_unique_structures,
 )
+from rsspolymlp.common.interface_vasp import Poscar
 from rsspolymlp.common.property import PropUtil
 from rsspolymlp.rss.load_logfile import LogfileLoader
 
@@ -123,8 +124,8 @@ class RSSResultAnalyzer:
     def _validate_optimized_struct(self, poscar_name, struct_prop):
         if self.cutoff is None:
             _params, _ = load_mlps(self.potential)
-            if not isinstance(_params, list):
-                self.cutoff = _params.as_dict()["model"]["cutoff"]
+            if not isinstance(_params.params, list):
+                self.cutoff = _params.params.as_dict()["model"]["cutoff"]
             else:
                 max_cutoff = 0.0
                 for param in _params:

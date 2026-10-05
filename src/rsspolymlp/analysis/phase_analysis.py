@@ -7,9 +7,8 @@ import numpy as np
 import yaml
 from scipy.spatial import ConvexHull
 
-from pypolymlp.core.interface_vasp import Vasprun
-from rsspolymlp.common.atomic_energy import atomic_energy
 from rsspolymlp.common.composition import compute_composition
+from rsspolymlp.common.interface_vasp import parse_properties_from_vasprun
 
 
 class ConvexHullAnalyzer:
@@ -319,15 +318,13 @@ class ConvexHullAnalyzer:
         for dft_path in input_paths:
             vasprun_path = f"{dft_path}/vasprun.xml"
             try:
-                vaspobj = Vasprun(vasprun_path)
+                structure, (energy_dft, _, _) = parse_properties_from_vasprun(
+                    vasprun_path
+                )
             except Exception:
                 print(vasprun_path, "failed")
                 continue
 
-            energy_dft = vaspobj.energy
-            structure = vaspobj.structure
-            for element in structure.elements:
-                energy_dft -= atomic_energy(element)
             energy_dft /= len(structure.elements)
             if energy_dft < -15:
                 print(vasprun_path, "exhibits very low energy:", energy_dft, "eV/atom")

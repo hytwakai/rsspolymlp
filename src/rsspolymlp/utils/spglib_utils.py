@@ -7,7 +7,7 @@ import numpy as np
 import spglib
 
 from pypolymlp.core.data_format import PolymlpStructure
-from pypolymlp.core.interface_vasp import Poscar
+from rsspolymlp.common.interface_vasp import Poscar
 
 
 class SymCell:

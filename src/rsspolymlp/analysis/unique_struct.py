@@ -6,7 +6,7 @@ import joblib
 import numpy as np
 
 from pypolymlp.core.data_format import PolymlpStructure
-from pypolymlp.core.interface_vasp import Poscar
+from rsspolymlp.common.interface_vasp import Poscar
 from rsspolymlp.analysis.struct_matcher.struct_match import (
     ReducedStructRep,
     generate_primitive_cells,

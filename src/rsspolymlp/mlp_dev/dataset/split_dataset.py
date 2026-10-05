@@ -7,11 +7,10 @@ from typing import Optional
 
 import numpy as np
 
-from pypolymlp.core.interface_vasp import Vasprun
 from pypolymlp.core.units import EVtoGPa
 from rsspolymlp.analysis.phase_analysis import ConvexHullAnalyzer
-from rsspolymlp.common.atomic_energy import atomic_energy
 from rsspolymlp.common.composition import compute_composition
+from rsspolymlp.common.interface_vasp import parse_properties_from_vasprun
 
 
 def parse_vasp_results(elements, vasprun_paths):
@@ -32,24 +31,19 @@ def parse_vasp_results(elements, vasprun_paths):
     dft_dict = defaultdict(list)
     for vasprun_path in vasprun_paths:
         try:
-            vaspobj = Vasprun(vasprun_path)
+            structure, (energy, force, stress) = parse_properties_from_vasprun(
+                vasprun_path, units="GPa",
+            )
         except Exception:
             print(vasprun_path, "failed")
             continue
 
-        energy = vaspobj.energy
-        force = vaspobj.forces
-        stress = vaspobj.stress
-        structure = vaspobj.structure
-        for element in structure.elements:
-            energy -= atomic_energy(element)
         energy /= len(structure.elements)
-
         if energy < -15:
             print(vasprun_path, "exhibits very low energy:", energy, "eV/atom")
             continue
 
-        pressure = np.mean([(stress / 10).tolist()[i][i] for i in range(3)])  # GPa
+        pressure = np.mean([stress[i][i] for i in range(3)])
         vol_per_atom = structure.volume / len(structure.elements)
         energy += pressure * vol_per_atom / EVtoGPa
 

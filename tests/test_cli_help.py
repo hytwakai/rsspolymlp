@@ -3,7 +3,6 @@ import subprocess
 CLI_COMMANDS = [
     "rsspolymlp",
     "rsspolymlp-devkit",
-    "rsspolymlp-plot",
     "rsspolymlp-utils",
 ]
 

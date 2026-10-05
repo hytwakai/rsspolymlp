@@ -8,9 +8,8 @@ import shutil
 import numpy as np
 from sklearn.cluster import KMeans
 
-from pypolymlp.core.interface_vasp import Vasprun
 from pypolymlp.core.units import EVtoGPa
-from rsspolymlp.common.atomic_energy import atomic_energy
+from rsspolymlp.common.interface_vasp import parse_properties_from_vasprun
 
 
 def detect_ghost_minima(energies: np.array, distances: np.array):
@@ -165,7 +164,9 @@ def detect_actual_ghost_minima(dft_path):
         vasprun_get = False
         for vasprun in vasprun_paths:
             try:
-                vaspobj = Vasprun(vasprun)
+                structure, (energy_dft, _, stress_dft) = parse_properties_from_vasprun(
+                    vasprun, units="GPa"
+                )
                 vasprun_get = True
             except Exception:
                 continue
@@ -182,22 +183,17 @@ def detect_actual_ghost_minima(dft_path):
             )
             continue
 
-        energy_dft = vaspobj.energy
-        structure = vaspobj.structure
-        for element in structure.elements:
-            energy_dft -= atomic_energy(element)
-        energy_dft /= len(structure.elements)
         vol_per_atom = structure.volume / len(structure.elements)
 
-        # Subtract pressure term from MLP enthalpy
         mlp_energy = res["energy"]
         mlp_energy -= pressure * vol_per_atom / EVtoGPa
+        energy_dft /= len(structure.elements)
+        e_diff = mlp_energy - energy_dft
 
-        stress_dft = [(vaspobj.stress / 10).tolist()[i][i] for i in range(3)]
+        stress_dft = [stress_dft[i][i] for i in range(3)]
         press_diff = [pressure - stress_dft[i] for i in range(3)]
         stress_diff = np.max(np.abs(press_diff)) * vol_per_atom / EVtoGPa
 
-        e_diff = mlp_energy - energy_dft
         diff_all.append(
             {
                 "energy_diff": e_diff,
@@ -221,8 +217,8 @@ def detect_actual_ghost_minima(dft_path):
 
             print(f"  - structure: {poscar}", file=f)
             if not delta_e == "null":
-                print(f"    energy_diff_meV_per_atom: {delta_e*1000:.3f}", file=f)
-                print(f"    stress_diff_meV_per_atom: {delta_s*1000:.3f}", file=f)
+                print(f"    energy_diff_meV_per_atom: {delta_e * 1000:.3f}", file=f)
+                print(f"    stress_diff_meV_per_atom: {delta_s * 1000:.3f}", file=f)
                 e_threshold = -0.1  # unit: eV/atom
                 s_threshold = 0.5
                 if delta_e < e_threshold or delta_s > s_threshold:
