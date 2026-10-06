@@ -1,3 +1,5 @@
+import warnings
+
 import numpy as np
 
 from pymatgen.analysis.prototypes import AflowPrototypeMatcher
@@ -66,19 +68,44 @@ class PymatUtil:
         pymat_st = Structure.from_file(file)
         return pymat_st
 
-    def input_cif(self, file, site_tolerance=1e-4, primitive=True):
+    def input_cif(self, file, site_tolerance=1e-4):
         """
         Parameters
         ----------
         file : string (cif file)
         Returns pymatgen.core.structure
         """
-        parser = CifParser(file, site_tolerance=site_tolerance)
-        pymat_st = parser.parse_structures(primitive=primitive)[0]
-        return pymat_st
+        options = [
+            (site_tolerance, True),
+            (1e-3, True),
+            (1e-2, True),
+            (site_tolerance, False),
+            (1e-3, False),
+            (1e-2, False),
+        ]
+
+        for tolerance, use_primitive in options:
+            parser = CifParser(
+                file,
+                site_tolerance=tolerance,
+            )
+
+            with warnings.catch_warnings(record=True) as caught_warnings:
+                warnings.simplefilter("always")
+                pymat_st = parser.parse_structures(primitive=use_primitive)[0]
+
+            incorrect_stoichiometry = any(
+                warning.category is UserWarning
+                and "Incorrect stoichiometry" in str(warning.message)
+                for warning in caught_warnings
+            )
+            if not incorrect_stoichiometry:
+                return pymat_st
+
+        raise ValueError(f"Incorrect stoichiometry for all parsing conditions: {file}")
 
     def output_poscar(self, pymat_st, file_name="./POSCAR"):
-        writer = Poscar(pymat_st).get_string(significant_figures=16)
+        writer = Poscar(pymat_st).get_str(significant_figures=16)
         with open(file_name, "w") as f:
             print(writer, file=f)
 
