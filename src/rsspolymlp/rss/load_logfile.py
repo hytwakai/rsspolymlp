@@ -28,6 +28,9 @@ class LogfileLoader:
 
         keyword_parsers = {
             "Selected potential:": self.parse_potential,
+            "Cutoff radius (Ang.):": lambda line, res: self.parse_numeric(
+                line, "cutoff", res
+            ),
             "Pressure (GPa):": lambda line, res: self.parse_numeric(
                 line, "pressure", res
             ),

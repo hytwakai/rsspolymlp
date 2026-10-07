@@ -12,7 +12,7 @@ from time import time
 
 import numpy as np
 
-from pypolymlp.core.io_polymlp import load_mlps
+from pypolymlp.calculator.properties import Properties
 from rsspolymlp.analysis.ghost_minima import detect_ghost_minima
 from rsspolymlp.analysis.unique_struct import (
     UniqueStructureAnalyzer,
@@ -116,6 +116,8 @@ class RSSResultAnalyzer:
             return None, None
 
         self.potential = struct_prop["potential"]
+        if struct_prop["cutoff"] is not None:
+            self.cutoff = struct_prop["cutoff"]
         if struct_prop["pressure"] is not None:
             self.pressure = struct_prop["pressure"]
 
@@ -123,17 +125,12 @@ class RSSResultAnalyzer:
 
     def _validate_optimized_struct(self, poscar_name, struct_prop):
         if self.cutoff is None:
-            _params, _ = load_mlps(self.potential)
-            if not isinstance(_params.params, list):
-                self.cutoff = _params.params.as_dict()["model"]["cutoff"]
-            else:
-                max_cutoff = 0.0
-                for param in _params:
-                    model_dict = param.as_dict()
-                    cutoff_i = model_dict["model"]["cutoff"]
-                    if cutoff_i > max_cutoff:
-                        max_cutoff = cutoff_i
-                self.cutoff = max_cutoff
+            try:
+                self.cutoff = max(
+                    param.as_dict()["model"]["cutoff"] for param in Properties(pot=self.pot).params
+                )
+            except FileNotFoundError:
+                self.cutoff = 1e6
 
         polymlp_st = Poscar(poscar_name).structure
         objprop = PropUtil(polymlp_st.axis.T, polymlp_st.positions.T)

@@ -66,7 +66,12 @@ class OptimizationMLP:
                 print("Selected potential:", self.pot, flush=True)
             else:
                 print("Selected potential:", [self.pot], flush=True)
+            max_cutoff = max(
+                param.as_dict()["model"]["cutoff"] for param in self.properties.params
+            )
+            print("Cutoff radius (Ang.):", max_cutoff, flush=True)
             print("Pressure (GPa):", self.pressure, flush=True)
+
             unitcell = Poscar(poscar_path).structure
 
             for iteration in range(max_iteration):
