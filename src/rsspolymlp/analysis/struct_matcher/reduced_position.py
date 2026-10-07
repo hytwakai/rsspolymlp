@@ -320,9 +320,7 @@ class StructRepReducer:
         if any(np.any(v == -1) for v in signed_permutation_cands):
             invert_list = [False, True]
 
-        cluster_id, snapped_positions = self._assign_clusters_by_type(
-            _pos, _types, invert_list
-        )
+        cluster_id, snapped_positions = self._assign_clusters_by_type(_pos, invert_list)
         return cluster_id, snapped_positions
 
     def _assign_clusters_by_type(self, positions, invert_list=[False]):
