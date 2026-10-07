@@ -213,6 +213,7 @@ class StructRepReducer:
         cluster_id, snapped_pos = self.assign_clusters(
             _positions, types, signed_permutation_cands
         )
+        print(cluster_id)
 
         position_cands = []
 
@@ -322,12 +323,9 @@ class StructRepReducer:
         cluster_id, snapped_positions = self._assign_clusters_by_type(
             _pos, _types, invert_list
         )
-        cluster_id2 = self._relabel_clusters_by_centres(
-            snapped_positions, _types, cluster_id
-        )
-        return cluster_id2, snapped_positions
+        return cluster_id, snapped_positions
 
-    def _assign_clusters_by_type(self, positions, types, invert_list=[False]):
+    def _assign_clusters_by_type(self, positions, invert_list=[False]):
         """Assigns cluster IDs by element and axis."""
         if len(invert_list) == 1:
             cluster_id = np.full_like(positions, -1, dtype=np.int32)
@@ -345,89 +343,17 @@ class StructRepReducer:
                 _positions = -positions.copy() % 1.0
                 target_idx = slice(3, 6)
 
-            start_id = np.zeros((3))
+            if self.cartesian_coords:
+                gap = np.diff(_positions, axis=0)
+                gap *= np.sqrt(self.reduced_axis[0:3])
+            else:
+                gap = np.diff(_positions, axis=0)
 
-            # Group atoms by element type
-            for type_n in range(np.max(types) + 1):
-                mask = types == type_n
-                pos_sub = _positions[mask]
-                idx_sub = np.where(mask)[0]
+            is_new_cluster = gap > self.symprec
 
-                sort_idx = np.argsort(pos_sub, axis=0, kind="mergesort")
-                coord_sorted = np.take_along_axis(pos_sub, sort_idx, axis=0)
+            cluster_id_sub = np.zeros_like(_positions, dtype=np.int32)
+            cluster_id_sub[1:] = np.cumsum(is_new_cluster, axis=0)
 
-                # Compute forward differences with periodic wrapping
-                gap = np.roll(coord_sorted, -1, axis=0) - coord_sorted
-                gap[-1, :] += 1.0
-                if self.cartesian_coords:
-                    gap = gap * np.sqrt(self.reduced_axis[0:3])
-
-                # New cluster starts where gap > symprec
-                is_new_cluster = gap > self.symprec
-                cluster_id_sorted = np.empty_like(coord_sorted, dtype=np.int32)
-                cluster_id_sorted[0, :] = start_id
-                cluster_id_sorted[1:, :] = (
-                    np.cumsum(is_new_cluster[:-1, :], axis=0) + start_id
-                )
-
-                # Merge last cluster if gap is small (periodic condition)
-                merge_mask = ~is_new_cluster[-1, :]
-                for ax in np.where(merge_mask)[0]:
-                    max_id = cluster_id_sorted[-1, ax]
-                    merged = cluster_id_sorted[:, ax] == max_id
-                    coord_sorted[merged, ax] -= 1.0
-                    cluster_id_sorted[merged, ax] = start_id[ax]
-
-                # Restore original order
-                cluster_id_sub = np.empty_like(coord_sorted, dtype=np.int32)
-                coord_unsort_sub = np.empty_like(coord_sorted)
-                for ax in range(3):
-                    cluster_id_sub[sort_idx[:, ax], ax] = cluster_id_sorted[:, ax]
-                    coord_unsort_sub[sort_idx[:, ax], ax] = coord_sorted[:, ax]
-
-                cluster_id[idx_sub, target_idx] = cluster_id_sub
-                snapped_positions[idx_sub, target_idx] = coord_unsort_sub
-                start_id = np.max(cluster_id_sub, axis=0) + 1
+            cluster_id[:, target_idx] = cluster_id_sub
 
         return cluster_id, snapped_positions
-
-    def _relabel_clusters_by_centres(self, positions, types, cluster_id):
-        """
-        Relabels cluster IDs so that cluster centers are ordered in ascending position.
-        Different element types within the same center are assigned separate IDs.
-        """
-        cluster_id2 = np.full_like(positions, -1, dtype=np.int32)
-
-        for ax in range(positions.shape[1]):
-            cls_id = cluster_id[:, ax]
-            coord = positions[:, ax]
-
-            # The index of `centres` corresponds directly to the cluster ID
-            centres = np.bincount(cls_id, weights=coord) / np.bincount(cls_id)
-
-            # Assign a element type to each cluster
-            _, unique_idx = np.unique(cls_id, return_index=True)
-            cluster_types = types[unique_idx]
-
-            # Create cluster IDs based on centre positions only (ignoring types)
-            sort_idx = np.argsort(centres)
-            centres_sorted = centres[sort_idx]
-            gap = np.roll(centres_sorted, -1) - centres_sorted
-            gap[-1] += 1.0
-            is_new_cluster = gap > self.symprec[ax % 3]
-            centre_cls_id = np.zeros_like(centres_sorted, dtype=np.int32)
-            centre_cls_id[1:] = np.cumsum(is_new_cluster[:-1])
-            if not is_new_cluster[-1]:
-                centre_cls_id[centre_cls_id == centre_cls_id[-1]] = 0
-
-            # Map cluster center IDs back to their atomic order
-            centre_cls_id_origin = np.empty_like(centre_cls_id)
-            centre_cls_id_origin[sort_idx] = centre_cls_id
-
-            # Reassign new cluster IDs to each atom based on reordered clusters:
-            # primary key = center ID, secondary key = element type
-            reorder_cluster_ids = np.lexsort((cluster_types, centre_cls_id_origin))
-            for new_id, old_id in enumerate(reorder_cluster_ids):
-                cluster_id2[cls_id == old_id, ax] = new_id
-
-        return cluster_id2
