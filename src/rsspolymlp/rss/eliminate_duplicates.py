@@ -127,7 +127,8 @@ class RSSResultAnalyzer:
         if self.cutoff is None:
             try:
                 self.cutoff = max(
-                    param.as_dict()["model"]["cutoff"] for param in Properties(pot=self.pot).params
+                    param.as_dict()["model"]["cutoff"]
+                    for param in Properties(pot=self.potential).params
                 )
             except FileNotFoundError:
                 self.cutoff = 1e6

@@ -12,6 +12,7 @@ class LogfileLoader:
     def read_file(self):
         _res = {
             "potential": None,
+            "cutoff": None,
             "pressure": None,
             "spg_list": None,
             "res_f": None,
