@@ -211,9 +211,8 @@ class StructRepReducer:
     ):
         _positions = positions.copy()
         cluster_id, snapped_pos = self.assign_clusters(
-            _positions, types, signed_permutation_cands
+            _positions, signed_permutation_cands
         )
-        print(cluster_id)
 
         position_cands = []
 
@@ -307,14 +306,12 @@ class StructRepReducer:
     def assign_clusters(
         self,
         positions: np.ndarray,
-        types: np.ndarray,
         signed_permutation_cands: np.ndarray,
     ):
         """
         Assigns cluster IDs along each axis; atoms at identical positions share the same ID.
         """
         _pos = positions.copy()
-        _types = types.copy()
 
         invert_list = [False]
         if any(np.any(v == -1) for v in signed_permutation_cands):
