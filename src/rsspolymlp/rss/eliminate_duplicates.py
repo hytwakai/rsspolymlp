@@ -341,11 +341,12 @@ class RSSResultAnalyzer:
             print("", file=f)
 
         # Sort structures by energy
-        energies = np.array([s.energy for s in unique_structs])
+        energies = np.round(np.array([s.energy for s in unique_structs]), 8)
         distances = np.array([s.least_distance for s in unique_structs])
+        n_duplicates = np.array([len(s.dupstr_paths) for s in unique_structs])
         iters = np.array([s["iter"] for s in unique_str_prop])
 
-        sort_idx = np.argsort(energies)
+        sort_idx = np.lexsort((-n_duplicates, energies))
         unique_str_sorted = [unique_structs[i] for i in sort_idx]
         iters_sorted = [iters[i] for i in sort_idx]
 

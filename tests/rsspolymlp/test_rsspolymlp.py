@@ -1,5 +1,6 @@
 import glob
 import os
+import shutil
 
 import pytest
 import yaml
@@ -178,3 +179,31 @@ def test_rss_summarize(tmp_path, pressure):
             expected_energy_diff[i]
         )
         assert data["n_duplicates"] == expected_n_duplicates[i]
+
+
+@pytest.mark.parametrize("target_dir", ["5GPa_Bi6", "5GPa_Ca5Bi5"])
+def test_rss_uniq_struct(tmp_path, target_dir):
+    ref_path = f"{test_dir}/../files/Bi_based_alloy/Ca-Bi"
+    with open(f"{ref_path}/{target_dir}/rss_result/rss_results.yaml") as f:
+        ref_data = yaml.safe_load(f)
+
+    n_duplicates_ref = []
+    for data in ref_data["unique_structures"]:
+        n_duplicates_ref.append(data["n_duplicates"])
+
+    os.makedirs(f"{tmp_path}/{target_dir}/rss_result")
+    os.chdir(f"{tmp_path}/{target_dir}")
+    shutil.copytree(f"{ref_path}/{target_dir}/log", "log")
+    shutil.copytree(f"{ref_path}/{target_dir}/opt_struct", "opt_struct")
+    shutil.copy(f"{ref_path}/{target_dir}/rss_result/finish.dat", "rss_result")
+    shutil.copy(f"{ref_path}/{target_dir}/rss_result/success.dat", "rss_result")
+
+    rss_uniq_struct()
+    with open("./rss_result/rss_results.yaml") as f:
+        yaml_data = yaml.safe_load(f)
+
+    n_duplicates = []
+    for data in yaml_data["unique_structures"]:
+        n_duplicates.append(data["n_duplicates"])
+
+    assert n_duplicates_ref == n_duplicates

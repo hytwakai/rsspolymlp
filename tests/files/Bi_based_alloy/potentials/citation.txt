@@ -1,0 +1,11 @@
+These potentials were developed in the following paper:
+
+Authors: Hayato Wakai, Shintaro Ishiwata, Atsuto Seko
+Title: “Systematic global structure search of bismuth-based binary systems under pressure using machine learning potentials”
+Journal: Phys. Rev. Materials 10, 093801 (2026).
+
+The potentials and other data presented in this study are also available from the following repository:
+
+Data for "Systematic global structure search of bismuth-based binary systems under pressure using machine learning potentials"
+DOI: 10.57723/kds622608
+URI: http://hdl.handle.net/2433/302571

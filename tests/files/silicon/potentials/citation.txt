@@ -4,7 +4,7 @@ Authors: Hayato Wakai, Atsuto Seko, Isao Tanaka
 Title: “Pressure-temperature phase diagram from global structure prediction and self-consistent phonon calculations based on polynomial machine learning potentials: Application to elemental silicon”
 Journal: The Journal of Chemical Physics, in press
 
-The potentials used in this study are also available from the following repository:
+The potentials and other data presented in this study are also available from the following repository:
 
 Data for: “Pressure-temperature phase diagram calculations using polynomial machine learning potentials: A case study on silicon”
 DOI: 10.57723/kds592411
