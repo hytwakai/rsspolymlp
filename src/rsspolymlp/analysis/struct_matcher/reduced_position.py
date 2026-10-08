@@ -210,7 +210,7 @@ class StructRepReducer:
         signed_permutation_cands: np.ndarray,
     ):
         _positions = positions.copy()
-        cluster_id, snapped_pos = self.assign_clusters(
+        cluster_id, positions_by_axis = self.assign_clusters(
             _positions, signed_permutation_cands
         )
 
@@ -224,10 +224,10 @@ class StructRepReducer:
                 target_axis = np.where(val != 0)[0][0]
                 sign = val[target_axis]
                 if sign == 1:
-                    _pos[:, axis] = snapped_pos[:, target_axis]
+                    _pos[:, axis] = positions_by_axis[:, target_axis]
                     _cls_id[:, axis] = cluster_id[:, target_axis]
                 else:
-                    _pos[:, axis] = snapped_pos[:, target_axis + 3]
+                    _pos[:, axis] = positions_by_axis[:, target_axis + 3]
                     _cls_id[:, axis] = cluster_id[:, target_axis + 3]
             position_cands.append(
                 {
@@ -251,6 +251,7 @@ class StructRepReducer:
         id_max = np.max(cls_id, axis=0) + 1
 
         pos = pos - pos[target_idx]
+        pos %= 1.0
         cls_id = np.mod(cls_id - cls_id[target_idx], id_max).astype(int)
 
         pos = np.delete(pos, target_idx, axis=0)
@@ -258,8 +259,6 @@ class StructRepReducer:
         types = np.delete(types, target_idx, axis=0)
 
         for ax in range(3):
-            pos[:, ax] %= 1.0
-
             near_zero_mask = cls_id[:, ax] == 0
             vals = pos[near_zero_mask, ax]
             dist_to_0 = vals
@@ -311,24 +310,17 @@ class StructRepReducer:
         """
         Assigns cluster IDs along each axis; atoms at identical positions share the same ID.
         """
-        _pos = positions.copy()
-
         invert_list = [False]
         if any(np.any(v == -1) for v in signed_permutation_cands):
             invert_list = [False, True]
 
-        cluster_id, snapped_positions = self._assign_clusters_by_type(_pos, invert_list)
-        return cluster_id, snapped_positions
-
-    def _assign_clusters_by_type(self, positions, invert_list=[False]):
-        """Assigns cluster IDs by element and axis."""
         if len(invert_list) == 1:
             cluster_id = np.full_like(positions, -1, dtype=np.int32)
-            snapped_positions = np.zeros_like(positions)
+            positions_by_axis = np.zeros_like(positions)
         else:
             n_rows, n_cols = positions.shape
             cluster_id = np.full((n_rows, n_cols * 2), -1, dtype=np.int32)
-            snapped_positions = np.zeros((n_rows, n_cols * 2), dtype=positions.dtype)
+            positions_by_axis = np.zeros((n_rows, n_cols * 2), dtype=positions.dtype)
 
         for invert in invert_list:
             if not invert:
@@ -337,18 +329,38 @@ class StructRepReducer:
             else:
                 _positions = -positions.copy() % 1.0
                 target_idx = slice(3, 6)
+            positions_by_axis[:, target_idx] = _positions
 
+            sort_idx = np.argsort(_positions, axis=0, kind="mergesort")
+            pos_sorted = np.take_along_axis(_positions, sort_idx, axis=0)
+
+            # Compute forward differences with periodic wrapping
+            gap = np.roll(pos_sorted, -1, axis=0) - pos_sorted
+            gap[-1, :] += 1.0
             if self.cartesian_coords:
-                gap = np.diff(_positions, axis=0)
                 gap *= np.sqrt(self.reduced_axis[0:3])
-            else:
-                gap = np.diff(_positions, axis=0)
 
+            # New cluster starts where gap > symprec
             is_new_cluster = gap > self.symprec
+            cluster_id_sorted = np.zeros_like(_positions, dtype=np.int32)
+            cluster_id_sorted[1:, :] = np.cumsum(is_new_cluster[:-1, :], axis=0)
 
-            cluster_id_sub = np.zeros_like(_positions, dtype=np.int32)
-            cluster_id_sub[1:] = np.cumsum(is_new_cluster, axis=0)
+            # Merge last cluster if gap is small (periodic condition)
+            merge_mask = ~is_new_cluster[-1, :]
+            for ax in np.where(merge_mask)[0]:
+                max_id = cluster_id_sorted[-1, ax]
+                merged = cluster_id_sorted[:, ax] == max_id
+                pos_sorted[merged, ax] -= 1.0
+                cluster_id_sorted[merged, ax] = 0
+
+            # Restore original order
+            cluster_id_sub = np.empty_like(pos_sorted, dtype=np.int32)
+            pos_unsort_sub = np.empty_like(pos_sorted)
+            for ax in range(3):
+                cluster_id_sub[sort_idx[:, ax], ax] = cluster_id_sorted[:, ax]
+                pos_unsort_sub[sort_idx[:, ax], ax] = pos_sorted[:, ax]
 
             cluster_id[:, target_idx] = cluster_id_sub
+            positions_by_axis[:, target_idx] = pos_unsort_sub
 
-        return cluster_id, snapped_positions
+        return cluster_id, positions_by_axis
