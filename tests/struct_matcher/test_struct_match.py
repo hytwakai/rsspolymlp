@@ -12,7 +12,7 @@ test_dir = os.path.dirname(os.path.abspath(__file__))
 
 def test_struct_matcher(tmp_path):
     files = [
-        f"{test_dir}/../files/struct_matcher/case1/*",
+        f"{test_dir}/../files/struct_matcher/case1/POSCAR*",
         f"{test_dir}/../files/silicon/opt_struct/p/0.0GPa/*",
         f"{test_dir}/../files/silicon/opt_struct/p/100.0GPa/*",
     ]
@@ -37,7 +37,7 @@ def test_struct_matcher(tmp_path):
 
 
 def test_struct_compare(tmp_path):
-    files = [f"{test_dir}/../files/struct_matcher/case2/*"]
+    files = [f"{test_dir}/../files/struct_matcher/case2/POSCAR*"]
     for file in files:
         os.makedirs(f"{tmp_path}/{file.split('/')[-2]}")
         os.chdir(f"{tmp_path}/{file.split('/')[-2]}")

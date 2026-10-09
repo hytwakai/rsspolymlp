@@ -1,0 +1,2 @@
+space_group: ['P1 (1)', 'P1 (1)', 'P1 (1)', 'P1 (1)']
+other_info: 10 atom / distance 3.068 (Ang.) / volume 29.92 (A^3/atom)
