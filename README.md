@@ -1,4 +1,4 @@
-# A framework for random structure search (RSS) using polynomial MLPs
+# Framework for random structure search using polynomial MLPs
 
 ## Citation of rsspolymlp
 
