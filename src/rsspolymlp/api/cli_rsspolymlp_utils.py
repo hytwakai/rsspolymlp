@@ -128,6 +128,7 @@ def run():
             reduced_symprecs=args.reduced_symprecs,
             axis_tol=args.axis_tol,
             pos_tol=args.pos_tol,
+            refine_cell=args.refine_cell,
             standardize_axis=args.standardize_axis,
             frac_coords=args.frac_coords,
             keep_unique=args.keep_unique,

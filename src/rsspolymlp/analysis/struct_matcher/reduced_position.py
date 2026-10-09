@@ -265,8 +265,8 @@ class StructRepReducer:
             dist_to_1 = 1.0 - vals
             pos[near_zero_mask, ax] = np.where(dist_to_0 < dist_to_1, vals, vals - 1.0)
 
-        # Stable lexicographic sort by (ids_x, ids_y, ids_z)
-        sort_idx = np.lexsort((cls_id[:, 2], cls_id[:, 1], cls_id[:, 0], types))
+        # Stable lexicographic sort by (ids_z, ids_y, ids_x)
+        sort_idx = np.lexsort((cls_id[:, 0], cls_id[:, 1], cls_id[:, 2], types))
         reduced_perm_positions = pos[sort_idx]
 
         return reduced_perm_positions

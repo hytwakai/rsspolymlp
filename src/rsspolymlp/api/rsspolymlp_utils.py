@@ -22,6 +22,7 @@ def struct_matcher(
     reduced_symprecs: list[float] = None,
     axis_tol: float = 0.05,
     pos_tol: float = 0.03,
+    refine_cell: bool = False,
     standardize_axis: bool = False,
     frac_coords: bool = False,
     keep_unique: bool = False,
@@ -45,6 +46,7 @@ def struct_matcher(
         primitive_symprecs=primitive_symprecs,
         redrep_symprecs=reduced_symprecs,
         standardize_axis=standardize_axis,
+        refine_cell=refine_cell,
         cartesian_coords=not frac_coords,
     )
 
@@ -126,6 +128,7 @@ def struct_compare(
         standardize_axis=standardize_axis,
         original_axis=original_axis,
         cartesian_coords=not frac_coords,
+        struct_path="st1",
     )
     reduced_struct_set2 = generate_redreps(
         polymlp_st=polymlp_st2,
@@ -134,6 +137,7 @@ def struct_compare(
         standardize_axis=standardize_axis,
         original_axis=original_axis,
         cartesian_coords=not frac_coords,
+        struct_path="st12",
     )
 
     judge = struct_match(
