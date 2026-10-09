@@ -1,4 +1,4 @@
-# Framework for random structure search using polynomial MLPs
+# Framework for random structure search using polynomial machine learning potentials
 
 ## Citation of rsspolymlp
 
@@ -34,8 +34,8 @@ If you use `rsspolymlp` in your study, please cite the following articles.
 - symfc
 
 [Optional]
-- matplotlib (if plotting RSS results)
-- seaborn (if plotting RSS results)
+- matplotlib, seaborn
+- pymatgen
 
 ### How to install
 - Install from conda-forge
@@ -64,7 +64,6 @@ pip install rsspolymlp
    - Initial structure generation
    - Global RSS with polynomial MLPs
    - Unique structure identification and RSS result summarization
-   - Ghost minimum structure elimination
    - Phase stability analysis
  - [Development kit for polynomial MLPs](docs/rsspolymlp_dev.md)
    - MLP dataset generation
