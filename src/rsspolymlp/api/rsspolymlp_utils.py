@@ -66,7 +66,7 @@ def struct_matcher(
         unique_structs = analyzer.unique_str
         unique_structs_sorted = sorted(
             unique_structs,
-            key=lambda x: len(x.original_structure.positions.T),
+            key=lambda x: len(x.original_polymlp_st.positions.T),
             reverse=False,
         )
 
