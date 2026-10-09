@@ -1,14 +1,15 @@
 from pypolymlp.utils.spglib_utils import SymCell
-from rsspolymlp.analysis.struct_matcher.struct_match import (
-    generate_primitive_cells,
-    generate_reduced_struct,
-    struct_match,
-)
-from rsspolymlp.analysis.unique_struct import (
-    UniqueStructureAnalyzer,
-    generate_unique_structs,
+from rsspolymlp.analysis.rss_summarize import (
     log_all_unique_structures,
     log_unique_structures,
+)
+from rsspolymlp.analysis.struct_matcher.gen_redrep import (
+    generate_redreps,
+    generate_redreps_parallel,
+)
+from rsspolymlp.analysis.struct_matcher.struct_match import (
+    UniqueStructIdentifier,
+    struct_match,
 )
 from rsspolymlp.rss.optimization_mlp import OptimizationMLP
 
@@ -37,20 +38,20 @@ def struct_matcher(
     for poscar_path in poscar_paths:
         rss_results.append({"struct_path": poscar_path})
 
-    unique_structs = generate_unique_structs(
+    redreps_list = generate_redreps_parallel(
         rss_results,
         num_process=num_process,
         backend=backend,
-        symprec_set1=primitive_symprecs,
-        symprec_set2=reduced_symprecs,
+        primitive_symprecs=primitive_symprecs,
+        redrep_symprecs=reduced_symprecs,
         standardize_axis=standardize_axis,
         cartesian_coords=not frac_coords,
     )
 
-    analyzer = UniqueStructureAnalyzer()
-    for unique_struct in unique_structs:
+    analyzer = UniqueStructIdentifier()
+    for redreps in redreps_list:
         analyzer.identify_duplicate_struct(
-            unique_struct=unique_struct,
+            reduced_reps=redreps,
             keep_unique=keep_unique,
             axis_tol=axis_tol,
             pos_tol=pos_tol,
@@ -118,37 +119,22 @@ def struct_compare(
         else:
             reduced_symprecs = [1e-5, 1e-3, 1e-2]
 
-    primitive_st_set, spg_number_set = generate_primitive_cells(
+    reduced_struct_set1 = generate_redreps(
         polymlp_st=polymlp_st1,
         refine_cell=refine_cell,
+        redrep_symprecs=reduced_symprecs,
+        standardize_axis=standardize_axis,
+        original_axis=original_axis,
+        cartesian_coords=not frac_coords,
     )
-    reduced_struct_set1 = []
-    for i, primitive_st in enumerate(primitive_st_set):
-        reduced_struct = generate_reduced_struct(
-            primitive_st,
-            spg_number_set[i],
-            symprec_set=reduced_symprecs,
-            standardize_axis=standardize_axis,
-            original_axis=original_axis,
-            cartesian_coords=not frac_coords,
-        )
-        reduced_struct_set1.append(reduced_struct)
-
-    primitive_st_set, spg_number_set = generate_primitive_cells(
+    reduced_struct_set2 = generate_redreps(
         polymlp_st=polymlp_st2,
         refine_cell=refine_cell,
+        redrep_symprecs=reduced_symprecs,
+        standardize_axis=standardize_axis,
+        original_axis=original_axis,
+        cartesian_coords=not frac_coords,
     )
-    reduced_struct_set2 = []
-    for i, primitive_st in enumerate(primitive_st_set):
-        reduced_struct = generate_reduced_struct(
-            primitive_st,
-            spg_number_set[i],
-            symprec_set=reduced_symprecs,
-            standardize_axis=standardize_axis,
-            original_axis=original_axis,
-            cartesian_coords=not frac_coords,
-        )
-        reduced_struct_set2.append(reduced_struct)
 
     judge = struct_match(
         reduced_struct_set1,

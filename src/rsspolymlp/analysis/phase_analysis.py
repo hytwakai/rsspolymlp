@@ -293,7 +293,7 @@ class ConvexHullAnalyzer:
                     [r["is_ghost_minima"] for r in rss_results]
                 ),
                 "struct_tag": np.array(
-                    [f"POSCAR_{logname}_No{r['struct_no']}" for r in rss_results]
+                    [f"POSCAR_{logname}_No{r['struct_tag']}" for r in rss_results]
                 ),
             }
 

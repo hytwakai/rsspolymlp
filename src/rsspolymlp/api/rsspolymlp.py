@@ -181,7 +181,7 @@ def rss_summarize(
     element_order: list = None,
     num_process=-1,
     backend="loky",
-    symprec_set: list[float] = [1e-5, 1e-4, 1e-3, 1e-2],
+    primitive_symprecs: list[float] = [1e-5, 1e-4, 1e-3, 1e-2],
     output_poscar: bool = False,
     thresholds: list[float] = None,
     parse_vasp: bool = False,
@@ -194,7 +194,7 @@ def rss_summarize(
         element_order=element_order,
         num_process=num_process,
         backend=backend,
-        symprec_set=symprec_set,
+        primitive_symprecs=primitive_symprecs,
         output_poscar=output_poscar,
         thresholds=thresholds,
         parse_vasp=parse_vasp,
@@ -208,7 +208,7 @@ def rss_summarize(
 
 def rss_ghost_minima_cands(result_paths):
     dir_path = os.path.dirname(result_paths[0])
-    os.makedirs(f"{dir_path}/../ghost_minima/ghost_minima_candidates", exist_ok=True)
+    os.makedirs(f"{dir_path}/../ghost_minima/ghost_minima_cands", exist_ok=True)
     os.chdir(f"{dir_path}/../")
     ghost_minima_candidates(result_paths)
 

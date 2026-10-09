@@ -212,7 +212,7 @@ def run():
         help="List of element symbols",
     )
     parser.add_argument(
-        "--symprec_set",
+        "--primitive_symprecs",
         nargs="*",
         type=float,
         default=[1e-5, 1e-4, 1e-3, 1e-2],
@@ -314,7 +314,7 @@ def run():
             element_order=args.element_order,
             num_process=args.num_process,
             backend=args.backend,
-            symprec_set=args.symprec_set,
+            primitive_symprecs=args.primitive_symprecs,
             output_poscar=args.output_poscar,
             thresholds=args.thresholds,
             parse_vasp=args.parse_vasp,

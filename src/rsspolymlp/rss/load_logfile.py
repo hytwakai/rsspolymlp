@@ -22,7 +22,6 @@ class LogfileLoader:
             "iter": 0,
             "fval": 0,
             "gval": 0,
-            "dup_count": 1,
             "struct_path": self.logfile.split("/")[-1].removesuffix(".log"),
             "struct": None,
         }

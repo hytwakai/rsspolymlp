@@ -65,7 +65,7 @@ class StructRepReducer:
 
         if self.standardize_axis:
             volume = abs(np.linalg.det(self.axis))
-            _axis = self.axis / (volume ** (1 / 3))
+            _axis = self.axis / ((volume / len(elements)) ** (1 / 3))
         else:
             _axis = self.axis
 

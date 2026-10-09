@@ -117,7 +117,7 @@ def get_ghost_minima_dists(dir_path):
 
 def ghost_minima_candidates(result_paths):
     # Prepare output directory: remove existing files if already exists
-    out_dir = "ghost_minima/ghost_minima_candidates"
+    out_dir = "ghost_minima/ghost_minima_cands"
     os.makedirs(out_dir, exist_ok=True)
     for filename in os.listdir(out_dir):
         if "POSCAR" in filename:
@@ -135,14 +135,14 @@ def ghost_minima_candidates(result_paths):
         logname = os.path.basename(res_path).split(".json")[0]
         for res in rss_results:
             if res.get("is_ghost_minima"):
-                dest = f"ghost_minima/ghost_minima_candidates/POSCAR_{logname}_No{res['struct_no']}"
+                dest = f"ghost_minima/ghost_minima_cands/POSCAR_{logname}_No{res['struct_tag']}"
                 shutil.copy(res["struct_path"], dest)
                 _res = res
                 _res.pop("structure", None)
-                _res["ghost_minima_poscar"] = f"POSCAR_{logname}_No{res['struct_no']}"
+                _res["ghost_minima_poscar"] = f"POSCAR_{logname}_No{res['struct_tag']}"
                 ghost_minima_all.append(_res)
 
-    with open("ghost_minima/ghost_minima_candidates.dat", "w") as f:
+    with open("ghost_minima/ghost_minima_cands.dat", "w") as f:
         for res in ghost_minima_all:
             print(res, file=f)
     print(f"Detected {len(ghost_minima_all)} potential ghost_minima")
@@ -151,7 +151,7 @@ def ghost_minima_candidates(result_paths):
 def detect_actual_ghost_minima(dft_path):
     # Load ghost_minima candidates
     ghost_minima_all = []
-    with open("ghost_minima/ghost_minima_candidates.dat") as f:
+    with open("ghost_minima/ghost_minima_cands.dat") as f:
         for line in f:
             ghost_minima_all.append(ast.literal_eval(line.strip()))
 
