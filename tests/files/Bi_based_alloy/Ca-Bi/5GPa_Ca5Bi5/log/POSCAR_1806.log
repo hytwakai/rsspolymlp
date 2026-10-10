@@ -1,0 +1,200 @@
+Selected potential: ['../../potentials/CaBi_polymlp.lammps']
+Cutoff radius (Ang.): 8.0
+Pressure (GPa): 5.0
+Relax cell shape:        True
+Relax volume:            True
+Relax atomic positions:  True
+Basis (Axis)
+[[1. 0. 0. 0. 0. 0. 0. 0. 0.]
+ [0. 1. 0. 0. 0. 0. 0. 0. 0.]
+ [0. 0. 1. 0. 0. 0. 0. 0. 0.]
+ [0. 0. 0. 1. 0. 0. 0. 0. 0.]
+ [0. 0. 0. 0. 1. 0. 0. 0. 0.]
+ [0. 0. 0. 0. 0. 1. 0. 0. 0.]
+ [0. 0. 0. 0. 0. 0. 1. 0. 0.]
+ [0. 0. 0. 0. 0. 0. 0. 1. 0.]
+ [0. 0. 0. 0. 0. 0. 0. 0. 1.]]
+Basis (Positions)
+[[1. 0. 0. ... 0. 0. 0.]
+ [0. 1. 0. ... 0. 0. 0.]
+ [0. 0. 1. ... 0. 0. 0.]
+ ...
+ [0. 0. 0. ... 1. 0. 0.]
+ [0. 0. 0. ... 0. 1. 0.]
+ [0. 0. 0. ... 0. 0. 1.]]
+Degrees of freedom: 69
+---------------------------
+Initial structure
+Axis basis vectors:
+- [np.float64(18.117577774910057), np.float64(0.0), np.float64(0.0)]
+- [np.float64(0.0), np.float64(4.445972148582603), np.float64(0.0)]
+- [np.float64(-1.37654596252707), np.float64(0.0), np.float64(7.059121513647118)]
+Fractional coordinates:
+- Bi [np.float64(0.521445922074834), np.float64(0.0), np.float64(0.055693162818854)]
+- Bi [np.float64(0.541021094096025), np.float64(0.0), np.float64(0.561755463716255)]
+- Bi [np.float64(0.829794094277134), np.float64(0.5), np.float64(0.936928919954934)]
+- Bi [np.float64(0.708065001648233), np.float64(0.0), np.float64(0.147380328477271)]
+- Bi [np.float64(0.828132444155382), np.float64(0.5), np.float64(0.469443710882508)]
+- Bi [np.float64(0.021445922074834), np.float64(0.5), np.float64(0.055693162818854)]
+- Bi [np.float64(0.041021094096025), np.float64(0.5), np.float64(0.561755463716255)]
+- Bi [np.float64(0.329794094277134), np.float64(0.0), np.float64(0.936928919954934)]
+- Bi [np.float64(0.208065001648233), np.float64(0.5), np.float64(0.147380328477271)]
+- Bi [np.float64(0.328132444155382), np.float64(0.0), np.float64(0.469443710882508)]
+- Ca [np.float64(0.620686178023255), np.float64(0.5), np.float64(0.342835571328995)]
+- Ca [np.float64(0.909979739895376), np.float64(0.0), np.float64(0.246019274170311)]
+- Ca [np.float64(0.740682612334842), np.float64(0.0), np.float64(0.658083790612503)]
+- Ca [np.float64(0.936679772311744), np.float64(0.0), np.float64(0.746186497676517)]
+- Ca [np.float64(0.628455409128691), np.float64(0.5), np.float64(0.864981209349497)]
+- Ca [np.float64(0.120686178023255), np.float64(0.0), np.float64(0.342835571328995)]
+- Ca [np.float64(0.409979739895376), np.float64(0.5), np.float64(0.246019274170311)]
+- Ca [np.float64(0.240682612334842), np.float64(0.5), np.float64(0.658083790612503)]
+- Ca [np.float64(0.436679772311745), np.float64(0.5), np.float64(0.746186497676517)]
+- Ca [np.float64(0.128455409128691), np.float64(0.0), np.float64(0.864981209349497)]
+Energy (Initial structure): -56.17451134985968
+E + PV (Initial structure): -38.42946475491841
+---------------------------
+Initial structure
+Axis basis vectors:
+- [np.float64(18.117577774910057), np.float64(0.0), np.float64(0.0)]
+- [np.float64(0.0), np.float64(4.445972148582603), np.float64(0.0)]
+- [np.float64(-1.37654596252707), np.float64(0.0), np.float64(7.059121513647118)]
+Fractional coordinates:
+- Bi [np.float64(0.521445922074834), np.float64(0.0), np.float64(0.055693162818854)]
+- Bi [np.float64(0.541021094096025), np.float64(0.0), np.float64(0.561755463716255)]
+- Bi [np.float64(0.829794094277134), np.float64(0.5), np.float64(0.936928919954934)]
+- Bi [np.float64(0.708065001648233), np.float64(0.0), np.float64(0.147380328477271)]
+- Bi [np.float64(0.828132444155382), np.float64(0.5), np.float64(0.469443710882508)]
+- Bi [np.float64(0.021445922074834), np.float64(0.5), np.float64(0.055693162818854)]
+- Bi [np.float64(0.041021094096025), np.float64(0.5), np.float64(0.561755463716255)]
+- Bi [np.float64(0.329794094277134), np.float64(0.0), np.float64(0.936928919954934)]
+- Bi [np.float64(0.208065001648233), np.float64(0.5), np.float64(0.147380328477271)]
+- Bi [np.float64(0.328132444155382), np.float64(0.0), np.float64(0.469443710882508)]
+- Ca [np.float64(0.620686178023255), np.float64(0.5), np.float64(0.342835571328995)]
+- Ca [np.float64(0.909979739895376), np.float64(0.0), np.float64(0.246019274170311)]
+- Ca [np.float64(0.740682612334842), np.float64(0.0), np.float64(0.658083790612503)]
+- Ca [np.float64(0.936679772311744), np.float64(0.0), np.float64(0.746186497676517)]
+- Ca [np.float64(0.628455409128691), np.float64(0.5), np.float64(0.864981209349497)]
+- Ca [np.float64(0.120686178023255), np.float64(0.0), np.float64(0.342835571328995)]
+- Ca [np.float64(0.409979739895376), np.float64(0.5), np.float64(0.246019274170311)]
+- Ca [np.float64(0.240682612334842), np.float64(0.5), np.float64(0.658083790612503)]
+- Ca [np.float64(0.436679772311745), np.float64(0.5), np.float64(0.746186497676517)]
+- Ca [np.float64(0.128455409128691), np.float64(0.0), np.float64(0.864981209349497)]
+Using CG method
+Optimization terminated successfully.
+         Current function value: -38.429465
+         Iterations: 0
+         Function evaluations: 1
+         Gradient evaluations: 1
+Energy (eV/atom): -1.9214732377459207
+Relax cell shape:        True
+Relax volume:            True
+Relax atomic positions:  True
+Basis (Axis)
+[[1. 0. 0. 0. 0. 0. 0. 0. 0.]
+ [0. 1. 0. 0. 0. 0. 0. 0. 0.]
+ [0. 0. 1. 0. 0. 0. 0. 0. 0.]
+ [0. 0. 0. 1. 0. 0. 0. 0. 0.]
+ [0. 0. 0. 0. 1. 0. 0. 0. 0.]
+ [0. 0. 0. 0. 0. 1. 0. 0. 0.]
+ [0. 0. 0. 0. 0. 0. 1. 0. 0.]
+ [0. 0. 0. 0. 0. 0. 0. 1. 0.]
+ [0. 0. 0. 0. 0. 0. 0. 0. 1.]]
+Basis (Positions)
+[[1. 0. 0. ... 0. 0. 0.]
+ [0. 1. 0. ... 0. 0. 0.]
+ [0. 0. 1. ... 0. 0. 0.]
+ ...
+ [0. 0. 0. ... 1. 0. 0.]
+ [0. 0. 0. ... 0. 1. 0.]
+ [0. 0. 0. ... 0. 0. 1.]]
+Degrees of freedom: 69
+---------------------------
+Initial structure
+Axis basis vectors:
+- [np.float64(18.117577774910057), np.float64(0.0), np.float64(0.0)]
+- [np.float64(0.0), np.float64(4.445972148582603), np.float64(0.0)]
+- [np.float64(-1.37654596252707), np.float64(0.0), np.float64(7.059121513647118)]
+Fractional coordinates:
+- Bi [np.float64(0.521445922074834), np.float64(0.0), np.float64(0.055693162818854)]
+- Bi [np.float64(0.541021094096025), np.float64(0.0), np.float64(0.561755463716255)]
+- Bi [np.float64(0.829794094277134), np.float64(0.5), np.float64(0.936928919954934)]
+- Bi [np.float64(0.708065001648233), np.float64(0.0), np.float64(0.147380328477271)]
+- Bi [np.float64(0.828132444155382), np.float64(0.5), np.float64(0.469443710882508)]
+- Bi [np.float64(0.021445922074834), np.float64(0.5), np.float64(0.055693162818854)]
+- Bi [np.float64(0.041021094096025), np.float64(0.5), np.float64(0.561755463716255)]
+- Bi [np.float64(0.329794094277134), np.float64(0.0), np.float64(0.936928919954934)]
+- Bi [np.float64(0.208065001648233), np.float64(0.5), np.float64(0.147380328477271)]
+- Bi [np.float64(0.328132444155382), np.float64(0.0), np.float64(0.469443710882508)]
+- Ca [np.float64(0.620686178023255), np.float64(0.5), np.float64(0.342835571328995)]
+- Ca [np.float64(0.909979739895376), np.float64(0.0), np.float64(0.246019274170311)]
+- Ca [np.float64(0.740682612334842), np.float64(0.0), np.float64(0.658083790612503)]
+- Ca [np.float64(0.936679772311744), np.float64(0.0), np.float64(0.746186497676517)]
+- Ca [np.float64(0.628455409128691), np.float64(0.5), np.float64(0.864981209349497)]
+- Ca [np.float64(0.120686178023255), np.float64(0.0), np.float64(0.342835571328995)]
+- Ca [np.float64(0.409979739895376), np.float64(0.5), np.float64(0.246019274170311)]
+- Ca [np.float64(0.240682612334842), np.float64(0.5), np.float64(0.658083790612503)]
+- Ca [np.float64(0.436679772311745), np.float64(0.5), np.float64(0.746186497676517)]
+- Ca [np.float64(0.128455409128691), np.float64(0.0), np.float64(0.864981209349497)]
+Energy (Initial structure): -56.17451134985968
+E + PV (Initial structure): -38.42946475491841
+---------------------------
+Using CG method
+Optimization terminated successfully.
+         Current function value: -38.429465
+         Iterations: 0
+         Function evaluations: 1
+         Gradient evaluations: 1
+Energy (eV/atom): -1.9214732377459207
+Energy difference from the previous iteration: 0.0
+Final function value (eV/atom): -1.9214732377459207
+Geometry optimization succeeded
+Residuals (force):
+[-0.00000001 -0.          0.00000025 -0.00000185  0.          0.0000006
+ -0.00000161  0.          0.00000016  0.00000244  0.          0.00000021
+  0.00000134  0.         -0.00000118 -0.00000001  0.          0.00000025
+ -0.00000185 -0.          0.0000006  -0.00000161 -0.          0.00000016
+  0.00000244 -0.          0.00000021  0.00000134  0.         -0.00000118
+  0.00000472 -0.         -0.00000061 -0.00000154 -0.         -0.00000077
+ -0.00000183  0.          0.00000174 -0.00000413 -0.         -0.00000085
+  0.00000247 -0.          0.00000044  0.00000472 -0.         -0.00000061
+ -0.00000154  0.         -0.00000077 -0.00000183  0.          0.00000174
+ -0.00000413 -0.         -0.00000085  0.00000247  0.          0.00000044]
+Maximum absolute value in Residuals (force): 4.7240049446011225e-06
+Residuals (stress):
+[ 0.00000024 -0.          0.00000082 -0.          0.00000105  0.
+  0.00000023  0.         -0.00000118]
+Maximum absolute value in Residuals (stress): 1.1757974867837905e-06
+Final structure
+Axis basis vectors:
+- [np.float64(18.117577774910057), np.float64(0.0), np.float64(0.0)]
+- [np.float64(0.0), np.float64(4.445972148582603), np.float64(0.0)]
+- [np.float64(-1.3765459625270697), np.float64(0.0), np.float64(7.059121513647118)]
+Fractional coordinates:
+- Bi [np.float64(0.521445922074834), np.float64(0.0), np.float64(0.05569316281885395)]
+- Bi [np.float64(0.541021094096025), np.float64(0.0), np.float64(0.561755463716255)]
+- Bi [np.float64(0.829794094277134), np.float64(0.5), np.float64(0.936928919954934)]
+- Bi [np.float64(0.708065001648233), np.float64(0.0), np.float64(0.147380328477271)]
+- Bi [np.float64(0.828132444155382), np.float64(0.5), np.float64(0.469443710882508)]
+- Bi [np.float64(0.02144592207483398), np.float64(0.5), np.float64(0.05569316281885395)]
+- Bi [np.float64(0.041021094096024946), np.float64(0.5), np.float64(0.561755463716255)]
+- Bi [np.float64(0.329794094277134), np.float64(0.0), np.float64(0.936928919954934)]
+- Bi [np.float64(0.20806500164823305), np.float64(0.5), np.float64(0.147380328477271)]
+- Bi [np.float64(0.3281324441553819), np.float64(0.0), np.float64(0.469443710882508)]
+- Ca [np.float64(0.620686178023255), np.float64(0.5), np.float64(0.342835571328995)]
+- Ca [np.float64(0.909979739895376), np.float64(0.0), np.float64(0.246019274170311)]
+- Ca [np.float64(0.740682612334842), np.float64(0.0), np.float64(0.658083790612503)]
+- Ca [np.float64(0.9366797723117445), np.float64(0.0), np.float64(0.746186497676517)]
+- Ca [np.float64(0.628455409128691), np.float64(0.5), np.float64(0.864981209349497)]
+- Ca [np.float64(0.12068617802325488), np.float64(0.0), np.float64(0.342835571328995)]
+- Ca [np.float64(0.40997973989537595), np.float64(0.5), np.float64(0.246019274170311)]
+- Ca [np.float64(0.240682612334842), np.float64(0.5), np.float64(0.658083790612503)]
+- Ca [np.float64(0.4366797723117446), np.float64(0.5), np.float64(0.746186497676517)]
+- Ca [np.float64(0.12845540912869113), np.float64(0.0), np.float64(0.864981209349497)]
+Space group (1e-05): Cm (8)
+Space group (0.0001): Cm (8)
+Space group (0.001): Cm (8)
+Space group (0.01): Cm (8)
+Space group set:
+['Cm (8)', 'Cm (8)', 'Cm (8)', 'Cm (8)']
+Computational time: 0.009582042694091797
+Finished

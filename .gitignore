@@ -182,3 +182,5 @@ examples/struct_matcher
 example.py
 POTCAR
 ._
+!tests/files/Bi_based_alloy/Ca-Bi/5GPa_Bi6/log/*
+!tests/files/Bi_based_alloy/Ca-Bi/5GPa_Ca5Bi5/log/*

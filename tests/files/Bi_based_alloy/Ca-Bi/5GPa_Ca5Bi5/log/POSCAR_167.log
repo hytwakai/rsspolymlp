@@ -1,0 +1,117 @@
+Selected potential: ['../../potentials/CaBi_polymlp.lammps']
+Cutoff radius (Ang.): 8.0
+Pressure (GPa): 5.0
+Relax cell shape:        True
+Relax volume:            True
+Relax atomic positions:  True
+Basis (Axis)
+[[1. 0. 0. 0. 0. 0. 0. 0. 0.]
+ [0. 1. 0. 0. 0. 0. 0. 0. 0.]
+ [0. 0. 1. 0. 0. 0. 0. 0. 0.]
+ [0. 0. 0. 1. 0. 0. 0. 0. 0.]
+ [0. 0. 0. 0. 1. 0. 0. 0. 0.]
+ [0. 0. 0. 0. 0. 1. 0. 0. 0.]
+ [0. 0. 0. 0. 0. 0. 1. 0. 0.]
+ [0. 0. 0. 0. 0. 0. 0. 1. 0.]
+ [0. 0. 0. 0. 0. 0. 0. 0. 1.]]
+Basis (Positions)
+[[1. 0. 0. 0. 0. 0.]
+ [0. 1. 0. 0. 0. 0.]
+ [0. 0. 1. 0. 0. 0.]
+ [0. 0. 0. 1. 0. 0.]
+ [0. 0. 0. 0. 1. 0.]
+ [0. 0. 0. 0. 0. 1.]]
+Degrees of freedom: 15
+---------------------------
+Initial structure
+Axis basis vectors:
+- [np.float64(3.62890105496863), np.float64(0.0), np.float64(0.0)]
+- [np.float64(0.0), np.float64(3.62890105496863), np.float64(0.0)]
+- [np.float64(0.0), np.float64(0.0), np.float64(4.270947186681264)]
+Fractional coordinates:
+- Bi [np.float64(0.0), np.float64(0.0), np.float64(0.0)]
+- Ca [np.float64(0.5), np.float64(0.5), np.float64(0.5)]
+Energy (Initial structure): -5.8224080284309165
+E + PV (Initial structure): -4.067177882790194
+---------------------------
+Initial structure
+Axis basis vectors:
+- [np.float64(3.62890105496863), np.float64(0.0), np.float64(0.0)]
+- [np.float64(0.0), np.float64(3.62890105496863), np.float64(0.0)]
+- [np.float64(0.0), np.float64(0.0), np.float64(4.270947186681264)]
+Fractional coordinates:
+- Bi [np.float64(0.0), np.float64(0.0), np.float64(0.0)]
+- Ca [np.float64(0.5), np.float64(0.5), np.float64(0.5)]
+Using CG method
+Optimization terminated successfully.
+         Current function value: -4.067178
+         Iterations: 0
+         Function evaluations: 1
+         Gradient evaluations: 1
+Energy (eV/atom): -2.033588941395097
+Relax cell shape:        True
+Relax volume:            True
+Relax atomic positions:  True
+Basis (Axis)
+[[1. 0. 0. 0. 0. 0. 0. 0. 0.]
+ [0. 1. 0. 0. 0. 0. 0. 0. 0.]
+ [0. 0. 1. 0. 0. 0. 0. 0. 0.]
+ [0. 0. 0. 1. 0. 0. 0. 0. 0.]
+ [0. 0. 0. 0. 1. 0. 0. 0. 0.]
+ [0. 0. 0. 0. 0. 1. 0. 0. 0.]
+ [0. 0. 0. 0. 0. 0. 1. 0. 0.]
+ [0. 0. 0. 0. 0. 0. 0. 1. 0.]
+ [0. 0. 0. 0. 0. 0. 0. 0. 1.]]
+Basis (Positions)
+[[1. 0. 0. 0. 0. 0.]
+ [0. 1. 0. 0. 0. 0.]
+ [0. 0. 1. 0. 0. 0.]
+ [0. 0. 0. 1. 0. 0.]
+ [0. 0. 0. 0. 1. 0.]
+ [0. 0. 0. 0. 0. 1.]]
+Degrees of freedom: 15
+---------------------------
+Initial structure
+Axis basis vectors:
+- [np.float64(3.62890105496863), np.float64(0.0), np.float64(0.0)]
+- [np.float64(0.0), np.float64(3.62890105496863), np.float64(0.0)]
+- [np.float64(0.0), np.float64(0.0), np.float64(4.270947186681264)]
+Fractional coordinates:
+- Bi [np.float64(0.0), np.float64(0.0), np.float64(0.0)]
+- Ca [np.float64(0.5), np.float64(0.5), np.float64(0.5)]
+Energy (Initial structure): -5.8224080284309165
+E + PV (Initial structure): -4.067177882790194
+---------------------------
+Using CG method
+Optimization terminated successfully.
+         Current function value: -4.067178
+         Iterations: 0
+         Function evaluations: 1
+         Gradient evaluations: 1
+Energy (eV/atom): -2.033588941395097
+Energy difference from the previous iteration: 0.0
+Final function value (eV/atom): -2.033588941395097
+Geometry optimization succeeded
+Residuals (force):
+[-0. -0.  0. -0. -0. -0.]
+Maximum absolute value in Residuals (force): 3.310481260087411e-17
+Residuals (stress):
+[ 0.00000025  0.         -0.          0.          0.00000025 -0.
+ -0.         -0.         -0.00000033]
+Maximum absolute value in Residuals (stress): 3.274093365295122e-07
+Final structure
+Axis basis vectors:
+- [np.float64(3.62890105496863), np.float64(0.0), np.float64(0.0)]
+- [np.float64(0.0), np.float64(3.62890105496863), np.float64(0.0)]
+- [np.float64(0.0), np.float64(0.0), np.float64(4.270947186681264)]
+Fractional coordinates:
+- Bi [np.float64(0.0), np.float64(0.0), np.float64(0.0)]
+- Ca [np.float64(0.5), np.float64(0.5), np.float64(0.5)]
+Space group (1e-05): P4/mmm (123)
+Space group (0.0001): P4/mmm (123)
+Space group (0.001): P4/mmm (123)
+Space group (0.01): P4/mmm (123)
+Space group set:
+['P4/mmm (123)', 'P4/mmm (123)', 'P4/mmm (123)', 'P4/mmm (123)']
+Computational time: 0.005666971206665039
+Finished
