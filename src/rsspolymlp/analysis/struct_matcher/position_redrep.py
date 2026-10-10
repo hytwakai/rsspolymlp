@@ -67,15 +67,22 @@ class PositionRepReducer:
                 self.original_axis,
             )
         )
-        print(self.reduced_axis)
 
         # Trivial case: single‑atom cell → nothing to do
         if self.positions.shape[0] == 1:
             return metric_tensor_half, np.array([0, 0, 0]), self.elements
 
+        if self.cartesian_coords:
+            a, b, c = np.array(axis_cands[0])
+            norm_a = np.linalg.norm(a)
+            norm_b = np.linalg.norm(b)
+            norm_c = np.linalg.norm(c)
+            self.axis_abc = np.array([norm_a, norm_b, norm_c])
+
         reduced_positions, sorted_elements = self.get_reduced_positions(
             self.positions,
             self.elements,
+            axis_cands,
             signed_permutation_cands,
         )
 
@@ -85,6 +92,7 @@ class PositionRepReducer:
         self,
         positions,
         elements,
+        axis_cands,
         signed_permutation_cands,
     ):
         """Derive a reduced representation of atomic positions."""
@@ -104,7 +112,7 @@ class PositionRepReducer:
         positions = positions[sort_idx, :]
 
         position_cands = self.position_candidates(
-            positions, sorted_types, signed_permutation_cands
+            positions, sorted_types, axis_cands, signed_permutation_cands
         )
 
         reduced_perm_cands = []
@@ -118,7 +126,7 @@ class PositionRepReducer:
                 )
                 if self.cartesian_coords:
                     reduced_perm_positions = (
-                        reduced_perm_positions @ todo
+                        reduced_perm_positions @ pos_cand["axis"]
                     )
                 reduced_perm_cands.append(reduced_perm_positions.T.reshape(-1))
 
@@ -140,6 +148,7 @@ class PositionRepReducer:
         self,
         positions: np.ndarray,
         types: np.ndarray,
+        axis_cands: np.ndarray,
         signed_permutation_cands: np.ndarray,
     ):
         _positions = positions.copy()
@@ -149,10 +158,10 @@ class PositionRepReducer:
 
         mask = types == 0
         position_cands = []
-        for cand in signed_permutation_cands:
+        for idx, signed in enumerate(signed_permutation_cands):
             _pos = np.zeros_like(_positions)
             _cls_id = np.zeros_like(_positions, dtype=np.int32)
-            for axis, val in enumerate(cand):
+            for axis, val in enumerate(signed):
                 target_axis = np.where(val != 0)[0][0]
                 sign = val[target_axis]
                 if sign == 1:
@@ -166,6 +175,7 @@ class PositionRepReducer:
                     "positions": _pos,
                     "cluster_id": _cls_id,
                     "cands_idx": np.where(mask)[0],
+                    "axis": axis_cands[idx],
                 }
             )
         return position_cands
@@ -266,7 +276,7 @@ class PositionRepReducer:
             gap = np.roll(pos_sorted, -1, axis=0) - pos_sorted
             gap[-1, :] += 1.0
             if self.cartesian_coords:
-                gap = gap @ todo
+                gap = gap * self.axis_abc
 
             # New cluster starts where gap > symprec
             is_new_cluster = gap > self.symprec
