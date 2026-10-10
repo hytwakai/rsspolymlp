@@ -8,7 +8,7 @@ import numpy as np
 
 from pypolymlp.core.data_format import PolymlpStructure
 from pypolymlp.utils.vasp_utils import write_poscar_file
-from rsspolymlp.analysis.struct_matcher.reduced_position import StructRepReducer
+from rsspolymlp.analysis.struct_matcher.position_redrep import PositionRepReducer
 from rsspolymlp.common.composition import compute_composition
 from rsspolymlp.common.interface_vasp import Poscar
 from rsspolymlp.common.property import PropUtil
@@ -280,7 +280,7 @@ def generate_redrep(
         _pos = polymlp_st.positions.T
         _elements = polymlp_st.elements
 
-        reducer = StructRepReducer(
+        reducer = PositionRepReducer(
             symprec=input_symprec,
             standardize_axis=standardize_axis,
             original_axis=original_axis,

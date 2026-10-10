@@ -1,5 +1,89 @@
 import numpy as np
 
+from rsspolymlp.analysis.struct_matcher.chiral_spg import is_chiral
+
+
+def get_reduced_lattice(
+    axis: np.ndarray,
+    spg_number: int,
+    symprec: list[float] = [1e-4, 1e-4, 1e-4],
+    original_axis: bool = False,
+):
+    proper_matrices, improper_matrices = signed_permutation_matrices()
+    proper_G_transform, improper_G_transform = metric_tensor_transform()
+    if not is_chiral(spg_number):
+        all_signed_permutation_matrices = np.concatenate(
+            [proper_matrices, improper_matrices], axis=0
+        )
+        all_G_transform = np.concatenate(
+            [proper_G_transform, improper_G_transform], axis=0
+        )
+    else:
+        all_signed_permutation_matrices = proper_matrices
+        all_G_transform = proper_G_transform
+
+    all_axis = []
+    for P in all_signed_permutation_matrices:
+        trans_axis = np.abs(P) @ axis
+        all_axis.append(trans_axis)
+    all_axis = np.array(all_axis)
+
+    a, b, c = np.array(axis)
+    aa = np.sum(a**2)
+    bb = np.sum(b**2)
+    cc = np.sum(c**2)
+    ab = a @ b
+    ac = a @ c
+    bc = b @ c
+    metric_tensor = np.array([aa, bb, cc, ab, ac, bc])
+
+    all_metric_tensor = []
+    for P in all_G_transform:
+        trans_metric_tensor = P @ metric_tensor
+        all_metric_tensor.append(trans_metric_tensor)
+    all_metric_tensor = np.array(all_metric_tensor)
+
+    axis_cands = all_axis
+    metric_tensor_cands = all_metric_tensor
+    signed_permutation_cands = all_signed_permutation_matrices
+    for idx in range(6):
+        if original_axis:
+            is_near_max = np.where(
+                np.abs(metric_tensor_cands[:, idx] - metric_tensor[idx])
+                <= symprec[idx % 3]
+            )[0]
+        else:
+            # Get the reduced axis representation
+            min_metric = np.min(metric_tensor_cands[:, idx])
+            is_near_max = np.where(
+                np.abs(metric_tensor_cands[:, idx] - min_metric) <= symprec[idx % 3]
+            )[0]
+        # Update the axis candidates
+        axis_cands = axis_cands[is_near_max, :]
+        metric_tensor_cands = metric_tensor_cands[is_near_max, :]
+        signed_permutation_cands = signed_permutation_cands[is_near_max, :]
+        if metric_tensor_cands.shape[0] == 1:
+            break
+
+    reduced_metric_tensor = metric_tensor_cands[0]
+
+    aa, bb, cc, ab, ac, bc = reduced_metric_tensor
+    G = np.array([[aa, ab, ac], [ab, bb, bc], [ac, bc, cc]], dtype=float)
+    w, U = np.linalg.eigh(G)
+    w = np.clip(w, 0, None)
+    G_half = (U * np.sqrt(w)) @ U.T
+    metric_tensor_half = np.array(
+        [
+            G_half[0, 0],
+            G_half[1, 1],
+            G_half[2, 2],
+            G_half[0, 1],
+            G_half[0, 2],
+            G_half[1, 2],
+        ]
+    )
+    return metric_tensor_half, axis_cands, signed_permutation_cands
+
 
 def signed_permutation_matrices():
     proper_matrices = np.array(

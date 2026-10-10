@@ -2,22 +2,11 @@ from collections import Counter
 
 import numpy as np
 
-from rsspolymlp.analysis.struct_matcher.chiral_spg import is_chiral
-from rsspolymlp.analysis.struct_matcher.invert_and_swap import (
-    metric_tensor_transform,
-    signed_permutation_matrices,
-)
-from rsspolymlp.common.property import PropUtil
+from rsspolymlp.analysis.struct_matcher.lattice_redrep import get_reduced_lattice
 
 
-class StructRepReducer:
-    """Identify the reduced crystal structure representation in a periodic cell.
-
-    Parameters
-    ----------
-    symprec : List[float], optional
-        Numerical tolerance when comparing fractional coordinates (default: 1e-5).
-    """
+class PositionRepReducer:
+    """Identify the reduced crystal structure representation in a periodic cell."""
 
     def __init__(
         self,
@@ -55,8 +44,9 @@ class StructRepReducer:
             One-dimensional vector [X_a, X_b, X_c] that uniquely identifies
             the structure up to the tolerance `symprec`.
         sorted_elements : ndarray
-            Chemical element symbols sorted in alphabetical order,
-            corresponding to the order of fractional atomic coordinates in reduced_positions.
+            Chemical element symbols ordered starting from the least frequent element
+            (alphabetically first in case of ties), corresponding to the order of
+            atomic coordinates.
         """
 
         self.axis = np.asarray(axis, dtype=float)
@@ -69,29 +59,15 @@ class StructRepReducer:
         else:
             _axis = self.axis
 
-        prop = PropUtil(_axis, self.positions)
-        metric_tensor = prop.metric_tensor
-
-        self.reduced_axis, signed_permutation_cands = self.get_reduced_axis(
-            metric_tensor,
-            spg_number,
+        metric_tensor_half, axis_cands, signed_permutation_cands = (
+            get_reduced_lattice(
+                _axis,
+                spg_number,
+                self.symprec,
+                self.original_axis,
+            )
         )
-
-        aa, bb, cc, ab, ac, bc = self.reduced_axis
-        G = np.array([[aa, ab, ac], [ab, bb, bc], [ac, bc, cc]], dtype=float)
-        w, U = np.linalg.eigh(G)
-        w = np.clip(w, 0, None)
-        G_half = (U * np.sqrt(w)) @ U.T
-        metric_tensor_half = np.array(
-            [
-                G_half[0, 0],
-                G_half[1, 1],
-                G_half[2, 2],
-                G_half[0, 1],
-                G_half[0, 2],
-                G_half[1, 2],
-            ]
-        )
+        print(self.reduced_axis)
 
         # Trivial case: single‑atom cell → nothing to do
         if self.positions.shape[0] == 1:
@@ -104,49 +80,6 @@ class StructRepReducer:
         )
 
         return metric_tensor_half, reduced_positions, sorted_elements
-
-    def get_reduced_axis(self, metric_tensor, spg_number):
-        proper_matrices, improper_matrices = signed_permutation_matrices()
-        proper_G_transform, improper_G_transform = metric_tensor_transform()
-        if not is_chiral(spg_number):
-            all_signed_permutation_matrices = np.concatenate(
-                [proper_matrices, improper_matrices], axis=0
-            )
-            all_G_transform = np.concatenate(
-                [proper_G_transform, improper_G_transform], axis=0
-            )
-        else:
-            all_signed_permutation_matrices = proper_matrices
-            all_G_transform = proper_G_transform
-
-        all_metric_tensor = []
-        for P in all_G_transform:
-            trans_metric_tensor = P @ metric_tensor
-            all_metric_tensor.append(trans_metric_tensor)
-        all_metric_tensor = np.array(all_metric_tensor)
-
-        reduced_axis_cands = all_metric_tensor
-        signed_permutation_cands = all_signed_permutation_matrices
-        for idx in range(6):
-            if self.original_axis:
-                is_near_max = np.where(
-                    np.abs(reduced_axis_cands[:, idx] - metric_tensor[idx])
-                    <= self.symprec[idx % 3]
-                )[0]
-            else:
-                min_metric = np.min(reduced_axis_cands[:, idx])
-                is_near_max = np.where(
-                    np.abs(reduced_axis_cands[:, idx] - min_metric)
-                    <= self.symprec[idx % 3]
-                )[0]
-
-            reduced_axis_cands = reduced_axis_cands[is_near_max, :]
-            signed_permutation_cands = signed_permutation_cands[is_near_max, :]
-            if reduced_axis_cands.shape[0] == 1:
-                break
-
-        reduced_axis = reduced_axis_cands[0]
-        return reduced_axis, signed_permutation_cands
 
     def get_reduced_positions(
         self,
@@ -184,8 +117,8 @@ class StructRepReducer:
                     target_idx, _pos, sorted_types, _cls_id
                 )
                 if self.cartesian_coords:
-                    reduced_perm_positions = reduced_perm_positions * np.sqrt(
-                        self.reduced_axis[0:3]
+                    reduced_perm_positions = (
+                        reduced_perm_positions @ todo
                     )
                 reduced_perm_cands.append(reduced_perm_positions.T.reshape(-1))
 
@@ -214,9 +147,8 @@ class StructRepReducer:
             _positions, signed_permutation_cands
         )
 
-        position_cands = []
-
         mask = types == 0
+        position_cands = []
         for cand in signed_permutation_cands:
             _pos = np.zeros_like(_positions)
             _cls_id = np.zeros_like(_positions, dtype=np.int32)
@@ -236,7 +168,6 @@ class StructRepReducer:
                     "cands_idx": np.where(mask)[0],
                 }
             )
-
         return position_cands
 
     def reduced_permutation(
@@ -311,13 +242,10 @@ class StructRepReducer:
         Assigns cluster IDs along each axis; atoms at identical positions share the same ID.
         """
         invert_list = [False]
+        cluster_id = np.full_like(positions, -1, dtype=np.int32)
+        positions_by_axis = np.zeros_like(positions)
         if any(np.any(v == -1) for v in signed_permutation_cands):
             invert_list = [False, True]
-
-        if len(invert_list) == 1:
-            cluster_id = np.full_like(positions, -1, dtype=np.int32)
-            positions_by_axis = np.zeros_like(positions)
-        else:
             n_rows, n_cols = positions.shape
             cluster_id = np.full((n_rows, n_cols * 2), -1, dtype=np.int32)
             positions_by_axis = np.zeros((n_rows, n_cols * 2), dtype=positions.dtype)
@@ -338,7 +266,7 @@ class StructRepReducer:
             gap = np.roll(pos_sorted, -1, axis=0) - pos_sorted
             gap[-1, :] += 1.0
             if self.cartesian_coords:
-                gap *= np.sqrt(self.reduced_axis[0:3])
+                gap = gap @ todo
 
             # New cluster starts where gap > symprec
             is_new_cluster = gap > self.symprec
