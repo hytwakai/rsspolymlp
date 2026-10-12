@@ -1,181 +1,15 @@
 import math
-import re
 from contextlib import redirect_stdout
-from typing import Optional
 
 import numpy as np
+from scipy.optimize import linear_sum_assignment
 
+from rsspolymlp.analysis.struct_matcher.gen_allrep import (
+    AllStructReps,
+)
 from rsspolymlp.analysis.struct_matcher.gen_redrep import (
     ReducedStructReps,
-    generate_redreps_parallel,
 )
-
-
-class UniqueStructIdentifier:
-
-    def __init__(self):
-        self.unique_str: list[ReducedStructReps] = []  # Store unique structures
-        self.unique_str_prop: list[dict] = []  # Store unique structure properties
-        self.unique_str_keep: list[list[ReducedStructReps]] = []
-        self.unique_str_prop_keep: list[list[dict]] = []
-
-    def identify_duplicate_struct(
-        self,
-        reduced_reps: ReducedStructReps,
-        other_properties: Optional[dict] = None,
-        axis_tol: float = 0.01,
-        pos_tol: float = 0.01,
-        keep_unique: bool = False,
-    ):
-        """
-        Identify and manage duplicate structures.
-        A structure is considered a duplicate if it matches an existing structure based on
-        equivalence of the reduced crystal structure representation.
-
-        Parameters
-        ----------
-        reduced_reps : ReducedStructReps
-            The structure to be compared and registered if unique.
-        other_properties : dict, optional
-            Additional metadata associated with the structure.
-        energy_diff : float
-            Energy tolerance used in energy-based duplicate detection.
-
-        Returns
-        -------
-        is_unique : bool
-            True if the structure is unique.
-        is_change_struct : bool
-            True if the existing structure was replaced due to higher symmetry.
-        """
-
-        is_unique = True
-        is_change_struct = False
-        if other_properties is None:
-            other_properties = {}
-
-        for idx, _uniq_str in enumerate(self.unique_str):
-            uniq_str_list = self.unique_str_keep[idx] if keep_unique else [_uniq_str]
-            for uniq_str in uniq_str_list:
-                if struct_match(
-                    uniq_str,
-                    reduced_reps,
-                    axis_tol=axis_tol,
-                    pos_tol=pos_tol,
-                ):
-                    is_unique = False
-                    if self._spg_count(reduced_reps.spg_list) > self._spg_count(
-                        uniq_str.spg_list
-                    ) or (
-                        self._spg_count(reduced_reps.spg_list)
-                        == self._spg_count(uniq_str.spg_list)
-                    ):
-                        is_change_struct = True
-                    break
-
-            if not is_unique:
-                break
-
-        if not is_unique:
-            if reduced_reps.struct_path not in self.unique_str[idx].dupstr_paths:
-                self.unique_str[idx].dupstr_paths.add(reduced_reps.struct_path)
-            if is_change_struct:
-                # Update duplicate count and replace with better data if necessary
-                reduced_reps.dupstr_paths = self.unique_str[idx].dupstr_paths
-                reduced_reps.struct_tag = self.unique_str[idx].struct_tag
-                self.unique_str[idx] = reduced_reps
-                self.unique_str_prop[idx] = other_properties
-            if keep_unique:
-                self.unique_str_keep[idx].append(reduced_reps)
-                self.unique_str_prop_keep[idx].append(other_properties)
-        else:
-            self.unique_str.append(reduced_reps)
-            self.unique_str_prop.append(other_properties)
-            if keep_unique:
-                self.unique_str_keep.append([reduced_reps])
-                self.unique_str_prop_keep.append([other_properties])
-
-        if is_unique and len(self.unique_str) % 500 == 0:
-            print(f"Reached {len(self.unique_str)} unique structures.")
-
-        return is_unique, is_change_struct
-
-    def _spg_count(self, spg_list):
-        """Extract and sum space group counts from a list of space group strings."""
-        return sum(
-            int(re.search(r"\((\d+)\)", s).group(1))
-            for s in spg_list
-            if re.search(r"\((\d+)\)", s)
-        )
-
-    def _initialize_unique_structs(
-        self,
-        unique_structs: list[ReducedStructReps],
-        unique_str_prop: Optional[list[dict]] = None,
-    ):
-        """Initialize unique structures and their associated properties."""
-        self.unique_str = unique_structs
-        if unique_str_prop is None:
-            self.unique_str_prop = [{} for _ in unique_structs]
-        else:
-            self.unique_str_prop = unique_str_prop
-
-
-def identify_unique_structure(
-    struct_lists: list[dict],
-    axis_tol: float = 0.01,
-    pos_tol: float = 0.01,
-    keep_unique: bool = False,
-    num_process: int = -1,
-    backend: str = "loky",
-    primitive_symprecs: list[float] = [1e-5, 1e-4, 1e-3, 1e-2],
-    redrep_symprecs: list[float] = [1e-4, 1e-2, 1e-1],
-    standardize_axis: bool = False,
-    cartesian_coords: bool = True,
-    refine_cell: bool = False,
-    pre_analyzer: Optional[UniqueStructIdentifier] = None,
-    verbose: bool = False,
-):
-    """
-    Parameters
-    ----------
-    struct_lists : list of dict
-        A list of dictionaries, where each dictionary contains a single structure information.
-        Each dictionary must include "struct_path" keys:
-            - "struct_path": path of POSCAR format file
-        Optional keys:
-            - "structure": PolymlpStructure object
-            - "struct_tag" (optional): structure identifier (e.g., structure number)
-    """
-    if pre_analyzer is None:
-        analyzer = UniqueStructIdentifier()
-    else:
-        analyzer = pre_analyzer
-
-    if verbose:
-        print("   - Converting reduced crystal structure representation...")
-    redreps_list = generate_redreps_parallel(
-        struct_lists,
-        num_process=num_process,
-        backend=backend,
-        primitive_symprecs=primitive_symprecs,
-        redrep_symprecs=redrep_symprecs,
-        standardize_axis=standardize_axis,
-        cartesian_coords=cartesian_coords,
-        refine_cell=refine_cell,
-    )
-
-    if verbose:
-        print("   - Eliminating duplicate structures...")
-    for idx, redreps in enumerate(redreps_list):
-        analyzer.identify_duplicate_struct(
-            redreps,
-            other_properties=struct_lists[idx],
-            axis_tol=axis_tol,
-            pos_tol=pos_tol,
-            keep_unique=keep_unique,
-        )
-    return analyzer
 
 
 def struct_match(
@@ -200,9 +34,9 @@ def struct_match(
     Parameters
     ----------
     redreps_1 : ReducedStructReps
-        First set of symmetry-reduced structures (e.g., from structure A).
-    redreps_1 : ReducedStructReps
-        Second set of symmetry-reduced structures (e.g., from structure B).
+        Set of reduced representations from structure A.
+    redreps_2 : ReducedStructReps
+        Set of reduced representations from structure B.
     axis_tol : float, default=0.01
         Tolerance for lattice vector differences, computed using the squared
         L2 norm along each axis.
@@ -220,8 +54,8 @@ def struct_match(
     axis_d_min = None
     pos_d_min = None
     min_axis_l2_norm = 1e8
-    for st_1 in redreps_1.reduced_struct_set:
-        for st_2 in redreps_2.reduced_struct_set:
+    for st_1 in redreps_1.redrep_list:
+        for st_2 in redreps_2.redrep_list:
             if struct_match or st_1.element_count != st_2.element_count:
                 continue
             if spg_match and st_1.spg_number != st_2.spg_number:
@@ -280,9 +114,7 @@ def struct_match(
             print("  axis_tol:", axis_tol)
             print("  pos_tol:", pos_tol)
             print("structures:")
-            for i, st_set in enumerate(
-                [redreps_1.reduced_struct_set, redreps_2.reduced_struct_set]
-            ):
+            for i, st_set in enumerate([redreps_1.redrep_list, redreps_2.redrep_list]):
                 print(f"  - struct_No: {i + 1}")
                 for st in st_set:
                     print("    spg_number:", st.spg_number)
@@ -328,4 +160,40 @@ def struct_match(
             print("Match:", struct_match)
         print(f"{output_file} is generated.")
 
+    return struct_match
+
+
+def struct_match_allrep(
+    allreps_1: AllStructReps,
+    allreps_2: AllStructReps,
+    axis_tol: float = 0.01,
+    pos_tol: float = 0.01,
+    spg_match: bool = True,
+) -> bool:
+    struct_match = False
+    min_axis_l2_norm = 1e8
+    for st_1 in allreps_1.allrep_list:
+        for st_2 in allreps_2.allrep_list:
+            if struct_match or st_1.element_count != st_2.element_count:
+                continue
+            if spg_match and st_1.spg_number != st_2.spg_number:
+                continue
+
+            axis_d = st_1.axis - st_2.axis
+            l2_norm = np.linalg.norm(axis_d)
+            min_axis_l2_norm = min(min_axis_l2_norm, np.min(l2_norm))
+            if l2_norm > axis_tol:
+                continue
+
+            for pos1 in st_1.positions:
+                if struct_match:
+                    break
+                for pos2 in st_2.positions:
+                    # pos_d = np.linalg.norm(pos1[:, None, :] - pos2[None, :, :], axis=2)
+                    pos_d = np.max(np.abs(pos1[:, None, :] - pos2[None, :, :]), axis=2)
+                    row, col = linear_sum_assignment(pos_d)
+                    pos_max_abs = pos_d[row, col]
+                    if np.all(pos_max_abs < pos_tol):
+                        struct_match = True
+                        break
     return struct_match

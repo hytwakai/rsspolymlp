@@ -3,7 +3,6 @@ from collections import Counter
 import numpy as np
 
 from rsspolymlp.analysis.struct_matcher.lattice_redrep import get_reduced_lattice
-from rsspolymlp.common.property import PropUtil
 
 
 class PositionRepGenerator:
@@ -11,7 +10,7 @@ class PositionRepGenerator:
 
     def __init__(
         self,
-        symprec: list[float] = [1e-4, 1e-4, 1e-4],
+        symprec: list[float] = [1e-3, 1e-3, 1e-3],
         standardize_axis: bool = False,
         original_axis: bool = False,
         cartesian_coords: bool = True,
@@ -22,7 +21,7 @@ class PositionRepGenerator:
         self.original_axis = original_axis
         self.cartesian_coords = cartesian_coords
 
-    def get_all_structure_representation(self, axis, positions, elements, spg_number):
+    def get_all_structure_representations(self, axis, positions, elements, spg_number):
         """Derive all representations of a crystal structure.
 
         Parameters
@@ -40,7 +39,7 @@ class PositionRepGenerator:
         Returns
         -------
         all_positions : list[ndarray]
-            List of one-dimensional vectors [X_a, X_b, X_c].
+            List of (N, 3) arrays.
         sorted_elements : ndarray
             Chemical element symbols ordered starting from the least frequent element
             (alphabetically first in case of ties), corresponding to the order of
@@ -57,30 +56,11 @@ class PositionRepGenerator:
         else:
             _axis = self.axis
 
-        prop = PropUtil(_axis, self.positions)
-        metric_tensor = prop.metric_tensor
-
-        self.reduced_metric_tensor, signed_permutation_cands = get_reduced_lattice(
-            metric_tensor,
+        metric_tensor_half, axis_cands, signed_permutation_cands = get_reduced_lattice(
+            _axis,
             spg_number,
             self.symprec,
             self.original_axis,
-        )
-
-        aa, bb, cc, ab, ac, bc = self.reduced_metric_tensor
-        G = np.array([[aa, ab, ac], [ab, bb, bc], [ac, bc, cc]], dtype=float)
-        w, U = np.linalg.eigh(G)
-        w = np.clip(w, 0, None)
-        G_half = (U * np.sqrt(w)) @ U.T
-        metric_tensor_half = np.array(
-            [
-                G_half[0, 0],
-                G_half[1, 1],
-                G_half[2, 2],
-                G_half[0, 1],
-                G_half[0, 2],
-                G_half[1, 2],
-            ]
         )
 
         # Trivial case: single‑atom cell → nothing to do
@@ -90,6 +70,7 @@ class PositionRepGenerator:
         all_positions, sorted_elements = self.get_all_positions(
             self.positions,
             self.elements,
+            axis_cands,
             signed_permutation_cands,
         )
 
@@ -99,6 +80,7 @@ class PositionRepGenerator:
         self,
         positions,
         elements,
+        axis_cands,
         signed_permutation_cands,
     ):
         unique_elements = np.sort(np.unique(elements))
@@ -117,28 +99,20 @@ class PositionRepGenerator:
         positions = positions[sort_idx, :]
 
         position_cands = self.position_candidates(
-            positions, types, signed_permutation_cands
+            positions, types, axis_cands, signed_permutation_cands
         )
 
         all_positions = []
-        target_vals = []
         for pos_cand in position_cands:
             for target_idx in pos_cand["cands_idx"]:
                 _pos = pos_cand["positions"].copy()
-                _cls_id = pos_cand["cluster_id"].copy()
-                position_onerep = self.get_position_onerep(
-                    target_idx, _pos, sorted_types, _cls_id
+                position_onerep = self.snapped_positions(
+                    target_idx,
+                    _pos,
                 )
                 if self.cartesian_coords:
-                    position_onerep = position_onerep * np.sqrt(
-                        self.reduced_axis[0:3]
-                    )
-                reduced_perm_cands.append(reduced_perm_positions.T.reshape(-1))
-
-                mask = types == 0
-                target_vals.append(
-                    reduced_perm_positions[0 : len(mask) - 1, :].T.reshape(-1)
-                )
+                    position_onerep = position_onerep @ pos_cand["axis"]
+                all_positions.append(position_onerep)
 
         return all_positions, elements
 
@@ -146,6 +120,7 @@ class PositionRepGenerator:
         self,
         positions: np.ndarray,
         types: np.ndarray,
+        axis_cands: np.ndarray,
         signed_permutation_cands: np.ndarray,
     ):
         invert_list = [False]
@@ -162,7 +137,7 @@ class PositionRepGenerator:
 
         mask = types == 0
         position_cands = []
-        for cand in signed_permutation_cands:
+        for idx, cand in enumerate(signed_permutation_cands):
             _pos = np.zeros_like(positions)
             for axis, val in enumerate(cand):
                 target_axis = np.where(val != 0)[0][0]
@@ -175,6 +150,26 @@ class PositionRepGenerator:
                 {
                     "positions": _pos,
                     "cands_idx": np.where(mask)[0],
+                    "axis": axis_cands[idx],
                 }
             )
         return position_cands
+
+    def snapped_positions(
+        self,
+        target_idx: int,
+        positions: np.ndarray,
+    ):
+        pos = positions.copy()
+        pos = pos - pos[target_idx]
+        pos %= 1.0
+
+        snapped_pos = np.delete(pos, target_idx, axis=0)
+        for ax in range(3):
+            threshold = self.symprec[ax]
+            snapped_pos[:, ax] = np.where(
+                snapped_pos[:, ax] > 1.0 - threshold,
+                snapped_pos[:, ax] - 1,
+                snapped_pos[:, ax],
+            )
+        return snapped_pos

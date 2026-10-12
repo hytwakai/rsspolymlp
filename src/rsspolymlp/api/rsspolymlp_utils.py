@@ -1,15 +1,22 @@
 from pypolymlp.utils.spglib_utils import SymCell
+
 from rsspolymlp.analysis.rss_summarize import (
     log_all_unique_structures,
     log_unique_structures,
+)
+from rsspolymlp.analysis.struct_matcher.gen_allrep import (
+    generate_allreps,
 )
 from rsspolymlp.analysis.struct_matcher.gen_redrep import (
     generate_redreps,
     generate_redreps_parallel,
 )
-from rsspolymlp.analysis.struct_matcher.struct_match import (
+from rsspolymlp.analysis.struct_matcher.identify_uniqstr import (
     UniqueStructIdentifier,
+)
+from rsspolymlp.analysis.struct_matcher.struct_match import (
     struct_match,
+    struct_match_allrep,
 )
 from rsspolymlp.rss.optimization_mlp import OptimizationMLP
 
@@ -96,6 +103,7 @@ def struct_compare(
     original_axis: bool = False,
     frac_coords: bool = False,
     refine_cell: bool = False,
+    gen_allrep: bool = False,
     verbose: bool = True,
 ):
     sym = SymCell(poscar_name=poscar_paths[0], symprec=refine_symprec)
@@ -115,39 +123,66 @@ def struct_compare(
         print("- Positions:")
         print(polymlp_st2.positions.T)
 
-    if reduced_symprecs is None:
-        if not frac_coords:
-            reduced_symprecs = [1e-4, 1e-2, 1e-1]
-        else:
-            reduced_symprecs = [1e-5, 1e-3, 1e-2]
-
-    reduced_struct_set1 = generate_redreps(
-        polymlp_st=polymlp_st1,
-        refine_cell=refine_cell,
-        redrep_symprecs=reduced_symprecs,
-        standardize_axis=standardize_axis,
-        original_axis=original_axis,
-        cartesian_coords=not frac_coords,
-        struct_path="st1",
-    )
-    reduced_struct_set2 = generate_redreps(
-        polymlp_st=polymlp_st2,
-        refine_cell=refine_cell,
-        redrep_symprecs=reduced_symprecs,
-        standardize_axis=standardize_axis,
-        original_axis=original_axis,
-        cartesian_coords=not frac_coords,
-        struct_path="st12",
-    )
-
-    judge = struct_match(
-        reduced_struct_set1,
-        reduced_struct_set2,
-        axis_tol=axis_tol,
-        pos_tol=pos_tol,
-        verbose=verbose,
-        spg_match=False,
-    )
+    if not gen_allrep:
+        if reduced_symprecs is None:
+            if not frac_coords:
+                reduced_symprecs = [1e-4, 1e-2, 1e-1]
+            else:
+                reduced_symprecs = [1e-5, 1e-3, 1e-2]
+        redreps_1 = generate_redreps(
+            polymlp_st=polymlp_st1,
+            refine_cell=refine_cell,
+            redrep_symprecs=reduced_symprecs,
+            standardize_axis=standardize_axis,
+            original_axis=original_axis,
+            cartesian_coords=not frac_coords,
+            struct_path="st1",
+        )
+        redreps_2 = generate_redreps(
+            polymlp_st=polymlp_st2,
+            refine_cell=refine_cell,
+            redrep_symprecs=reduced_symprecs,
+            standardize_axis=standardize_axis,
+            original_axis=original_axis,
+            cartesian_coords=not frac_coords,
+            struct_path="st12",
+        )
+        judge = struct_match(
+            redreps_1,
+            redreps_2,
+            axis_tol=axis_tol,
+            pos_tol=pos_tol,
+            verbose=verbose,
+            spg_match=False,
+        )
+    else:
+        reduced_symprecs = 1e-3
+        allreps_1 = generate_allreps(
+            polymlp_st=polymlp_st1,
+            refine_cell=refine_cell,
+            allrep_symprec=reduced_symprecs,
+            standardize_axis=standardize_axis,
+            original_axis=original_axis,
+            cartesian_coords=not frac_coords,
+            struct_path="st1",
+        )
+        allreps_2 = generate_allreps(
+            polymlp_st=polymlp_st2,
+            refine_cell=refine_cell,
+            allrep_symprec=reduced_symprecs,
+            standardize_axis=standardize_axis,
+            original_axis=original_axis,
+            cartesian_coords=not frac_coords,
+            struct_path="st12",
+        )
+        judge = struct_match_allrep(
+            allreps_1,
+            allreps_2,
+            axis_tol=axis_tol,
+            pos_tol=pos_tol,
+        )
+    if verbose:
+        print("Match:", judge)
     return judge
 
 

@@ -16,7 +16,7 @@ from rsspolymlp.analysis.struct_matcher.gen_redrep import (
     ReducedStructReps,
     generate_redreps_parallel,
 )
-from rsspolymlp.analysis.struct_matcher.struct_match import (
+from rsspolymlp.analysis.struct_matcher.identify_uniqstr import (
     UniqueStructIdentifier,
     identify_unique_structure,
 )

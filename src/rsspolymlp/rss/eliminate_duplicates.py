@@ -10,15 +10,15 @@ from collections import Counter, defaultdict
 from time import time
 
 import numpy as np
-
 from pypolymlp.calculator.properties import Properties
+
 from rsspolymlp.analysis.ghost_minima import detect_ghost_minima
 from rsspolymlp.analysis.rss_summarize import (
     dump_json_rss_results,
     log_unique_structures,
 )
 from rsspolymlp.analysis.struct_matcher.gen_redrep import generate_redreps_parallel
-from rsspolymlp.analysis.struct_matcher.struct_match import UniqueStructIdentifier
+from rsspolymlp.analysis.struct_matcher.identify_uniqstr import UniqueStructIdentifier
 from rsspolymlp.common.interface_vasp import Poscar
 from rsspolymlp.common.property import PropUtil
 from rsspolymlp.rss.load_logfile import LogfileLoader

@@ -158,10 +158,10 @@ class PositionRepReducer:
 
         mask = types == 0
         position_cands = []
-        for idx, signed in enumerate(signed_permutation_cands):
+        for idx, cand in enumerate(signed_permutation_cands):
             _pos = np.zeros_like(_positions)
             _cls_id = np.zeros_like(_positions, dtype=np.int32)
-            for axis, val in enumerate(signed):
+            for axis, val in enumerate(cand):
                 target_axis = np.where(val != 0)[0][0]
                 sign = val[target_axis]
                 if sign == 1:

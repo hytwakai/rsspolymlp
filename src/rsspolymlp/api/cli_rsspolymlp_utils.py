@@ -88,6 +88,7 @@ def run():
     parser.add_argument("--original_axis", action="store_true", help="")
     parser.add_argument("--frac_coords", action="store_true", help="")
     parser.add_argument("--refine_cell", action="store_true", help="")
+    parser.add_argument("--gen_allrep", action="store_true", help="")
     parser.add_argument("--not_verbose", action="store_true", help="")
 
     # --geometry_opt mode
@@ -147,6 +148,7 @@ def run():
             original_axis=args.original_axis,
             frac_coords=args.frac_coords,
             refine_cell=args.refine_cell,
+            gen_allrep=args.gen_allrep,
             verbose=not args.not_verbose,
         )
 
