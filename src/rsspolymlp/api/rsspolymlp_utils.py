@@ -1,5 +1,6 @@
-from pypolymlp.utils.spglib_utils import SymCell
+from typing import Literal
 
+from pypolymlp.utils.spglib_utils import SymCell
 from rsspolymlp.analysis.rss_summarize import (
     log_all_unique_structures,
     log_unique_structures,
@@ -104,6 +105,7 @@ def struct_compare(
     frac_coords: bool = False,
     refine_cell: bool = False,
     gen_allrep: bool = False,
+    assign_method: Literal["greedy", "HK"] = "greedy",
     verbose: bool = True,
 ):
     sym = SymCell(poscar_name=poscar_paths[0], symprec=refine_symprec)
@@ -178,6 +180,7 @@ def struct_compare(
             allreps_2,
             axis_tol=axis_tol,
             pos_tol=pos_tol,
+            assign_method=assign_method,
             verbose=verbose,
         )
     if verbose:

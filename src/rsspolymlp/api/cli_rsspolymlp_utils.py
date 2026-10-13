@@ -89,6 +89,12 @@ def run():
     parser.add_argument("--frac_coords", action="store_true", help="")
     parser.add_argument("--refine_cell", action="store_true", help="")
     parser.add_argument("--gen_allrep", action="store_true", help="")
+    parser.add_argument(
+        "--assign_method",
+        choices=["greedy", "HK"],
+        default="greedy",
+        help="Choose greedy or HK (Hopcroft_Karp) methods"
+    )
     parser.add_argument("--not_verbose", action="store_true", help="")
 
     # --geometry_opt mode
@@ -149,6 +155,7 @@ def run():
             frac_coords=args.frac_coords,
             refine_cell=args.refine_cell,
             gen_allrep=args.gen_allrep,
+            assign_method=args.assign_method,
             verbose=not args.not_verbose,
         )
 

@@ -1,6 +1,7 @@
 import math
 import time
 from contextlib import redirect_stdout
+from typing import Literal
 
 import numpy as np
 from scipy.sparse import csr_array
@@ -174,6 +175,7 @@ def struct_match_allrep(
     axis_tol: float = 0.01,
     pos_tol: float = 0.01,
     spg_match: bool = True,
+    assign_method: Literal["greedy", "HK"] = "greedy",
     verbose: bool = False,
 ) -> bool:
 
@@ -193,34 +195,49 @@ def struct_match_allrep(
             if l2_norm > axis_tol:
                 continue
 
-            judge_greedy = False
-            for pos1 in st_1.positions[0]["pos_reps"]:
-                for pos2_dicts in st_2.positions:
-                    for pos2 in pos2_dicts["pos_reps"]:
-                        if judge_greedy:
-                            break
-                        judge_greedy = greedy_match(pos1, pos2, pos_tol * 2)
+            pos1_list = st_1.positions[0]["pos_reps"]
+            pos2_list = [
+                pos for pos_dict in st_2.positions for pos in pos_dict["pos_reps"]
+            ]
+            pos1_array = np.array(pos1_list)
+            pos2_array = np.array(pos2_list)
+            pre_judge = sort_match_screen(pos1_array, pos2_array, pos_tol)
+            row, col = np.where(pre_judge)
 
-            judge_Hopcroft_Karp = False
-            if judge_greedy:
-                for pos1 in st_1.positions[0]["pos_reps"]:
-                    for pos2_dicts in st_2.positions:
-                        for pos2 in pos2_dicts["pos_reps"]:
-                            if judge_Hopcroft_Karp:
-                                break
-                            diff = pos1[:, None, :] - pos2[None, :, :]
-                            diff -= np.round(diff)
-                            pos_d = np.max(np.abs(diff), axis=2)
-                            row, col = bottleneck_assignment(pos_d)
-                            pos_max_abs = pos_d[row, col]
-                            if np.max(pos_max_abs) < pos_tol:
-                                print(np.max(pos_max_abs))
-                                judge_Hopcroft_Karp = True
-            if judge_Hopcroft_Karp:
-                judge_st_match = True
+            judge_st_match = False
+            if assign_method == "greedy":
+                for i, j in zip(row, col):
+                    if judge_st_match:
+                        break
+                    judge_st_match = greedy_match(pos1_list[i], pos2_list[j], pos_tol)
+            elif assign_method == "HK":
+                for i, j in zip(row, col):
+                    if judge_st_match:
+                        break
+                    diff = pos1_list[i][:, None, :] - pos2_list[j][None, :, :]
+                    diff -= np.round(diff)
+                    pos_d = np.max(np.abs(diff), axis=2)
+                    row, col = bottleneck_assignment(pos_d)
+                    pos_max_abs = pos_d[row, col]
+                    if np.max(pos_max_abs) < pos_tol:
+                        print(np.max(pos_max_abs))
+                        judge_st_match = True
+            else:
+                raise ValueError(f"Unknown assignment method: {assign_method}")
     if verbose:
         print("Elapsed time:", np.round((time.time() - s_time) * 1000, 2), "ms")
     return judge_st_match
+
+
+def sort_match_screen(pos_reps1, pos_reps2, pos_tol):
+    # pos1: (N1, n_atoms, 3)
+    # pos2: (N2, n_atoms, 3)
+    pos1_sorted = np.sort(pos_reps1, axis=1)
+    pos2_sorted = np.sort(pos_reps2, axis=1)
+
+    diff = pos1_sorted[:, None, :, :] - pos2_sorted[None, :, :, :]
+    diff -= np.round(diff)
+    return np.all(np.abs(diff) <= pos_tol, axis=(2, 3))
 
 
 def greedy_match(pos1, pos2, pos_tol):
