@@ -59,13 +59,11 @@ class PositionRepReducer:
         else:
             _axis = self.axis
 
-        metric_tensor_half, axis_cands, signed_permutation_cands = (
-            get_reduced_lattice(
-                _axis,
-                spg_number,
-                self.symprec,
-                self.original_axis,
-            )
+        metric_tensor_half, axis_cands, signed_permutation_cands = get_reduced_lattice(
+            _axis,
+            spg_number,
+            self.symprec,
+            self.original_axis,
         )
 
         # Trivial case: single‑atom cell → nothing to do
@@ -125,9 +123,7 @@ class PositionRepReducer:
                     target_idx, _pos, sorted_types, _cls_id
                 )
                 if self.cartesian_coords:
-                    reduced_perm_positions = (
-                        reduced_perm_positions @ pos_cand["axis"]
-                    )
+                    reduced_perm_positions = reduced_perm_positions @ pos_cand["axis"]
                 reduced_perm_cands.append(reduced_perm_positions.T.reshape(-1))
 
                 mask = types == 0

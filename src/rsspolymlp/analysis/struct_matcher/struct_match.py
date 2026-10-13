@@ -1,4 +1,5 @@
 import math
+import time
 from contextlib import redirect_stdout
 
 import numpy as np
@@ -54,6 +55,8 @@ def struct_match(
     axis_d_min = None
     pos_d_min = None
     min_axis_l2_norm = 1e8
+
+    s_time = time.time()
     for st_1 in redreps_1.redrep_list:
         for st_2 in redreps_2.redrep_list:
             if struct_match or st_1.element_count != st_2.element_count:
@@ -100,6 +103,7 @@ def struct_match(
                 ]
 
     if verbose:
+        print("Elapsed time:", (time.time() - s_time) * 1000, "ms")
 
         def log_axis_positions(symprec, axis, positions, round_axis=4, round_pos=3):
             print("    - symprec:", np.round(symprec, 5).tolist())
@@ -169,9 +173,11 @@ def struct_match_allrep(
     axis_tol: float = 0.01,
     pos_tol: float = 0.01,
     spg_match: bool = True,
+    verbose: bool = False,
 ) -> bool:
     struct_match = False
     min_axis_l2_norm = 1e8
+    s_time = time.time()
     for st_1 in allreps_1.allrep_list:
         for st_2 in allreps_2.allrep_list:
             if struct_match or st_1.element_count != st_2.element_count:
@@ -196,4 +202,6 @@ def struct_match_allrep(
                     if np.all(pos_max_abs < pos_tol):
                         struct_match = True
                         break
+    if verbose:
+        print("Elapsed time:", (time.time() - s_time) * 1000, "ms")
     return struct_match

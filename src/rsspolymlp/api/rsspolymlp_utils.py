@@ -116,12 +116,12 @@ def struct_compare(
         print("- Axis:")
         print(polymlp_st1.axis.T)
         print("- Positions:")
-        print(polymlp_st1.positions.T)
+        print(polymlp_st1.positions)
         print("Structure 2:")
         print("- Axis:")
         print(polymlp_st2.axis.T)
         print("- Positions:")
-        print(polymlp_st2.positions.T)
+        print(polymlp_st2.positions)
 
     if not gen_allrep:
         if reduced_symprecs is None:
@@ -180,6 +180,7 @@ def struct_compare(
             allreps_2,
             axis_tol=axis_tol,
             pos_tol=pos_tol,
+            verbose=verbose,
         )
     if verbose:
         print("Match:", judge)
