@@ -13,13 +13,11 @@ class PositionRepGenerator:
         symprec: list[float] = [1e-3, 1e-3, 1e-3],
         standardize_axis: bool = False,
         original_axis: bool = False,
-        cartesian_coords: bool = True,
     ):
         """Init method."""
         self.symprec = np.array(symprec)
         self.standardize_axis = standardize_axis
         self.original_axis = original_axis
-        self.cartesian_coords = cartesian_coords
 
     def get_all_structure_representations(self, axis, positions, elements, spg_number):
         """Derive all representations of a crystal structure.
@@ -106,12 +104,8 @@ class PositionRepGenerator:
         for pos_cand in position_cands:
             for target_idx in pos_cand["cands_idx"]:
                 _pos = pos_cand["positions"].copy()
-                position_onerep = self.snapped_positions(
-                    target_idx,
-                    _pos,
-                )
-                if self.cartesian_coords:
-                    position_onerep = position_onerep @ pos_cand["axis"]
+                _pos = _pos - _pos[target_idx]
+                position_onerep = _pos % 1.0
                 all_positions.append(position_onerep)
 
         return all_positions, elements
@@ -136,6 +130,7 @@ class PositionRepGenerator:
                 positions_by_axis[:, slice(3, 6)] = -positions.copy() % 1.0
 
         mask = types == 0
+        cands_idx = np.where(mask)[0]
         position_cands = []
         for idx, cand in enumerate(signed_permutation_cands):
             _pos = np.zeros_like(positions)
@@ -149,27 +144,8 @@ class PositionRepGenerator:
             position_cands.append(
                 {
                     "positions": _pos,
-                    "cands_idx": np.where(mask)[0],
+                    "cands_idx": cands_idx,
                     "axis": axis_cands[idx],
                 }
             )
         return position_cands
-
-    def snapped_positions(
-        self,
-        target_idx: int,
-        positions: np.ndarray,
-    ):
-        pos = positions.copy()
-        pos = pos - pos[target_idx]
-        pos %= 1.0
-
-        snapped_pos = np.delete(pos, target_idx, axis=0)
-        for ax in range(3):
-            threshold = self.symprec[ax]
-            snapped_pos[:, ax] = np.where(
-                snapped_pos[:, ax] > 1.0 - threshold,
-                snapped_pos[:, ax] - 1,
-                snapped_pos[:, ax],
-            )
-        return snapped_pos

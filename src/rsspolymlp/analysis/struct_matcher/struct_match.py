@@ -175,6 +175,23 @@ def struct_match_allrep(
     spg_match: bool = True,
     verbose: bool = False,
 ) -> bool:
+
+    def greedy_match(pos1, pos2, pos_tol):
+        n = len(pos1)
+        if n != len(pos2):
+            return False
+
+        used = np.zeros(n, dtype=bool)
+        for i in range(n):
+            diff = np.max(np.abs(pos2 - pos1[i]), axis=1)
+            diff -= np.round(diff)
+            diff[used] = np.inf
+            j = np.argmin(diff)
+            if diff[j] >= pos_tol:
+                return False
+            used[j] = True
+        return True
+
     struct_match = False
     min_axis_l2_norm = 1e8
     s_time = time.time()
@@ -191,17 +208,11 @@ def struct_match_allrep(
             if l2_norm > axis_tol:
                 continue
 
-            for pos1 in st_1.positions:
+            pos1 = st_1.positions[0]
+            for pos2 in st_2.positions:
+                struct_match = greedy_match(pos1, pos2, pos_tol)
                 if struct_match:
                     break
-                for pos2 in st_2.positions:
-                    # pos_d = np.linalg.norm(pos1[:, None, :] - pos2[None, :, :], axis=2)
-                    pos_d = np.max(np.abs(pos1[:, None, :] - pos2[None, :, :]), axis=2)
-                    row, col = linear_sum_assignment(pos_d)
-                    pos_max_abs = pos_d[row, col]
-                    if np.all(pos_max_abs < pos_tol):
-                        struct_match = True
-                        break
     if verbose:
         print("Elapsed time:", (time.time() - s_time) * 1000, "ms")
     return struct_match

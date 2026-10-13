@@ -32,7 +32,6 @@ class AllStructReps:
     allrep_symprec: float
     standardize_axis: bool
     original_axis: bool
-    cartesian_coords: bool
     refine_cell: bool
     struct_path: Optional[str]
     struct_tag: Optional[int]
@@ -45,7 +44,6 @@ def generate_allrep(
     symprec: list = 1e-3,
     standardize_axis: bool = False,
     original_axis: bool = False,
-    cartesian_coords: bool = True,
 ) -> AllStructRep:
     """
     Parameters
@@ -67,7 +65,6 @@ def generate_allrep(
         symprec=input_symprec,
         standardize_axis=standardize_axis,
         original_axis=original_axis,
-        cartesian_coords=cartesian_coords,
     )
     metric_tensor, all_positions, sorted_elements = (
         generator.get_all_structure_representations(_axis, _pos, _elements, spg_number)
@@ -92,7 +89,6 @@ def generate_allreps(
     allrep_symprec: float = 1e-3,
     standardize_axis: bool = False,
     original_axis: bool = False,
-    cartesian_coords: bool = True,
     refine_cell: bool = False,
     struct_path: Optional[str] = None,
     struct_tag: Optional[str] = None,
@@ -134,7 +130,6 @@ def generate_allreps(
             symprec=allrep_symprec,
             standardize_axis=standardize_axis,
             original_axis=original_axis,
-            cartesian_coords=cartesian_coords,
         )
         allrep_list.append(allrep)
 
@@ -148,7 +143,6 @@ def generate_allreps(
         allrep_symprec=allrep_symprec,
         standardize_axis=standardize_axis,
         original_axis=original_axis,
-        cartesian_coords=cartesian_coords,
         refine_cell=refine_cell,
         struct_path=struct_path,
         struct_tag=struct_tag,
@@ -164,7 +158,6 @@ def generate_allreps_parallel(
     allrep_symprec: float = 1e-3,
     standardize_axis: bool = False,
     original_axis: bool = False,
-    cartesian_coords: bool = True,
     refine_cell: bool = False,
 ) -> list[AllStructReps]:
     """
@@ -197,7 +190,6 @@ def generate_allreps_parallel(
                     allrep_symprec=allrep_symprec,
                     standardize_axis=standardize_axis,
                     original_axis=original_axis,
-                    cartesian_coords=cartesian_coords,
                     refine_cell=refine_cell,
                     struct_tag=res.get("struct_tag", None),
                     dupstr_paths=res.get("dupstr_paths", None),
@@ -212,7 +204,6 @@ def generate_allreps_parallel(
                 allrep_symprec=allrep_symprec,
                 standardize_axis=standardize_axis,
                 original_axis=original_axis,
-                cartesian_coords=cartesian_coords,
                 refine_cell=refine_cell,
                 struct_path=res["struct_path"],
                 struct_tag=res.get("struct_tag", None),

@@ -145,7 +145,7 @@ def struct_compare(
             standardize_axis=standardize_axis,
             original_axis=original_axis,
             cartesian_coords=not frac_coords,
-            struct_path="st12",
+            struct_path="st2",
         )
         judge = struct_match(
             redreps_1,
@@ -163,7 +163,6 @@ def struct_compare(
             allrep_symprec=reduced_symprecs,
             standardize_axis=standardize_axis,
             original_axis=original_axis,
-            cartesian_coords=not frac_coords,
             struct_path="st1",
         )
         allreps_2 = generate_allreps(
@@ -172,8 +171,7 @@ def struct_compare(
             allrep_symprec=reduced_symprecs,
             standardize_axis=standardize_axis,
             original_axis=original_axis,
-            cartesian_coords=not frac_coords,
-            struct_path="st12",
+            struct_path="st2",
         )
         judge = struct_match_allrep(
             allreps_1,
