@@ -3,7 +3,8 @@ import time
 from contextlib import redirect_stdout
 
 import numpy as np
-from scipy.optimize import linear_sum_assignment
+from scipy.sparse import csr_array
+from scipy.sparse.csgraph import maximum_bipartite_matching
 
 from rsspolymlp.analysis.struct_matcher.gen_allrep import (
     AllStructReps,
@@ -103,7 +104,7 @@ def struct_match(
                 ]
 
     if verbose:
-        print("Elapsed time:", (time.time() - s_time) * 1000, "ms")
+        print("Elapsed time:", np.round((time.time() - s_time) * 1000, 2), "ms")
 
         def log_axis_positions(symprec, axis, positions, round_axis=4, round_pos=3):
             print("    - symprec:", np.round(symprec, 5).tolist())
@@ -176,28 +177,12 @@ def struct_match_allrep(
     verbose: bool = False,
 ) -> bool:
 
-    def greedy_match(pos1, pos2, pos_tol):
-        n = len(pos1)
-        if n != len(pos2):
-            return False
-
-        used = np.zeros(n, dtype=bool)
-        for i in range(n):
-            diff = np.max(np.abs(pos2 - pos1[i]), axis=1)
-            diff -= np.round(diff)
-            diff[used] = np.inf
-            j = np.argmin(diff)
-            if diff[j] >= pos_tol:
-                return False
-            used[j] = True
-        return True
-
-    struct_match = False
+    judge_st_match = False
     min_axis_l2_norm = 1e8
     s_time = time.time()
     for st_1 in allreps_1.allrep_list:
         for st_2 in allreps_2.allrep_list:
-            if struct_match or st_1.element_count != st_2.element_count:
+            if judge_st_match or st_1.element_count != st_2.element_count:
                 continue
             if spg_match and st_1.spg_number != st_2.spg_number:
                 continue
@@ -208,11 +193,88 @@ def struct_match_allrep(
             if l2_norm > axis_tol:
                 continue
 
-            pos1 = st_1.positions[0]
-            for pos2 in st_2.positions:
-                struct_match = greedy_match(pos1, pos2, pos_tol)
-                if struct_match:
-                    break
+            judge_greedy = False
+            for pos1 in st_1.positions[0]["pos_reps"]:
+                for pos2_dicts in st_2.positions:
+                    for pos2 in pos2_dicts["pos_reps"]:
+                        if judge_greedy:
+                            break
+                        judge_greedy = greedy_match(pos1, pos2, pos_tol * 2)
+
+            judge_Hopcroft_Karp = False
+            if judge_greedy:
+                for pos1 in st_1.positions[0]["pos_reps"]:
+                    for pos2_dicts in st_2.positions:
+                        for pos2 in pos2_dicts["pos_reps"]:
+                            if judge_Hopcroft_Karp:
+                                break
+                            diff = pos1[:, None, :] - pos2[None, :, :]
+                            diff -= np.round(diff)
+                            pos_d = np.max(np.abs(diff), axis=2)
+                            row, col = bottleneck_assignment(pos_d)
+                            pos_max_abs = pos_d[row, col]
+                            if np.max(pos_max_abs) < pos_tol:
+                                print(np.max(pos_max_abs))
+                                judge_Hopcroft_Karp = True
+            if judge_Hopcroft_Karp:
+                judge_st_match = True
     if verbose:
-        print("Elapsed time:", (time.time() - s_time) * 1000, "ms")
-    return struct_match
+        print("Elapsed time:", np.round((time.time() - s_time) * 1000, 2), "ms")
+    return judge_st_match
+
+
+def greedy_match(pos1, pos2, pos_tol):
+    n = len(pos1)
+    if n != len(pos2):
+        return False
+
+    used = np.zeros(n, dtype=bool)
+    for i in range(n):
+        diff = np.max(np.abs(pos2 - pos1[i]), axis=1)
+        diff -= np.round(diff)
+        diff[used] = np.inf
+        j = np.argmin(np.abs(diff))
+        if diff[j] >= pos_tol:
+            return False
+        used[j] = True
+    return True
+
+
+def bottleneck_assignment(pos_d):
+    n = pos_d.shape[0]
+
+    # Sort distinct candidate distances
+    values = np.unique(pos_d)
+    left, right = 0, len(values) - 1
+
+    while left < right:
+        mid = (left + right) // 2
+        rows, cols = np.where(pos_d <= values[mid])
+        graph = csr_array(
+            (
+                np.ones(len(rows), dtype=np.int8),
+                (rows, cols),
+            ),
+            shape=pos_d.shape,
+        )
+
+        matching = maximum_bipartite_matching(graph, perm_type="column")
+        if np.all(matching >= 0):
+            right = mid
+        else:
+            left = mid + 1
+
+    threshold = values[left]
+    rows, cols = np.where(pos_d <= threshold)
+    graph = csr_array(
+        (
+            np.ones(len(rows), dtype=np.int8),
+            (rows, cols),
+        ),
+        shape=pos_d.shape,
+    )
+
+    matching = maximum_bipartite_matching(graph, perm_type="column")
+    row = np.arange(n)
+    col = matching
+    return row, col
