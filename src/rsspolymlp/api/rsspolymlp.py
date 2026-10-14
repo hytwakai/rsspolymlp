@@ -28,7 +28,8 @@ def rss_init_struct(
         max_volume=max_volume,
         least_distance=least_distance,
     )
-    gen_str.random_structure(max_init_struct=n_init_str)
+    random_struct_list = gen_str.random_structure(max_init_struct=n_init_str)
+    gen_str.write_poscars(random_struct_list)
 
 
 def rss_opt(

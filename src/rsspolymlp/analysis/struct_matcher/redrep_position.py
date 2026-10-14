@@ -30,8 +30,8 @@ class PositionRepReducer:
         ----------
         axis : (3, 3) array_like
             Lattice vectors defining the unit cell. Each row represents
-            a lattice vector (a, b, or c) in Cartesian coordinates. Equivalent to
-            np.array([a, b, c]), where each of a, b, and c is a 3-element vector.
+            a lattice vector (a, b, or c) in Cartesian coordinates.
+            Equivalent to np.array([[a1, a2, a3], [b1, b2, b3], [c1, c2, c3]]).
         positions : (N, 3) array_like
             Fractional atomic coordinates within the unit cell.
             Each row represents the (x, y, z) coordinate of an atom.

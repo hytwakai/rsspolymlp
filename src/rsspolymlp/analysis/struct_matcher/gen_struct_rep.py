@@ -221,7 +221,11 @@ def generate_primitive_cells(
     for symprec in symprec_set:
         symutil = SymCell(st=polymlp_st, symprec=symprec)
         spg_str = symutil.get_spacegroup()
-        spg_number = int(re.search(r"\((\d+)\)", spg_str).group(1))
+        if spg_str is None:
+            spg_number = 1
+        else:
+            spg_number = int(re.search(r"\((\d+)\)", spg_str).group(1))
+
         if spg_number in spg_number_set:
             continue
         else:
@@ -258,6 +262,7 @@ def generate_struct_reps_parallel(
         Each dictionary must include "struct_path" keys:
             - "struct_path": path of POSCAR format file
         Optional keys:
+            - "poscar_path": Path of POSCAR file
             - "structure": PolymlpStructure object
             - "struct_tag" (optional): structure identifier (e.g., structure number)
     num_process : int, default=-1
@@ -272,14 +277,18 @@ def generate_struct_reps_parallel(
         for res in struct_lists:
             redreps_list.append(
                 generate_struct_reps(
-                    poscar_path=res["struct_path"],
+                    poscar_path=res.get("poscar_path", None),
                     polymlp_st=res.get("structure", None),
+                    axis=res.get("axis", None),
+                    positions=res.get("positions", None),
+                    elements=res.get("elements", None),
                     primitive_symprecs=primitive_symprecs,
                     redrep_symprecs=redrep_symprecs,
                     standardize_axis=standardize_axis,
                     original_axis=original_axis,
                     cartesian_coords=cartesian_coords,
                     refine_cell=refine_cell,
+                    struct_path=res["struct_path"],
                     struct_tag=res.get("struct_tag", None),
                     dupstr_paths=res.get("dupstr_paths", None),
                 )
@@ -287,8 +296,11 @@ def generate_struct_reps_parallel(
     else:
         redreps_list = joblib.Parallel(n_jobs=num_process, backend=backend)(
             joblib.delayed(generate_struct_reps)(
-                poscar_path=res["struct_path"],
+                poscar_path=res.get("poscar_path", None),
                 polymlp_st=res.get("structure", None),
+                axis=res.get("axis", None),
+                positions=res.get("positions", None),
+                elements=res.get("elements", None),
                 primitive_symprecs=primitive_symprecs,
                 redrep_symprecs=redrep_symprecs,
                 standardize_axis=standardize_axis,

@@ -476,6 +476,7 @@ def dump_json_rss_results(
         rss_results.append(
             {
                 "struct_path": _str.struct_path,
+                "poscar_path": _str.struct_path,
                 "structure": polymlp_struct_to_dict(polymlp_st),
                 "energy": enthalpy_lists[idx],
                 "axis_abc": objprop.abc,

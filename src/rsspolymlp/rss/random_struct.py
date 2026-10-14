@@ -50,7 +50,7 @@ class GenerateRandomStructure:
 
         os.makedirs("initial_struct", exist_ok=True)
 
-    def random_structure(self, max_init_struct: int = 5000):
+    def random_structure(self, max_init_struct: int = 5000) -> list[dict]:
         """
         Generate random structures while ensuring minimum interatomic distance constraints.
 
@@ -58,6 +58,19 @@ class GenerateRandomStructure:
         ----------
         max_init_struct : int, optional
             Maximum number of structures to generate (default: 5000).
+
+        Returns
+        -------
+        random_struct_list : list[dict]
+            List of generated random structures. Each dictionary contains:
+            - "axis" : ndarray
+                Lattice vectors of the structure.
+            - "positions" : ndarray
+                Fractional atomic coordinates.
+            - "elements" : list[str] or ndarray
+                Chemical element symbols corresponding to the atomic coordinates.
+            - "file_name" : str
+                File path for the corresponding POSCAR file.
         """
         str_count = len(glob.glob("initial_struct/*"))
         if str_count >= max_init_struct:
@@ -68,6 +81,7 @@ class GenerateRandomStructure:
         vol_constraint_min = self.min_volume * self.num_atom  # A^3
         axis_constraint = ((self.num_atom * self.max_volume * 4) ** (1 / 3)) ** 2
 
+        random_struct_list = []
         iteration = 1
         num_samples = 2000
         while True:
@@ -124,12 +138,23 @@ class GenerateRandomStructure:
             # Save valid structures
             for axis, positions in zip(valid_l_matrices, valid_positions):
                 if str_count >= max_init_struct:
-                    return
+                    return random_struct_list
                 str_count += 1
-                write_poscar(
-                    axis,
-                    positions,
-                    self.elements,
-                    f"initial_struct/POSCAR_{str_count}",
+                random_struct_list.append(
+                    {
+                        "axis": axis,
+                        "positions": positions,
+                        "elements": self.elements,
+                        "file_name": f"initial_struct/POSCAR_{str_count}",
+                    }
                 )
             iteration += 1
+
+    def write_poscars(self, random_struct_list: list[dict]):
+        for st_dict in random_struct_list:
+            write_poscar(
+                st_dict["axis"],
+                st_dict["positions"],
+                st_dict["elements"],
+                st_dict["file_name"],
+            )
