@@ -2,7 +2,7 @@ from collections import Counter
 
 import numpy as np
 
-from rsspolymlp.analysis.struct_matcher.lattice_redrep import get_reduced_lattice
+from rsspolymlp.analysis.struct_matcher.redrep_lattice import get_reduced_lattice
 
 
 class PositionRepReducer:

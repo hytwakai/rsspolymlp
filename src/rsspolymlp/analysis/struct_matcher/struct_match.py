@@ -214,6 +214,8 @@ def struct_match_allrep(
             axis2 = np.stack(allreps2["metric_tensors"], axis=0)
             allpos_list1 = allreps1["positions"]
             allpos_list2 = allreps2["positions"]
+            elements1 = np.array(st_1.elements[1:])
+            elements2 = np.array(st_2.elements[1:])
 
             axis_d = axis1[:, None, :] - axis2[None, :, :]  # (N_symp1, N_symp2, 6)
             axis_d_flat = axis_d.reshape(-1, axis_d.shape[2])  # (N_symp1*N_symp2, 6)
@@ -234,31 +236,25 @@ def struct_match_allrep(
                 pos_reps2 = [pos for pos_dict in pos2 for pos in pos_dict["pos_reps"]]
                 pos1_array = np.array(pos_reps1)
                 pos2_array = np.array(pos_reps2)
-                pre_judge = sort_match_screen(pos1_array, pos2_array, pos_tol)
+                pre_judge = sort_match_screen(
+                    pos1_array, pos2_array, elements1, elements2, pos_tol
+                )
                 row, col = np.where(pre_judge)
 
                 judge_st_match = False
-                if assign_method == "greedy":
-                    for i, j in zip(row, col):
-                        if judge_st_match:
-                            break
+                for i, j in zip(row, col):
+                    if judge_st_match:
+                        break
+                    if assign_method == "greedy":
                         judge_st_match = greedy_match(
-                            pos_reps1[i], pos_reps2[j], pos_tol
+                            pos_reps1[i], pos_reps2[j], elements1, elements2, pos_tol
                         )
-                elif assign_method == "HK":
-                    for i, j in zip(row, col):
-                        if judge_st_match:
-                            break
-                        diff = pos_reps1[i][:, None, :] - pos_reps2[j][None, :, :]
-                        diff -= np.round(diff)
-                        pos_d = np.max(np.abs(diff), axis=2)
-                        row, col = bottleneck_assignment(pos_d)
-                        pos_max_abs = pos_d[row, col]
-                        if np.max(pos_max_abs) < pos_tol:
-                            print(np.max(pos_max_abs))
-                            judge_st_match = True
-                else:
-                    raise ValueError(f"Unknown assignment method: {assign_method}")
+                    elif assign_method == "HK":
+                        judge_st_match = bottleneck_assignment(
+                            pos_reps1[i], pos_reps2[j], elements1, elements2, pos_tol
+                        )
+                    else:
+                        raise ValueError(f"Unknown assignment method: {assign_method}")
     if verbose:
         print("Elapsed time:", np.round((time.time() - s_time) * 1000, 2), "ms")
     return judge_st_match

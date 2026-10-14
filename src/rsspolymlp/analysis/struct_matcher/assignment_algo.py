@@ -3,44 +3,100 @@ from scipy.sparse import csr_array
 from scipy.sparse.csgraph import maximum_bipartite_matching
 
 
-def sort_match_screen(pos_reps1, pos_reps2, pos_tol):
+def sort_match_screen(
+    pos_reps1: np.ndarray,
+    pos_reps2: np.ndarray,
+    elements1: np.ndarray,
+    elements2: np.ndarray,
+    pos_tol: float,
+):
     # pos1: (N1, n_atoms, 3)
     # pos2: (N2, n_atoms, 3)
-    pos1_sorted = np.sort(pos_reps1, axis=1)
-    pos2_sorted = np.sort(pos_reps2, axis=1)
+    if len(elements1) != len(elements2):
+        return np.zeros((len(pos_reps1), len(pos_reps2)), dtype=bool)
+    unique_elements = np.unique(elements1)
+
+    def sort_positions(pos_reps, elements):
+        sorted_reps = []
+        for pos in pos_reps:
+            pos_sorted = []
+            for el in unique_elements:
+                pos_el = pos[elements == el]
+                pos_el = np.sort(pos_el, axis=0)
+                pos_sorted.append(pos_el)
+            sorted_reps.append(np.concatenate(pos_sorted, axis=0))
+        return np.asarray(sorted_reps)
+
+    pos1_sorted = sort_positions(pos_reps1, elements1)
+    pos2_sorted = sort_positions(pos_reps2, elements2)
 
     diff = pos1_sorted[:, None, :, :] - pos2_sorted[None, :, :, :]
     diff -= np.round(diff)
     return np.all(np.abs(diff) <= pos_tol, axis=(2, 3))
 
 
-def greedy_match(pos1, pos2, pos_tol):
-    n = len(pos1)
-    if n != len(pos2):
-        return False
-
-    used = np.zeros(n, dtype=bool)
-    for i in range(n):
-        diff = np.max(np.abs(pos2 - pos1[i]), axis=1)
-        diff -= np.round(diff)
-        diff[used] = np.inf
-        j = np.argmin(np.abs(diff))
-        if diff[j] >= pos_tol:
-            return False
-        used[j] = True
+def greedy_match(
+    pos1: np.ndarray,
+    pos2: np.ndarray,
+    elements1: np.ndarray,
+    elements2: np.ndarray,
+    pos_tol: float,
+):
+    for el in np.unique(elements1):
+        targets1 = np.where(elements1 == el)[0]
+        targets2 = np.where(elements2 == el)[0]
+        used = np.zeros(len(targets1), dtype=bool)
+        for i in enumerate(targets1):
+            diff = np.max(np.abs(pos2[targets2] - pos1[i]), axis=1)
+            diff -= np.round(diff)
+            diff[used] = np.inf
+            j = np.argmin(np.abs(diff))
+            if diff[j] >= pos_tol:
+                return False
+            used[j] = True
     return True
 
 
-def bottleneck_assignment(pos_d):
-    n = pos_d.shape[0]
+def bottleneck_assignment(
+    pos1: np.ndarray,
+    pos2: np.ndarray,
+    elements1: np.ndarray,
+    elements2: np.ndarray,
+    pos_tol: float,
+):
+    pos_max_diffs = []
+    for el in np.unique(elements1):
+        targets1 = np.where(elements1 == el)[0]
+        targets2 = np.where(elements2 == el)[0]
+        pos1_sub = pos1[targets1]
+        pos2_sub = pos2[targets2]
 
-    # Sort distinct candidate distances
-    values = np.unique(pos_d)
-    left, right = 0, len(values) - 1
+        diff = pos1_sub[:, None, :] - pos2_sub[None, :, :]
+        diff -= np.round(diff)
+        pos_d = np.max(np.abs(diff), axis=2)
+        n = pos_d.shape[0]
 
-    while left < right:
-        mid = (left + right) // 2
-        rows, cols = np.where(pos_d <= values[mid])
+        # Sort distinct candidate distances
+        values = np.unique(pos_d)
+        left, right = 0, len(values) - 1
+        while left < right:
+            mid = (left + right) // 2
+            rows, cols = np.where(pos_d <= values[mid])
+            graph = csr_array(
+                (
+                    np.ones(len(rows), dtype=np.int8),
+                    (rows, cols),
+                ),
+                shape=pos_d.shape,
+            )
+            matching = maximum_bipartite_matching(graph, perm_type="column")
+            if np.all(matching >= 0):
+                right = mid
+            else:
+                left = mid + 1
+
+        threshold = values[left]
+        rows, cols = np.where(pos_d <= threshold)
         graph = csr_array(
             (
                 np.ones(len(rows), dtype=np.int8),
@@ -48,24 +104,10 @@ def bottleneck_assignment(pos_d):
             ),
             shape=pos_d.shape,
         )
-
         matching = maximum_bipartite_matching(graph, perm_type="column")
-        if np.all(matching >= 0):
-            right = mid
-        else:
-            left = mid + 1
+        pos_max_diffs.append(pos_d[np.arange(n), matching])
 
-    threshold = values[left]
-    rows, cols = np.where(pos_d <= threshold)
-    graph = csr_array(
-        (
-            np.ones(len(rows), dtype=np.int8),
-            (rows, cols),
-        ),
-        shape=pos_d.shape,
-    )
-
-    matching = maximum_bipartite_matching(graph, perm_type="column")
-    row = np.arange(n)
-    col = matching
-    return row, col
+    if max(pos_max_diffs) < pos_tol:
+        judge = True
+        print(max(pos_max_diffs))
+    return judge

@@ -7,7 +7,7 @@ import joblib
 import numpy as np
 
 from pypolymlp.core.data_format import PolymlpStructure
-from rsspolymlp.analysis.struct_matcher.position_redrep import PositionRepReducer
+from rsspolymlp.analysis.struct_matcher.redrep_position import PositionRepReducer
 from rsspolymlp.common.composition import compute_composition
 from rsspolymlp.common.interface_vasp import Poscar
 from rsspolymlp.common.property import PropUtil
