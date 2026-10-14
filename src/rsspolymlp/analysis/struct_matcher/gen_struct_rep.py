@@ -251,6 +251,7 @@ def generate_struct_reps_parallel(
     original_axis: bool = False,
     cartesian_coords: bool = True,
     refine_cell: bool = False,
+    verbose: bool = False,
 ) -> list[StructReps]:
     """
     Generate a list of ReducedStructReps objects from the given RSS results.
@@ -294,7 +295,13 @@ def generate_struct_reps_parallel(
                 )
             )
     else:
-        redreps_list = joblib.Parallel(n_jobs=num_process, backend=backend)(
+        if verbose:
+            joblib_verbose = 50
+        else:
+            joblib_verbose = 0
+        redreps_list = joblib.Parallel(
+            n_jobs=num_process, backend=backend, verbose=joblib_verbose
+        )(
             joblib.delayed(generate_struct_reps)(
                 poscar_path=res.get("poscar_path", None),
                 polymlp_st=res.get("structure", None),

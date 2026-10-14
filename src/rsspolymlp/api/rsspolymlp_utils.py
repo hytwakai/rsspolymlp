@@ -35,6 +35,7 @@ def struct_matcher(
     keep_unique: bool = False,
     output_file: str = "unique_struct.yaml",
     log_all: bool = False,
+    verbose: bool = False,
 ):
     if poscar_paths is None and struct_lists is None:
         raise ValueError("Set poscar_paths or struct_lists")
@@ -61,6 +62,7 @@ def struct_matcher(
         standardize_axis=standardize_axis,
         refine_cell=refine_cell,
         cartesian_coords=not frac_coords,
+        verbose=verbose,
     )
 
     analyzer = UniqueStructIdentifier()

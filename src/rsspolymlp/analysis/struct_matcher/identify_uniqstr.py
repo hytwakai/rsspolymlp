@@ -113,11 +113,13 @@ class UniqueStructIdentifier:
 
     def _spg_count(self, spg_list):
         """Extract and sum space group counts from a list of space group strings."""
-        return sum(
-            int(re.search(r"\((\d+)\)", s).group(1))
-            for s in spg_list
-            if re.search(r"\((\d+)\)", s)
-        )
+        sum_n_spg = 0
+        for spg in spg_list:
+            if spg is None:
+                sum_n_spg += 1
+            else:
+                sum_n_spg += int(re.search(r"\((\d+)\)", spg).group(1))
+        return sum_n_spg
 
     def _initialize_unique_structs(
         self,

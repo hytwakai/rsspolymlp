@@ -45,8 +45,6 @@ class PositionRepReducer:
             the structure up to the tolerance `symprec`.
         all_positions : list[dict]
             List of dictionaries, each containing:
-            - lat_mat : ndarray, shape (3, 3)
-                Lattice matrix.
             - perm_mat : ndarray, shape (3, 3)
                 Permutation matrix.
             - pos_reps : list of ndarray
@@ -134,7 +132,7 @@ class PositionRepReducer:
                 )
                 pos_allreps.append(redperm_positions)
                 if self.cartesian_coords:
-                    redperm_positions = redperm_positions @ pos_cand["lat_mat"]
+                    redperm_positions = redperm_positions @ self.axis
                 reduced_perm_cands.append(redperm_positions.T.reshape(-1))
                 mask = types == 0
                 target_vals.append(
@@ -142,7 +140,6 @@ class PositionRepReducer:
                 )
             all_positions.append(
                 {
-                    "lat_mat": pos_cand["lat_mat"],
                     "perm_mat": pos_cand["perm_mat"],
                     "pos_reps": pos_allreps,
                 }
@@ -171,7 +168,7 @@ class PositionRepReducer:
 
         mask = types == 0
         position_cands = []
-        for idx, perm_mat in enumerate(signed_permutation_cands):
+        for perm_mat in signed_permutation_cands:
             _pos = np.zeros_like(_positions)
             _cls_id = np.zeros_like(_positions, dtype=np.int32)
             for axis, val in enumerate(perm_mat):
@@ -188,7 +185,6 @@ class PositionRepReducer:
                     "positions": _pos,
                     "cluster_id": _cls_id,
                     "cands_idx": np.where(mask)[0],
-                    "lat_mat": axis_cands[idx],
                     "perm_mat": perm_mat,
                 }
             )
