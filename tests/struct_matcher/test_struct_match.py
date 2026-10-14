@@ -1,6 +1,7 @@
 import glob
 import os
 
+import pytest
 import yaml
 
 from rsspolymlp.api.rsspolymlp_utils import struct_compare, struct_matcher
@@ -8,7 +9,8 @@ from rsspolymlp.api.rsspolymlp_utils import struct_compare, struct_matcher
 test_dir = os.path.dirname(os.path.abspath(__file__))
 
 
-def test_struct_matcher(tmp_path):
+@pytest.mark.parametrize("assign_method", ["redrep", "greedy", "HK"])
+def test_struct_matcher(tmp_path, assign_method):
     files = [
         f"{test_dir}/../files/struct_matcher/case1/POSCAR*",
         f"{test_dir}/../files/silicon/opt_struct/p/0.0GPa/*",
@@ -20,6 +22,7 @@ def test_struct_matcher(tmp_path):
         os.chdir(f"{tmp_path}/{dir_name}")
         struct_matcher(
             poscar_paths=glob.glob(file),
+            assign_method=assign_method,
         )
 
         n_duplicates = []

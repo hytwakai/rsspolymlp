@@ -46,7 +46,7 @@ def greedy_match(
         targets1 = np.where(elements1 == el)[0]
         targets2 = np.where(elements2 == el)[0]
         used = np.zeros(len(targets1), dtype=bool)
-        for i in enumerate(targets1):
+        for i in targets1:
             diff = np.max(np.abs(pos2[targets2] - pos1[i]), axis=1)
             diff -= np.round(diff)
             diff[used] = np.inf
@@ -105,7 +105,7 @@ def bottleneck_assignment(
             shape=pos_d.shape,
         )
         matching = maximum_bipartite_matching(graph, perm_type="column")
-        pos_max_diffs.append(pos_d[np.arange(n), matching])
+        pos_max_diffs.extend(pos_d[np.arange(n), matching].tolist())
 
     if max(pos_max_diffs) < pos_tol:
         judge = True

@@ -226,35 +226,50 @@ def struct_match_allrep(
             if not np.any(match_axis):
                 continue
 
-            match_idx1, match_idx2 = np.where(
-                l2_norm.reshape(axis_d.shape[:2]) < axis_tol
-            )
-            for i, j in zip(match_idx1, match_idx2):
-                pos1 = allpos_list1[i]
-                pos2 = allpos_list2[j]
-                pos_reps1 = pos1[0]["pos_reps"]
-                pos_reps2 = [pos for pos_dict in pos2 for pos in pos_dict["pos_reps"]]
-                pos1_array = np.array(pos_reps1)
-                pos2_array = np.array(pos_reps2)
-                pre_judge = sort_match_screen(
-                    pos1_array, pos2_array, elements1, elements2, pos_tol
+            if len(st_1.elements) == 1:
+                judge_st_match = True
+            else:
+                match_idx1, match_idx2 = np.where(
+                    l2_norm.reshape(axis_d.shape[:2]) < axis_tol
                 )
-                row, col = np.where(pre_judge)
+                for i1, j1 in zip(match_idx1, match_idx2):
+                    pos1 = allpos_list1[i1]
+                    pos2 = allpos_list2[j1]
+                    pos_reps1 = pos1[0]["pos_reps"]
+                    pos_reps2 = [
+                        pos for pos_dict in pos2 for pos in pos_dict["pos_reps"]
+                    ]
+                    pos1_array = np.array(pos_reps1)
+                    pos2_array = np.array(pos_reps2)
+                    pre_judge = sort_match_screen(
+                        pos1_array, pos2_array, elements1, elements2, pos_tol
+                    )
+                    row, col = np.where(pre_judge)
 
-                judge_st_match = False
-                for i, j in zip(row, col):
-                    if judge_st_match:
-                        break
-                    if assign_method == "greedy":
-                        judge_st_match = greedy_match(
-                            pos_reps1[i], pos_reps2[j], elements1, elements2, pos_tol
-                        )
-                    elif assign_method == "HK":
-                        judge_st_match = bottleneck_assignment(
-                            pos_reps1[i], pos_reps2[j], elements1, elements2, pos_tol
-                        )
-                    else:
-                        raise ValueError(f"Unknown assignment method: {assign_method}")
+                    judge_st_match = False
+                    for i2, j2 in zip(row, col):
+                        if judge_st_match:
+                            break
+                        if assign_method == "greedy":
+                            judge_st_match = greedy_match(
+                                pos_reps1[i2],
+                                pos_reps2[j2],
+                                elements1,
+                                elements2,
+                                pos_tol,
+                            )
+                        elif assign_method == "HK":
+                            judge_st_match = bottleneck_assignment(
+                                pos_reps1[i2],
+                                pos_reps2[j2],
+                                elements1,
+                                elements2,
+                                pos_tol,
+                            )
+                        else:
+                            raise ValueError(
+                                f"Unknown assignment method: {assign_method}"
+                            )
     if verbose:
         print("Elapsed time:", np.round((time.time() - s_time) * 1000, 2), "ms")
     return judge_st_match

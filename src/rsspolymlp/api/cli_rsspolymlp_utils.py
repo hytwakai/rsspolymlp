@@ -21,13 +21,31 @@ def run():
         help="Mode: geometry_optimizations",
     )
 
-    # --struct_matcher mode
+    # --struct_matcher or --struct_compare mode
     parser.add_argument(
         "--poscars",
         type=str,
         nargs="+",
         default=None,
         help="Paths of target POSCAR files.",
+    )
+    parser.add_argument(
+        "--axis_tol",
+        type=float,
+        default=1e-2,
+        help="",
+    )
+    parser.add_argument(
+        "--pos_tol",
+        type=float,
+        default=1e-2,
+        help="",
+    )
+    parser.add_argument(
+        "--assign_method",
+        choices=["redrep", "greedy", "HK"],
+        default="redrep",
+        help="Choose reduced representation, greedy, or HK (Hopcroft_Karp) methods"
     )
     parser.add_argument(
         "--num_process",
@@ -57,8 +75,6 @@ def run():
         help="Output file name (default: unique_struct.yaml).",
     )
     parser.add_argument("--log_all", action="store_true", help="")
-
-    # --struct_compare mode
     parser.add_argument(
         "--refine_symprec",
         type=float,
@@ -72,29 +88,10 @@ def run():
         default=None,
         help="List of symmetry tolerances used to identify reduced structure representation.",
     )
-    parser.add_argument(
-        "--axis_tol",
-        type=float,
-        default=1e-2,
-        help="",
-    )
-    parser.add_argument(
-        "--pos_tol",
-        type=float,
-        default=1e-2,
-        help="",
-    )
     parser.add_argument("--standardize_axis", action="store_true", help="")
     parser.add_argument("--original_axis", action="store_true", help="")
     parser.add_argument("--frac_coords", action="store_true", help="")
     parser.add_argument("--refine_cell", action="store_true", help="")
-    parser.add_argument("--gen_allrep", action="store_true", help="")
-    parser.add_argument(
-        "--assign_method",
-        choices=["greedy", "HK"],
-        default="greedy",
-        help="Choose greedy or HK (Hopcroft_Karp) methods"
-    )
     parser.add_argument("--not_verbose", action="store_true", help="")
 
     # --geometry_opt mode
@@ -129,12 +126,13 @@ def run():
     if args.struct_matcher:
         struct_matcher(
             poscar_paths=args.poscars,
+            axis_tol=args.axis_tol,
+            pos_tol=args.pos_tol,
+            assign_method=args.assign_method,
             num_process=args.num_process,
             backend=args.backend,
             primitive_symprecs=args.primitive_symprecs,
             reduced_symprecs=args.reduced_symprecs,
-            axis_tol=args.axis_tol,
-            pos_tol=args.pos_tol,
             refine_cell=args.refine_cell,
             standardize_axis=args.standardize_axis,
             frac_coords=args.frac_coords,
@@ -146,16 +144,15 @@ def run():
     if args.struct_compare:
         struct_compare(
             poscar_paths=args.poscars,
-            refine_symprec=args.refine_symprec,
-            reduced_symprecs=args.reduced_symprecs,
             axis_tol=args.axis_tol,
             pos_tol=args.pos_tol,
+            assign_method=args.assign_method,
+            refine_symprec=args.refine_symprec,
+            reduced_symprecs=args.reduced_symprecs,
             standardize_axis=args.standardize_axis,
             original_axis=args.original_axis,
             frac_coords=args.frac_coords,
             refine_cell=args.refine_cell,
-            gen_allrep=args.gen_allrep,
-            assign_method=args.assign_method,
             verbose=not args.not_verbose,
         )
 

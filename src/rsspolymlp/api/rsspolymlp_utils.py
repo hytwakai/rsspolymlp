@@ -21,12 +21,13 @@ from rsspolymlp.rss.optimization_mlp import OptimizationMLP
 
 def struct_matcher(
     poscar_paths,
+    axis_tol: float = 0.05,
+    pos_tol: float = 0.03,
+    assign_method: Literal["redrep", "greedy", "HK"] = "redrep",
     num_process: int = -1,
     backend: str = "loky",
     primitive_symprecs: list[float] = [1e-5, 1e-4, 1e-3, 1e-2],
     reduced_symprecs: list[float] = None,
-    axis_tol: float = 0.05,
-    pos_tol: float = 0.03,
     refine_cell: bool = False,
     standardize_axis: bool = False,
     frac_coords: bool = False,
@@ -56,12 +57,15 @@ def struct_matcher(
     )
 
     analyzer = UniqueStructIdentifier()
+    if not assign_method == "redrep":
+        pos_tol /= 10
     for struct_reps in struct_reps_list:
         analyzer.identify_duplicate_struct(
             struct_reps=struct_reps,
             keep_unique=keep_unique,
             axis_tol=axis_tol,
             pos_tol=pos_tol,
+            assign_method=assign_method,
         )
 
     if log_all:
@@ -93,15 +97,15 @@ def struct_matcher(
 
 def struct_compare(
     poscar_paths,
-    refine_symprec: float = 1e-3,
-    reduced_symprecs: list[float] = None,
     axis_tol: float = 0.01,
     pos_tol: float = 0.01,
+    assign_method: Literal["redrep", "greedy", "HK"] = "redrep",
+    refine_symprec: float = 1e-3,
+    reduced_symprecs: list[float] = None,
     standardize_axis: bool = False,
     original_axis: bool = False,
     frac_coords: bool = False,
     refine_cell: bool = False,
-    assign_method: Literal["redrep", "greedy", "HK"] = "redrep",
     verbose: bool = True,
 ):
     sym = SymCell(poscar_name=poscar_paths[0], symprec=refine_symprec)
