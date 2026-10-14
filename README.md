@@ -1,26 +1,24 @@
 # Framework for random structure search using polynomial machine learning potentials
 
-## Citation of rsspolymlp
+## How to use rsspolymlp
 
-If you use `rsspolymlp` in your study, please cite the following articles.
+ - [Workflow of RSS with polynomial MLPs](docs/rsspolymlp.md)
+   - Initial structure generation
+   - Global RSS with polynomial MLPs
+   - Unique structure identification and RSS result summarization
+   - Phase stability analysis
+ - [Development kit for polynomial MLPs](docs/rsspolymlp_dev.md)
+   - MLP dataset generation
+   - DFT dataset division
+   - Polynomial MLP development
+   - Pareto-optimal MLP selection
+ - Python API
+   - [RSS workflow](docs/api_rsspolymlp.md)
+   - [VASP calculation utilities](src/rsspolymlp/utils/vasp_util/readme.md)
+     - Single-point calculation
+     - Local geometry optimization
+   - [Matplotlib utilities](src/rsspolymlp/utils/matplot_util/readme.md)
 
-“Systematic global structure search of bismuth-based binary systems under pressure using machine learning potentials”, [Phys. Rev. Materials 10, 093801 (2026)](https://doi.org/10.1103/k9sg-v7hl)
-```
-@article{Phys.Rev.Mater.10.093801,
-  title = {Systematic global structure search of bismuth-based binary systems under pressure using machine learning potentials},
-  author = {Wakai, Hayato and Ishiwata, Shintaro and Seko, Atsuto},
-  journal = {Phys. Rev. Mater.},
-  volume = {10},
-  issue = {9},
-  pages = {093801},
-  numpages = {28},
-  year = {2026},
-  month = {Sep},
-  publisher = {American Physical Society},
-  doi = {10.1103/k9sg-v7hl},
-  url = {https://link.aps.org/doi/10.1103/k9sg-v7hl}
-}
-```
 
 ## Installation
 
@@ -58,21 +56,25 @@ conda install -c conda-forge scikit-learn joblib pypolymlp spglib symfc
 pip install rsspolymlp
 ```
 
-## How to use rsspolymlp
 
- - [Workflow of RSS with polynomial MLPs](docs/rsspolymlp.md)
-   - Initial structure generation
-   - Global RSS with polynomial MLPs
-   - Unique structure identification and RSS result summarization
-   - Phase stability analysis
- - [Development kit for polynomial MLPs](docs/rsspolymlp_dev.md)
-   - MLP dataset generation
-   - DFT dataset division
-   - Polynomial MLP development
-   - Pareto-optimal MLP selection
- - Python API
-   - [RSS workflow](docs/api_rsspolymlp.md)
-   - [VASP calculation utilities](src/rsspolymlp/utils/vasp_util/readme.md)
-     - Single-point calculation
-     - Local geometry optimization
-   - [Matplotlib utilities](src/rsspolymlp/utils/matplot_util/readme.md)
+## Citation of rsspolymlp
+
+If you use `rsspolymlp` in your study, please cite the following articles.
+
+“Systematic global structure search of bismuth-based binary systems under pressure using machine learning potentials”, [Phys. Rev. Materials 10, 093801 (2026)](https://doi.org/10.1103/k9sg-v7hl)
+```
+@article{Phys.Rev.Mater.10.093801,
+  title = {Systematic global structure search of bismuth-based binary systems under pressure using machine learning potentials},
+  author = {Wakai, Hayato and Ishiwata, Shintaro and Seko, Atsuto},
+  journal = {Phys. Rev. Mater.},
+  volume = {10},
+  issue = {9},
+  pages = {093801},
+  numpages = {28},
+  year = {2026},
+  month = {Sep},
+  publisher = {American Physical Society},
+  doi = {10.1103/k9sg-v7hl},
+  url = {https://link.aps.org/doi/10.1103/k9sg-v7hl}
+}
+```
