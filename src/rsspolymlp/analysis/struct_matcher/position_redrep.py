@@ -43,6 +43,14 @@ class PositionRepReducer:
         reduced_positions : ndarray
             One-dimensional vector [X_a, X_b, X_c] that uniquely identifies
             the structure up to the tolerance `symprec`.
+        all_positions : list[dict]
+            List of dictionaries, each containing:
+            - lat_mat : ndarray, shape (3, 3)
+                Lattice matrix.
+            - perm_mat : ndarray, shape (3, 3)
+                Permutation matrix.
+            - pos_reps : list of ndarray
+                List of position representations.
         sorted_elements : ndarray
             Chemical element symbols ordered starting from the least frequent element
             (alphabetically first in case of ties), corresponding to the order of
@@ -68,7 +76,7 @@ class PositionRepReducer:
 
         # Trivial case: single‑atom cell → nothing to do
         if self.positions.shape[0] == 1:
-            return metric_tensor_half, np.array([0, 0, 0]), self.elements
+            return metric_tensor_half, [], [], self.elements
 
         if self.cartesian_coords:
             a, b, c = np.array(axis_cands[0])
@@ -77,14 +85,14 @@ class PositionRepReducer:
             norm_c = np.linalg.norm(c)
             self.axis_abc = np.array([norm_a, norm_b, norm_c])
 
-        reduced_positions, sorted_elements = self.get_reduced_positions(
+        reduced_positions, all_positions, sorted_elements = self.get_reduced_positions(
             self.positions,
             self.elements,
             axis_cands,
             signed_permutation_cands,
         )
 
-        return metric_tensor_half, reduced_positions, sorted_elements
+        return metric_tensor_half, reduced_positions, all_positions, sorted_elements
 
     def get_reduced_positions(
         self,
@@ -113,32 +121,41 @@ class PositionRepReducer:
             positions, sorted_types, axis_cands, signed_permutation_cands
         )
 
+        all_positions = []
         reduced_perm_cands = []
         target_vals = []
         for pos_cand in position_cands:
+            pos_allreps = []
             for target_idx in pos_cand["cands_idx"]:
                 _pos = pos_cand["positions"].copy()
                 _cls_id = pos_cand["cluster_id"].copy()
-                reduced_perm_positions = self.reduced_permutation(
+                redperm_positions = self.reduced_permutation(
                     target_idx, _pos, sorted_types, _cls_id
                 )
+                pos_allreps.append(redperm_positions)
                 if self.cartesian_coords:
-                    reduced_perm_positions = reduced_perm_positions @ pos_cand["axis"]
-                reduced_perm_cands.append(reduced_perm_positions.T.reshape(-1))
-
+                    redperm_positions = redperm_positions @ pos_cand["lat_mat"]
+                reduced_perm_cands.append(redperm_positions.T.reshape(-1))
                 mask = types == 0
                 target_vals.append(
-                    reduced_perm_positions[0 : len(mask) - 1, :].T.reshape(-1)
+                    redperm_positions[0 : len(mask) - 1, :].T.reshape(-1)
                 )
+            all_positions.append(
+                {
+                    "lat_mat": pos_cand["lat_mat"],
+                    "perm_mat": pos_cand["perm_mat"],
+                    "pos_reps": pos_allreps,
+                }
+            )
 
-        target_vals = np.array(target_vals)
         reduced_perm_cands = np.array(reduced_perm_cands)
+        target_vals = np.array(target_vals)
         reduced_positions = self.reduced_translation(
-            target_vals,
             reduced_perm_cands,
+            target_vals,
         )
 
-        return reduced_positions, sorted_elements
+        return reduced_positions, all_positions, sorted_elements
 
     def position_candidates(
         self,
@@ -154,10 +171,10 @@ class PositionRepReducer:
 
         mask = types == 0
         position_cands = []
-        for idx, cand in enumerate(signed_permutation_cands):
+        for idx, perm_mat in enumerate(signed_permutation_cands):
             _pos = np.zeros_like(_positions)
             _cls_id = np.zeros_like(_positions, dtype=np.int32)
-            for axis, val in enumerate(cand):
+            for axis, val in enumerate(perm_mat):
                 target_axis = np.where(val != 0)[0][0]
                 sign = val[target_axis]
                 if sign == 1:
@@ -171,7 +188,8 @@ class PositionRepReducer:
                     "positions": _pos,
                     "cluster_id": _cls_id,
                     "cands_idx": np.where(mask)[0],
-                    "axis": axis_cands[idx],
+                    "lat_mat": axis_cands[idx],
+                    "perm_mat": perm_mat,
                 }
             )
         return position_cands
@@ -189,12 +207,10 @@ class PositionRepReducer:
 
         pos = pos - pos[target_idx]
         pos %= 1.0
-        cls_id = np.mod(cls_id - cls_id[target_idx], id_max).astype(int)
-
         pos = np.delete(pos, target_idx, axis=0)
-        cls_id = np.delete(cls_id, target_idx, axis=0).astype(int)
-        types = np.delete(types, target_idx, axis=0)
 
+        cls_id = np.mod(cls_id - cls_id[target_idx], id_max).astype(int)
+        cls_id = np.delete(cls_id, target_idx, axis=0).astype(int)
         for ax in range(3):
             near_zero_mask = cls_id[:, ax] == 0
             vals = pos[near_zero_mask, ax]
@@ -203,15 +219,15 @@ class PositionRepReducer:
             pos[near_zero_mask, ax] = np.where(dist_to_0 < dist_to_1, vals, vals - 1.0)
 
         # Stable lexicographic sort by (ids_z, ids_y, ids_x)
+        types = np.delete(types, target_idx, axis=0)
         sort_idx = np.lexsort((cls_id[:, 0], cls_id[:, 1], cls_id[:, 2], types))
-        reduced_perm_positions = pos[sort_idx]
-
-        return reduced_perm_positions
+        redperm_positions = pos[sort_idx]
+        return redperm_positions
 
     def reduced_translation(
         self,
-        target_vals: np.ndarray,
         reduced_perm_cands: np.ndarray,
+        target_vals: np.ndarray,
     ):
         _reduced_perm_cands = reduced_perm_cands
         _target_vals = target_vals

@@ -4,20 +4,20 @@ from contextlib import redirect_stdout
 from typing import Literal
 
 import numpy as np
-from scipy.sparse import csr_array
-from scipy.sparse.csgraph import maximum_bipartite_matching
 
-from rsspolymlp.analysis.struct_matcher.gen_allrep import (
-    AllStructReps,
+from rsspolymlp.analysis.struct_matcher.assignment_algo import (
+    bottleneck_assignment,
+    greedy_match,
+    sort_match_screen,
 )
-from rsspolymlp.analysis.struct_matcher.gen_redrep import (
-    ReducedStructReps,
+from rsspolymlp.analysis.struct_matcher.gen_struct_rep import (
+    StructReps,
 )
 
 
 def struct_match(
-    redreps_1: ReducedStructReps,
-    redreps_2: ReducedStructReps,
+    struct_reps_1: StructReps,
+    struct_reps_2: StructReps,
     axis_tol: float = 0.01,
     pos_tol: float = 0.01,
     spg_match: bool = True,
@@ -36,9 +36,9 @@ def struct_match(
 
     Parameters
     ----------
-    redreps_1 : ReducedStructReps
+    redreps_1 : StructReps
         Set of reduced representations from structure A.
-    redreps_2 : ReducedStructReps
+    redreps_2 : StructReps
         Set of reduced representations from structure B.
     axis_tol : float, default=0.01
         Tolerance for lattice vector differences, computed using the squared
@@ -57,18 +57,25 @@ def struct_match(
     axis_d_min = None
     pos_d_min = None
     min_axis_l2_norm = 1e8
+    strep_list1 = struct_reps_1.struct_rep_list
+    strep_list2 = struct_reps_2.struct_rep_list
 
     s_time = time.time()
-    for st_1 in redreps_1.redrep_list:
-        for st_2 in redreps_2.redrep_list:
+    for st_1 in strep_list1:
+        for st_2 in strep_list2:
             if struct_match or st_1.element_count != st_2.element_count:
                 continue
             if spg_match and st_1.spg_number != st_2.spg_number:
                 continue
 
-            axis_d = (
-                st_1.axis[:, None, :] - st_2.axis[None, :, :]
-            )  # (N_symp1, N_symp2, 6)
+            redreps1 = st_1.reduced_reps
+            redreps2 = st_2.reduced_reps
+            axis1 = np.stack(redreps1["metric_tensors"], axis=0)
+            axis2 = np.stack(redreps2["metric_tensors"], axis=0)
+            positions1 = np.stack(redreps1["positions"], axis=0)
+            positions2 = np.stack(redreps2["positions"], axis=0)
+
+            axis_d = axis1[:, None, :] - axis2[None, :, :]  # (N_symp1, N_symp2, 6)
             axis_d_flat = axis_d.reshape(-1, axis_d.shape[2])  # (N_symp1*N_symp2, 6)
             l2_norm = np.linalg.norm(axis_d_flat, axis=1)
             min_axis_l2_norm = min(min_axis_l2_norm, np.min(l2_norm))
@@ -77,32 +84,35 @@ def struct_match(
             if not np.any(match_axis):
                 continue
 
-            pos_d = st_1.positions[:, None, :] - st_2.positions[None, :, :]
-            pos_d_flat = pos_d.reshape(-1, pos_d.shape[2])
-            max_abs = np.max(np.abs(pos_d_flat), axis=1)
-            min_idx = np.argmin(max_abs[match_axis])
-
-            pos_max_abs = max_abs[match_axis][min_idx]
-            if pos_max_abs < pos_tol:
+            if len(st_1.elements) == 1:
                 struct_match = True
+            else:
+                pos_d = positions1[:, None, :] - positions2[None, :, :]
+                pos_d_flat = pos_d.reshape(-1, pos_d.shape[2])
+                max_abs = np.max(np.abs(pos_d_flat), axis=1)
+                min_idx = np.argmin(max_abs[match_axis])
 
-            if verbose and (pos_d_min is None or pos_d_min[0] > pos_max_abs):
-                axis_l2_norm = l2_norm[match_axis][min_idx]
-                i, j = divmod(np.where(match_axis)[0][min_idx], st_2.positions.shape[0])
-                axis_d_min = [
-                    axis_l2_norm,
-                    [st_1.axis[i], st_2.axis[j], axis_d[i, j]],
-                ]
-                pos_d_min = [
-                    pos_max_abs,
-                    [
-                        st_1.symprec_set[i],
-                        st_1.positions[i],
-                        st_2.symprec_set[j],
-                        st_2.positions[j],
-                        pos_d[i, j],
-                    ],
-                ]
+                pos_max_abs = max_abs[match_axis][min_idx]
+                if pos_max_abs < pos_tol:
+                    struct_match = True
+
+                if verbose and (pos_d_min is None or pos_d_min[0] > pos_max_abs):
+                    axis_l2_norm = l2_norm[match_axis][min_idx]
+                    i, j = divmod(np.where(match_axis)[0][min_idx], positions2.shape[0])
+                    axis_d_min = [
+                        axis_l2_norm,
+                        [axis1[i], axis2[j], axis_d[i, j]],
+                    ]
+                    pos_d_min = [
+                        pos_max_abs,
+                        [
+                            redreps1["symprec"][i],
+                            positions1[i],
+                            redreps2["symprec"][j],
+                            positions2[j],
+                            pos_d[i, j],
+                        ],
+                    ]
 
     if verbose:
         print("Elapsed time:", np.round((time.time() - s_time) * 1000, 2), "ms")
@@ -110,23 +120,30 @@ def struct_match(
         def log_axis_positions(symprec, axis, positions, round_axis=4, round_pos=3):
             print("    - symprec:", np.round(symprec, 5).tolist())
             print("      metric_tensor:", np.round(axis, round_axis).tolist())
-            print("      positions:")
-            for p in positions.reshape(3, -1).tolist():
-                formatted = ",".join(f"{val:{round_pos + 3}.{round_pos}f}" for val in p)
-                print(f"      - [{formatted}]")
+            if len(positions) > 0:
+                print("      positions:")
+                for p in positions.reshape(3, -1).tolist():
+                    formatted = ",".join(
+                        f"{val:{round_pos + 3}.{round_pos}f}" for val in p
+                    )
+                    print(f"      - [{formatted}]")
 
         with open(output_file, "w") as f, redirect_stdout(f):
             print("tolerance:")
             print("  axis_tol:", axis_tol)
             print("  pos_tol:", pos_tol)
             print("structures:")
-            for i, st_set in enumerate([redreps_1.redrep_list, redreps_2.redrep_list]):
+            for i, st_list in enumerate([strep_list1, strep_list2]):
                 print(f"  - struct_No: {i + 1}")
-                for st in st_set:
+                for st in st_list:
                     print("    spg_number:", st.spg_number)
                     print("    representations:")
-                    for h, pos in enumerate(st.positions):
-                        log_axis_positions(st.symprec_set[h], st.axis[h], pos)
+                    for h, pos in enumerate(st.reduced_reps["positions"]):
+                        log_axis_positions(
+                            st.reduced_reps["symprec"][h],
+                            st.reduced_reps["metric_tensors"][h],
+                            pos,
+                        )
             print("min_axis_l2_norm:", np.round(min_axis_l2_norm, 3))
             if axis_d_min is not None:
                 x_axis = abs(float(axis_d_min[0]))
@@ -170,128 +187,78 @@ def struct_match(
 
 
 def struct_match_allrep(
-    allreps_1: AllStructReps,
-    allreps_2: AllStructReps,
+    struct_reps_1: StructReps,
+    struct_reps_2: StructReps,
     axis_tol: float = 0.01,
     pos_tol: float = 0.01,
     spg_match: bool = True,
     assign_method: Literal["greedy", "HK"] = "greedy",
     verbose: bool = False,
 ) -> bool:
-
+    strep_list1 = struct_reps_1.struct_rep_list
+    strep_list2 = struct_reps_2.struct_rep_list
     judge_st_match = False
     min_axis_l2_norm = 1e8
+
     s_time = time.time()
-    for st_1 in allreps_1.allrep_list:
-        for st_2 in allreps_2.allrep_list:
+    for st_1 in strep_list1:
+        for st_2 in strep_list2:
             if judge_st_match or st_1.element_count != st_2.element_count:
                 continue
             if spg_match and st_1.spg_number != st_2.spg_number:
                 continue
 
-            axis_d = st_1.axis - st_2.axis
-            l2_norm = np.linalg.norm(axis_d)
+            allreps1 = st_1.all_reps
+            allreps2 = st_2.all_reps
+            axis1 = np.stack(allreps1["metric_tensors"], axis=0)
+            axis2 = np.stack(allreps2["metric_tensors"], axis=0)
+            allpos_list1 = allreps1["positions"]
+            allpos_list2 = allreps2["positions"]
+
+            axis_d = axis1[:, None, :] - axis2[None, :, :]  # (N_symp1, N_symp2, 6)
+            axis_d_flat = axis_d.reshape(-1, axis_d.shape[2])  # (N_symp1*N_symp2, 6)
+            l2_norm = np.linalg.norm(axis_d_flat, axis=1)
             min_axis_l2_norm = min(min_axis_l2_norm, np.min(l2_norm))
-            if l2_norm > axis_tol:
+
+            match_axis = l2_norm < axis_tol
+            if not np.any(match_axis):
                 continue
 
-            pos1_list = st_1.positions[0]["pos_reps"]
-            pos2_list = [
-                pos for pos_dict in st_2.positions for pos in pos_dict["pos_reps"]
-            ]
-            pos1_array = np.array(pos1_list)
-            pos2_array = np.array(pos2_list)
-            pre_judge = sort_match_screen(pos1_array, pos2_array, pos_tol)
-            row, col = np.where(pre_judge)
+            match_idx1, match_idx2 = np.where(
+                l2_norm.reshape(axis_d.shape[:2]) < axis_tol
+            )
+            for i, j in zip(match_idx1, match_idx2):
+                pos1 = allpos_list1[i]
+                pos2 = allpos_list2[j]
+                pos_reps1 = pos1[0]["pos_reps"]
+                pos_reps2 = [pos for pos_dict in pos2 for pos in pos_dict["pos_reps"]]
+                pos1_array = np.array(pos_reps1)
+                pos2_array = np.array(pos_reps2)
+                pre_judge = sort_match_screen(pos1_array, pos2_array, pos_tol)
+                row, col = np.where(pre_judge)
 
-            judge_st_match = False
-            if assign_method == "greedy":
-                for i, j in zip(row, col):
-                    if judge_st_match:
-                        break
-                    judge_st_match = greedy_match(pos1_list[i], pos2_list[j], pos_tol)
-            elif assign_method == "HK":
-                for i, j in zip(row, col):
-                    if judge_st_match:
-                        break
-                    diff = pos1_list[i][:, None, :] - pos2_list[j][None, :, :]
-                    diff -= np.round(diff)
-                    pos_d = np.max(np.abs(diff), axis=2)
-                    row, col = bottleneck_assignment(pos_d)
-                    pos_max_abs = pos_d[row, col]
-                    if np.max(pos_max_abs) < pos_tol:
-                        print(np.max(pos_max_abs))
-                        judge_st_match = True
-            else:
-                raise ValueError(f"Unknown assignment method: {assign_method}")
+                judge_st_match = False
+                if assign_method == "greedy":
+                    for i, j in zip(row, col):
+                        if judge_st_match:
+                            break
+                        judge_st_match = greedy_match(
+                            pos_reps1[i], pos_reps2[j], pos_tol
+                        )
+                elif assign_method == "HK":
+                    for i, j in zip(row, col):
+                        if judge_st_match:
+                            break
+                        diff = pos_reps1[i][:, None, :] - pos_reps2[j][None, :, :]
+                        diff -= np.round(diff)
+                        pos_d = np.max(np.abs(diff), axis=2)
+                        row, col = bottleneck_assignment(pos_d)
+                        pos_max_abs = pos_d[row, col]
+                        if np.max(pos_max_abs) < pos_tol:
+                            print(np.max(pos_max_abs))
+                            judge_st_match = True
+                else:
+                    raise ValueError(f"Unknown assignment method: {assign_method}")
     if verbose:
         print("Elapsed time:", np.round((time.time() - s_time) * 1000, 2), "ms")
     return judge_st_match
-
-
-def sort_match_screen(pos_reps1, pos_reps2, pos_tol):
-    # pos1: (N1, n_atoms, 3)
-    # pos2: (N2, n_atoms, 3)
-    pos1_sorted = np.sort(pos_reps1, axis=1)
-    pos2_sorted = np.sort(pos_reps2, axis=1)
-
-    diff = pos1_sorted[:, None, :, :] - pos2_sorted[None, :, :, :]
-    diff -= np.round(diff)
-    return np.all(np.abs(diff) <= pos_tol, axis=(2, 3))
-
-
-def greedy_match(pos1, pos2, pos_tol):
-    n = len(pos1)
-    if n != len(pos2):
-        return False
-
-    used = np.zeros(n, dtype=bool)
-    for i in range(n):
-        diff = np.max(np.abs(pos2 - pos1[i]), axis=1)
-        diff -= np.round(diff)
-        diff[used] = np.inf
-        j = np.argmin(np.abs(diff))
-        if diff[j] >= pos_tol:
-            return False
-        used[j] = True
-    return True
-
-
-def bottleneck_assignment(pos_d):
-    n = pos_d.shape[0]
-
-    # Sort distinct candidate distances
-    values = np.unique(pos_d)
-    left, right = 0, len(values) - 1
-
-    while left < right:
-        mid = (left + right) // 2
-        rows, cols = np.where(pos_d <= values[mid])
-        graph = csr_array(
-            (
-                np.ones(len(rows), dtype=np.int8),
-                (rows, cols),
-            ),
-            shape=pos_d.shape,
-        )
-
-        matching = maximum_bipartite_matching(graph, perm_type="column")
-        if np.all(matching >= 0):
-            right = mid
-        else:
-            left = mid + 1
-
-    threshold = values[left]
-    rows, cols = np.where(pos_d <= threshold)
-    graph = csr_array(
-        (
-            np.ones(len(rows), dtype=np.int8),
-            (rows, cols),
-        ),
-        shape=pos_d.shape,
-    )
-
-    matching = maximum_bipartite_matching(graph, perm_type="column")
-    row = np.arange(n)
-    col = matching
-    return row, col

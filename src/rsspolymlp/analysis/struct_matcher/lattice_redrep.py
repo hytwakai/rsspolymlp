@@ -6,7 +6,7 @@ from rsspolymlp.analysis.struct_matcher.chiral_spg import is_chiral
 def get_reduced_lattice(
     axis: np.ndarray,
     spg_number: int,
-    symprec: list[float] = [1e-4, 1e-4, 1e-4],
+    symprec: list[float] = [1e-2, 1e-2, 1e-2],
     original_axis: bool = False,
 ):
     proper_matrices, improper_matrices = signed_permutation_matrices()

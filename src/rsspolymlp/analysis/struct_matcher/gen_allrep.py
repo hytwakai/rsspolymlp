@@ -20,7 +20,6 @@ class AllStructRep:
     elements: np.ndarray
     element_count: Counter[str]
     spg_number: int
-    symprec: list
 
 
 @dataclass
@@ -29,7 +28,6 @@ class AllStructReps:
     original_polymlp_st: PolymlpStructure
     spg_list: list[str]
     primitive_symprecs: list[float]
-    allrep_symprec: float
     standardize_axis: bool
     original_axis: bool
     refine_cell: bool
@@ -41,7 +39,6 @@ class AllStructReps:
 def generate_allrep(
     polymlp_st: PolymlpStructure,
     spg_number: int,
-    symprec: list = 1e-3,
     standardize_axis: bool = False,
     original_axis: bool = False,
 ) -> AllStructRep:
@@ -54,15 +51,11 @@ def generate_allrep(
     symprec : float or list of 3-float lists.
         List of symmetry tolerances used to calculate representations.
     """
-    if isinstance(symprec, float):
-        input_symprec = [symprec] * 3
-
     _axis = polymlp_st.axis.T
     _pos = polymlp_st.positions.T
     _elements = polymlp_st.elements
 
     generator = PositionRepGenerator(
-        symprec=input_symprec,
         standardize_axis=standardize_axis,
         original_axis=original_axis,
     )
@@ -75,7 +68,6 @@ def generate_allrep(
         elements=sorted_elements,
         element_count=Counter(sorted_elements),
         spg_number=spg_number,
-        symprec=symprec,
     )
 
 
@@ -86,7 +78,6 @@ def generate_allreps(
     positions: Optional[np.ndarray] = None,
     elements: Optional[np.ndarray] = None,
     primitive_symprecs: list[float] = [1e-5, 1e-4, 1e-3, 1e-2],
-    allrep_symprec: float = 1e-3,
     standardize_axis: bool = False,
     original_axis: bool = False,
     refine_cell: bool = False,
@@ -127,7 +118,6 @@ def generate_allreps(
         allrep = generate_allrep(
             primitive_st,
             spg_number_set[i],
-            symprec=allrep_symprec,
             standardize_axis=standardize_axis,
             original_axis=original_axis,
         )
@@ -140,7 +130,6 @@ def generate_allreps(
         original_polymlp_st=polymlp_st,
         spg_list=spg_list,
         primitive_symprecs=primitive_symprecs,
-        allrep_symprec=allrep_symprec,
         standardize_axis=standardize_axis,
         original_axis=original_axis,
         refine_cell=refine_cell,
@@ -155,7 +144,6 @@ def generate_allreps_parallel(
     num_process: int = -1,
     backend: str = "loky",
     primitive_symprecs: list[float] = [1e-5, 1e-4, 1e-3, 1e-2],
-    allrep_symprec: float = 1e-3,
     standardize_axis: bool = False,
     original_axis: bool = False,
     refine_cell: bool = False,
@@ -187,7 +175,6 @@ def generate_allreps_parallel(
                     poscar_path=res["struct_path"],
                     polymlp_st=res.get("structure", None),
                     primitive_symprecs=primitive_symprecs,
-                    allrep_symprec=allrep_symprec,
                     standardize_axis=standardize_axis,
                     original_axis=original_axis,
                     refine_cell=refine_cell,
@@ -201,7 +188,6 @@ def generate_allreps_parallel(
                 poscar_path=res["struct_path"],
                 polymlp_st=res.get("structure", None),
                 primitive_symprecs=primitive_symprecs,
-                allrep_symprec=allrep_symprec,
                 standardize_axis=standardize_axis,
                 original_axis=original_axis,
                 refine_cell=refine_cell,

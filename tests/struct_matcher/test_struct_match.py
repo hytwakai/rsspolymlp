@@ -1,8 +1,6 @@
 import glob
 import os
-import shutil
 
-import pytest
 import yaml
 
 from rsspolymlp.api.rsspolymlp_utils import struct_compare, struct_matcher

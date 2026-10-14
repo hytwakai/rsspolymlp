@@ -12,9 +12,9 @@ import numpy as np
 
 from pypolymlp.utils.vasp_utils import write_poscar_file
 from rsspolymlp.analysis.ghost_minima import detect_ghost_minima
-from rsspolymlp.analysis.struct_matcher.gen_redrep import (
-    ReducedStructReps,
-    generate_redreps_parallel,
+from rsspolymlp.analysis.struct_matcher.gen_struct_rep import (
+    StructReps,
+    generate_struct_reps_parallel,
 )
 from rsspolymlp.analysis.struct_matcher.identify_uniqstr import (
     UniqueStructIdentifier,
@@ -264,7 +264,7 @@ class RSSResultSummarizer:
             r["dupstr_paths"] = set(r["dupstr_paths"])
 
         print("   - Converting reduced crystal structure representation...")
-        redreps_list = generate_redreps_parallel(
+        struct_reps_list = generate_struct_reps_parallel(
             rss_results,
             num_process=self.num_process,
             backend=self.backend,
@@ -272,7 +272,7 @@ class RSSResultSummarizer:
         )
         if self.update_parent:
             print("   - Eliminating duplicate structures...")
-            for idx, redreps in enumerate(redreps_list):
+            for idx, redreps in enumerate(struct_reps_list):
                 self.analyzer.identify_duplicate_struct(
                     unique_struct=redreps,
                     other_properties=rss_results[idx],
@@ -280,7 +280,7 @@ class RSSResultSummarizer:
                     pos_tol=0.03,
                 )
         else:
-            self.analyzer._initialize_unique_structs(redreps_list, rss_results)
+            self.analyzer._initialize_unique_structs(struct_reps_list, rss_results)
 
         return set(processed_paths)
 
@@ -461,16 +461,16 @@ class RSSResultSummarizer:
 
 def dump_json_rss_results(
     file_name: str,
-    redreps_list: list[ReducedStructReps],
+    struct_reps_list: list[StructReps],
     enthalpy_lists: list[float],
     is_ghost_minima=None,
     pressure=None,
 ):
     if is_ghost_minima is None:
-        is_ghost_minima = np.full_like(redreps_list, False, dtype=bool)
+        is_ghost_minima = np.full_like(struct_reps_list, False, dtype=bool)
 
     rss_results = []
-    for idx, _str in enumerate(redreps_list):
+    for idx, _str in enumerate(struct_reps_list):
         polymlp_st = _str.original_polymlp_st
         objprop = PropUtil(polymlp_st.axis.T, polymlp_st.positions.T)
         rss_results.append(
@@ -487,8 +487,8 @@ def dump_json_rss_results(
                 "is_ghost_minima": bool(is_ghost_minima[idx]),
             }
         )
-    if len(redreps_list) > 0:
-        comp_res = compute_composition(redreps_list[0].original_polymlp_st.elements)
+    if len(struct_reps_list) > 0:
+        comp_res = compute_composition(struct_reps_list[0].original_polymlp_st.elements)
         rss_result_all = {
             "elements": comp_res.unique_elements.tolist(),
             "comp_ratio": comp_res.comp_ratio,
@@ -507,13 +507,13 @@ def dump_json_rss_results(
 
 def log_unique_structures(
     file_name: str,
-    redreps_list: list[ReducedStructReps],
+    struct_reps_list: list[StructReps],
     enthalpy_lists: Optional[list[float]] = None,
     is_ghost_minima=None,
     unique_struct_iters=None,
 ):
     if is_ghost_minima is None:
-        is_ghost_minima = np.full_like(redreps_list, False, dtype=bool)
+        is_ghost_minima = np.full_like(struct_reps_list, False, dtype=bool)
     energy_min = None
     if enthalpy_lists is not None:
         for i in range(len(enthalpy_lists)):
@@ -522,9 +522,10 @@ def log_unique_structures(
                 break
 
     struct_num_max = max(
-        (_s.struct_tag for _s in redreps_list if _s.struct_tag is not None), default=0
+        (_s.struct_tag for _s in struct_reps_list if _s.struct_tag is not None),
+        default=0,
     )
-    for _s in redreps_list:
+    for _s in struct_reps_list:
         if _s.struct_tag is None:
             struct_num_max += 1
             _s.struct_tag = struct_num_max
@@ -532,7 +533,7 @@ def log_unique_structures(
     with open(file_name, "a") as f:
         print("unique_structures:", file=f)
         for is_ghost in [False, True]:
-            for idx, _str in enumerate(redreps_list):
+            for idx, _str in enumerate(struct_reps_list):
                 if energy_min is not None:
                     e_diff = round((enthalpy_lists[idx] - energy_min) * 1000, 2)
                     if (not is_ghost and e_diff < -300) or (
@@ -579,7 +580,7 @@ def log_unique_structures(
 
 def log_all_unique_structures(
     file_name,
-    unique_structs: list[list[ReducedStructReps]],
+    unique_structs: list[list[StructReps]],
     unique_str_prop: Optional[list[list[dict]]] = None,
     unique_other_prop=None,
 ):

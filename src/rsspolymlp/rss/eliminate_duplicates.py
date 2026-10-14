@@ -10,14 +10,16 @@ from collections import Counter, defaultdict
 from time import time
 
 import numpy as np
-from pypolymlp.calculator.properties import Properties
 
+from pypolymlp.calculator.properties import Properties
 from rsspolymlp.analysis.ghost_minima import detect_ghost_minima
 from rsspolymlp.analysis.rss_summarize import (
     dump_json_rss_results,
     log_unique_structures,
 )
-from rsspolymlp.analysis.struct_matcher.gen_redrep import generate_redreps_parallel
+from rsspolymlp.analysis.struct_matcher.gen_struct_rep import (
+    generate_struct_reps_parallel,
+)
 from rsspolymlp.analysis.struct_matcher.identify_uniqstr import UniqueStructIdentifier
 from rsspolymlp.common.interface_vasp import Poscar
 from rsspolymlp.common.property import PropUtil
@@ -250,12 +252,12 @@ class RSSResultAnalyzer:
         backend: str = "locky",
     ):
         analyzer = UniqueStructIdentifier()
-        redreps_list = generate_redreps_parallel(
+        struct_reps_list = generate_struct_reps_parallel(
             struct_properties,
             num_process=num_process,
             backend=backend,
         )
-        for idx, unique_struct in enumerate(redreps_list):
+        for idx, unique_struct in enumerate(struct_reps_list):
             is_unique, _ = analyzer.identify_duplicate_struct(
                 unique_struct,
                 other_properties=struct_properties[idx],

@@ -1,27 +1,31 @@
 import re
-from typing import Optional
+from typing import Literal, Optional
 
-from rsspolymlp.analysis.struct_matcher.gen_redrep import (
-    ReducedStructReps,
-    generate_redreps_parallel,
+from rsspolymlp.analysis.struct_matcher.gen_struct_rep import (
+    StructReps,
+    generate_struct_reps_parallel,
 )
-from rsspolymlp.analysis.struct_matcher.struct_match import struct_match
+from rsspolymlp.analysis.struct_matcher.struct_match import (
+    struct_match,
+    struct_match_allrep,
+)
 
 
 class UniqueStructIdentifier:
 
     def __init__(self):
-        self.unique_str: list[ReducedStructReps] = []  # Store unique structures
+        self.unique_str: list[StructReps] = []  # Store unique structures
         self.unique_str_prop: list[dict] = []  # Store unique structure properties
-        self.unique_str_keep: list[list[ReducedStructReps]] = []
+        self.unique_str_keep: list[list[StructReps]] = []
         self.unique_str_prop_keep: list[list[dict]] = []
 
     def identify_duplicate_struct(
         self,
-        reduced_reps: ReducedStructReps,
+        struct_reps: StructReps,
         other_properties: Optional[dict] = None,
         axis_tol: float = 0.01,
         pos_tol: float = 0.01,
+        assign_method: Literal["redrep", "greedy", "HK"] = "redrep",
         keep_unique: bool = False,
     ):
         """
@@ -31,7 +35,7 @@ class UniqueStructIdentifier:
 
         Parameters
         ----------
-        reduced_reps : ReducedStructReps
+        struct_reps : StructReps
             The structure to be compared and registered if unique.
         other_properties : dict, optional
             Additional metadata associated with the structure.
@@ -54,17 +58,27 @@ class UniqueStructIdentifier:
         for idx, _uniq_str in enumerate(self.unique_str):
             uniq_str_list = self.unique_str_keep[idx] if keep_unique else [_uniq_str]
             for uniq_str in uniq_str_list:
-                if struct_match(
-                    uniq_str,
-                    reduced_reps,
-                    axis_tol=axis_tol,
-                    pos_tol=pos_tol,
-                ):
+                if assign_method == "redrep":
+                    judge_duplicate = struct_match(
+                        uniq_str,
+                        struct_reps,
+                        axis_tol=axis_tol,
+                        pos_tol=pos_tol,
+                    )
+                else:
+                    judge_duplicate = struct_match_allrep(
+                        uniq_str,
+                        struct_reps,
+                        axis_tol=axis_tol,
+                        pos_tol=pos_tol,
+                        assign_method=assign_method,
+                    )
+                if judge_duplicate:
                     is_unique = False
-                    if self._spg_count(reduced_reps.spg_list) > self._spg_count(
+                    if self._spg_count(struct_reps.spg_list) > self._spg_count(
                         uniq_str.spg_list
                     ) or (
-                        self._spg_count(reduced_reps.spg_list)
+                        self._spg_count(struct_reps.spg_list)
                         == self._spg_count(uniq_str.spg_list)
                     ):
                         is_change_struct = True
@@ -74,22 +88,22 @@ class UniqueStructIdentifier:
                 break
 
         if not is_unique:
-            if reduced_reps.struct_path not in self.unique_str[idx].dupstr_paths:
-                self.unique_str[idx].dupstr_paths.add(reduced_reps.struct_path)
+            if struct_reps.struct_path not in self.unique_str[idx].dupstr_paths:
+                self.unique_str[idx].dupstr_paths.add(struct_reps.struct_path)
             if is_change_struct:
                 # Update duplicate count and replace with better data if necessary
-                reduced_reps.dupstr_paths = self.unique_str[idx].dupstr_paths
-                reduced_reps.struct_tag = self.unique_str[idx].struct_tag
-                self.unique_str[idx] = reduced_reps
+                struct_reps.dupstr_paths = self.unique_str[idx].dupstr_paths
+                struct_reps.struct_tag = self.unique_str[idx].struct_tag
+                self.unique_str[idx] = struct_reps
                 self.unique_str_prop[idx] = other_properties
             if keep_unique:
-                self.unique_str_keep[idx].append(reduced_reps)
+                self.unique_str_keep[idx].append(struct_reps)
                 self.unique_str_prop_keep[idx].append(other_properties)
         else:
-            self.unique_str.append(reduced_reps)
+            self.unique_str.append(struct_reps)
             self.unique_str_prop.append(other_properties)
             if keep_unique:
-                self.unique_str_keep.append([reduced_reps])
+                self.unique_str_keep.append([struct_reps])
                 self.unique_str_prop_keep.append([other_properties])
 
         if is_unique and len(self.unique_str) % 500 == 0:
@@ -107,7 +121,7 @@ class UniqueStructIdentifier:
 
     def _initialize_unique_structs(
         self,
-        unique_structs: list[ReducedStructReps],
+        unique_structs: list[StructReps],
         unique_str_prop: Optional[list[dict]] = None,
     ):
         """Initialize unique structures and their associated properties."""
@@ -122,6 +136,7 @@ def identify_unique_structure(
     struct_lists: list[dict],
     axis_tol: float = 0.01,
     pos_tol: float = 0.01,
+    assign_method: Literal["redrep", "greedy", "HK"] = "redrep",
     keep_unique: bool = False,
     num_process: int = -1,
     backend: str = "loky",
@@ -151,7 +166,7 @@ def identify_unique_structure(
 
     if verbose:
         print("   - Converting reduced crystal structure representation...")
-    redreps_list = generate_redreps_parallel(
+    redreps_list = generate_struct_reps_parallel(
         struct_lists,
         num_process=num_process,
         backend=backend,
@@ -170,6 +185,7 @@ def identify_unique_structure(
             other_properties=struct_lists[idx],
             axis_tol=axis_tol,
             pos_tol=pos_tol,
+            assign_method=assign_method,
             keep_unique=keep_unique,
         )
     return analyzer

@@ -5,12 +5,9 @@ from rsspolymlp.analysis.rss_summarize import (
     log_all_unique_structures,
     log_unique_structures,
 )
-from rsspolymlp.analysis.struct_matcher.gen_allrep import (
-    generate_allreps,
-)
-from rsspolymlp.analysis.struct_matcher.gen_redrep import (
-    generate_redreps,
-    generate_redreps_parallel,
+from rsspolymlp.analysis.struct_matcher.gen_struct_rep import (
+    generate_struct_reps,
+    generate_struct_reps_parallel,
 )
 from rsspolymlp.analysis.struct_matcher.identify_uniqstr import (
     UniqueStructIdentifier,
@@ -47,7 +44,7 @@ def struct_matcher(
     for poscar_path in poscar_paths:
         rss_results.append({"struct_path": poscar_path})
 
-    redreps_list = generate_redreps_parallel(
+    struct_reps_list = generate_struct_reps_parallel(
         rss_results,
         num_process=num_process,
         backend=backend,
@@ -59,9 +56,9 @@ def struct_matcher(
     )
 
     analyzer = UniqueStructIdentifier()
-    for redreps in redreps_list:
+    for struct_reps in struct_reps_list:
         analyzer.identify_duplicate_struct(
-            reduced_reps=redreps,
+            struct_reps=struct_reps,
             keep_unique=keep_unique,
             axis_tol=axis_tol,
             pos_tol=pos_tol,
@@ -104,8 +101,7 @@ def struct_compare(
     original_axis: bool = False,
     frac_coords: bool = False,
     refine_cell: bool = False,
-    gen_allrep: bool = False,
-    assign_method: Literal["greedy", "HK"] = "greedy",
+    assign_method: Literal["redrep", "greedy", "HK"] = "redrep",
     verbose: bool = True,
 ):
     sym = SymCell(poscar_name=poscar_paths[0], symprec=refine_symprec)
@@ -125,59 +121,43 @@ def struct_compare(
         print("- Positions:")
         print(polymlp_st2.positions)
 
-    if not gen_allrep:
-        if reduced_symprecs is None:
-            if not frac_coords:
-                reduced_symprecs = [1e-4, 1e-2, 1e-1]
-            else:
-                reduced_symprecs = [1e-5, 1e-3, 1e-2]
-        redreps_1 = generate_redreps(
-            polymlp_st=polymlp_st1,
-            refine_cell=refine_cell,
-            redrep_symprecs=reduced_symprecs,
-            standardize_axis=standardize_axis,
-            original_axis=original_axis,
-            cartesian_coords=not frac_coords,
-            struct_path="st1",
-        )
-        redreps_2 = generate_redreps(
-            polymlp_st=polymlp_st2,
-            refine_cell=refine_cell,
-            redrep_symprecs=reduced_symprecs,
-            standardize_axis=standardize_axis,
-            original_axis=original_axis,
-            cartesian_coords=not frac_coords,
-            struct_path="st2",
-        )
+    if reduced_symprecs is None:
+        if not frac_coords:
+            reduced_symprecs = [1e-4, 1e-2, 1e-1]
+        else:
+            reduced_symprecs = [1e-5, 1e-3, 1e-2]
+    struct_reps_1 = generate_struct_reps(
+        polymlp_st=polymlp_st1,
+        refine_cell=refine_cell,
+        redrep_symprecs=reduced_symprecs,
+        standardize_axis=standardize_axis,
+        original_axis=original_axis,
+        cartesian_coords=not frac_coords,
+        struct_path="st1",
+    )
+    struct_reps_2 = generate_struct_reps(
+        polymlp_st=polymlp_st2,
+        refine_cell=refine_cell,
+        redrep_symprecs=reduced_symprecs,
+        standardize_axis=standardize_axis,
+        original_axis=original_axis,
+        cartesian_coords=not frac_coords,
+        struct_path="st2",
+    )
+
+    if assign_method == "redrep":
         judge = struct_match(
-            redreps_1,
-            redreps_2,
+            struct_reps_1,
+            struct_reps_2,
             axis_tol=axis_tol,
             pos_tol=pos_tol,
             verbose=verbose,
             spg_match=False,
         )
     else:
-        reduced_symprecs = 1e-3
-        allreps_1 = generate_allreps(
-            polymlp_st=polymlp_st1,
-            refine_cell=refine_cell,
-            allrep_symprec=reduced_symprecs,
-            standardize_axis=standardize_axis,
-            original_axis=original_axis,
-            struct_path="st1",
-        )
-        allreps_2 = generate_allreps(
-            polymlp_st=polymlp_st2,
-            refine_cell=refine_cell,
-            allrep_symprec=reduced_symprecs,
-            standardize_axis=standardize_axis,
-            original_axis=original_axis,
-            struct_path="st2",
-        )
         judge = struct_match_allrep(
-            allreps_1,
-            allreps_2,
+            struct_reps_1,
+            struct_reps_2,
             axis_tol=axis_tol,
             pos_tol=pos_tol,
             assign_method=assign_method,
