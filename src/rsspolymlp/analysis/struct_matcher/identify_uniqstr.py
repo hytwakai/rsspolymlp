@@ -135,7 +135,7 @@ class UniqueStructIdentifier:
 
 
 def identify_unique_structure(
-    struct_lists: list[dict],
+    struct_list: list[dict],
     axis_tol: float = 0.01,
     pos_tol: float = 0.01,
     assign_method: Literal["redrep", "greedy", "HK"] = "redrep",
@@ -153,7 +153,7 @@ def identify_unique_structure(
     """
     Parameters
     ----------
-    struct_lists : list of dict
+    struct_list : list of dict
         A list of dictionaries, where each dictionary contains a single structure information.
         Each dictionary must include "struct_path" keys:
             - "struct_path": path of POSCAR format file
@@ -169,7 +169,7 @@ def identify_unique_structure(
     if verbose:
         print("   - Converting reduced crystal structure representation...")
     redreps_list = generate_struct_reps_parallel(
-        struct_lists,
+        struct_list,
         num_process=num_process,
         backend=backend,
         primitive_symprecs=primitive_symprecs,
@@ -184,7 +184,7 @@ def identify_unique_structure(
     for idx, redreps in enumerate(redreps_list):
         analyzer.identify_duplicate_struct(
             redreps,
-            other_properties=struct_lists[idx],
+            other_properties=struct_list[idx],
             axis_tol=axis_tol,
             pos_tol=pos_tol,
             assign_method=assign_method,

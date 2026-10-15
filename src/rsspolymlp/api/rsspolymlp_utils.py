@@ -21,7 +21,8 @@ from rsspolymlp.rss.optimization_mlp import OptimizationMLP
 
 def struct_matcher(
     poscar_paths: Optional[list[str]] = None,
-    struct_lists: Optional[list[dict]] = None,
+    struct_list: Optional[list[dict]] = None,
+    struct_reps_list: Optional[list[dict]] = None,
     axis_tol: float = 0.05,
     pos_tol: float = 0.03,
     assign_method: Literal["redrep", "greedy", "HK"] = "redrep",
@@ -37,33 +38,34 @@ def struct_matcher(
     log_all: bool = False,
     verbose: bool = False,
 ):
-    if poscar_paths is None and struct_lists is None:
-        raise ValueError("Set poscar_paths or struct_lists")
+    if poscar_paths is None and struct_list is None and struct_reps_list is None:
+        raise ValueError("Set poscar_paths, struct_list, or struct_reps_list")
 
-    if reduced_symprecs is None:
-        if not frac_coords:
-            reduced_symprecs = [1e-4, 1e-2, 1e-1]
-        else:
-            reduced_symprecs = [1e-5, 1e-3, 1e-2]
+    if struct_reps_list is None:
+        if reduced_symprecs is None:
+            if not frac_coords:
+                reduced_symprecs = [1e-4, 1e-2, 1e-1]
+            else:
+                reduced_symprecs = [1e-5, 1e-3, 1e-2]
 
-    if struct_lists is None:
-        struct_lists = [{} for _ in poscar_paths]
-    if poscar_paths is not None:
-        for struct, poscar_path in zip(struct_lists, poscar_paths):
-            struct["poscar_path"] = poscar_path
-            struct["struct_path"] = poscar_path
+        if struct_list is None:
+            struct_list = [{} for _ in poscar_paths]
+        if poscar_paths is not None:
+            for struct, poscar_path in zip(struct_list, poscar_paths):
+                struct["poscar_path"] = poscar_path
+                struct["struct_path"] = poscar_path
 
-    struct_reps_list = generate_struct_reps_parallel(
-        struct_lists,
-        num_process=num_process,
-        backend=backend,
-        primitive_symprecs=primitive_symprecs,
-        redrep_symprecs=reduced_symprecs,
-        standardize_axis=standardize_axis,
-        refine_cell=refine_cell,
-        cartesian_coords=not frac_coords,
-        verbose=verbose,
-    )
+        struct_reps_list = generate_struct_reps_parallel(
+            struct_list,
+            num_process=num_process,
+            backend=backend,
+            primitive_symprecs=primitive_symprecs,
+            redrep_symprecs=reduced_symprecs,
+            standardize_axis=standardize_axis,
+            refine_cell=refine_cell,
+            cartesian_coords=not frac_coords,
+            verbose=verbose,
+        )
 
     analyzer = UniqueStructIdentifier()
     if not assign_method == "redrep":

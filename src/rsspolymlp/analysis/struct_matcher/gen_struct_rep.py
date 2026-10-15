@@ -242,7 +242,7 @@ def generate_primitive_cells(
 
 
 def generate_struct_reps_parallel(
-    struct_lists: list[dict],
+    struct_list: list[dict],
     num_process: int = -1,
     backend: str = "loky",
     primitive_symprecs: list[float] = [1e-5, 1e-4, 1e-3, 1e-2],
@@ -258,7 +258,7 @@ def generate_struct_reps_parallel(
 
     Parameters
     ----------
-    struct_lists : list of dict
+    struct_list : list of dict
         A list of dictionaries, where each dictionary contains a single structure information.
         Each dictionary must include "struct_path" keys:
             - "struct_path": path of POSCAR format file
@@ -275,7 +275,7 @@ def generate_struct_reps_parallel(
     """
     if num_process == 1:
         redreps_list = []
-        for res in struct_lists:
+        for res in struct_list:
             redreps_list.append(
                 generate_struct_reps(
                     poscar_path=res.get("poscar_path", None),
@@ -318,7 +318,7 @@ def generate_struct_reps_parallel(
                 struct_tag=res.get("struct_tag", None),
                 dupstr_paths=res.get("dupstr_paths", None),
             )
-            for res in struct_lists
+            for res in struct_list
         )
 
     redreps_list = [s for s in redreps_list if s is not None]
