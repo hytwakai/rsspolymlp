@@ -108,5 +108,6 @@ def bottleneck_assignment(
         pos_max_diffs.extend(pos_d[np.arange(n), matching].tolist())
 
     if max(pos_max_diffs) < pos_tol:
-        judge = True
-    return judge
+        return True
+    else:
+        return False

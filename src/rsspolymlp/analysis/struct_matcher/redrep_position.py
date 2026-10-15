@@ -86,7 +86,6 @@ class PositionRepReducer:
         reduced_positions, all_positions, sorted_elements = self.get_reduced_positions(
             self.positions,
             self.elements,
-            axis_cands,
             signed_permutation_cands,
         )
 
@@ -96,7 +95,6 @@ class PositionRepReducer:
         self,
         positions,
         elements,
-        axis_cands,
         signed_permutation_cands,
     ):
         """Derive a reduced representation of atomic positions."""
@@ -116,7 +114,7 @@ class PositionRepReducer:
         positions = positions[sort_idx, :]
 
         position_cands = self.position_candidates(
-            positions, sorted_types, axis_cands, signed_permutation_cands
+            positions, sorted_types, signed_permutation_cands
         )
 
         all_positions = []
@@ -158,7 +156,6 @@ class PositionRepReducer:
         self,
         positions: np.ndarray,
         types: np.ndarray,
-        axis_cands: np.ndarray,
         signed_permutation_cands: np.ndarray,
     ):
         _positions = positions.copy()

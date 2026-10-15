@@ -13,8 +13,8 @@ import numpy as np
 from pypolymlp.utils.vasp_utils import write_poscar_file
 from rsspolymlp.analysis.ghost_minima import detect_ghost_minima
 from rsspolymlp.analysis.struct_matcher.gen_struct_rep import (
+    StructRepGenerator,
     StructReps,
-    generate_struct_reps_parallel,
 )
 from rsspolymlp.analysis.struct_matcher.identify_uniqstr import (
     UniqueStructIdentifier,
@@ -264,11 +264,13 @@ class RSSResultSummarizer:
             r["dupstr_paths"] = set(r["dupstr_paths"])
 
         print("   - Converting reduced crystal structure representation...")
-        struct_reps_list = generate_struct_reps_parallel(
-            rss_results,
+        generator = StructRepGenerator(
             num_process=self.num_process,
             backend=self.backend,
-            symprec_set1=self.symprec_set,
+            primitive_symprecs=self.primitive_symprecs,
+        )
+        struct_reps_list = generator.generate_struct_reps_parallel(
+            rss_results,
         )
         if self.update_parent:
             print("   - Eliminating duplicate structures...")

@@ -18,7 +18,7 @@ from rsspolymlp.analysis.rss_summarize import (
     log_unique_structures,
 )
 from rsspolymlp.analysis.struct_matcher.gen_struct_rep import (
-    generate_struct_reps_parallel,
+    StructRepGenerator,
 )
 from rsspolymlp.analysis.struct_matcher.identify_uniqstr import UniqueStructIdentifier
 from rsspolymlp.common.interface_vasp import Poscar
@@ -252,7 +252,8 @@ class RSSResultAnalyzer:
         backend: str = "locky",
     ):
         analyzer = UniqueStructIdentifier()
-        struct_reps_list = generate_struct_reps_parallel(
+        generator = StructRepGenerator()
+        struct_reps_list = generator.generate_struct_reps_parallel(
             struct_properties,
             num_process=num_process,
             backend=backend,

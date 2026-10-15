@@ -3,7 +3,7 @@ import pytest
 import yaml
 
 from rsspolymlp.analysis.struct_matcher.gen_struct_rep import (
-    generate_struct_reps_parallel,
+    StructRepGenerator,
 )
 from rsspolymlp.analysis.struct_matcher.reduced_lattice import (
     signed_permutation_matrices,
@@ -71,7 +71,8 @@ def test_sm_random_struct(tmp_path, n_elements):
                 }
             )
 
-    struct_reps_list = generate_struct_reps_parallel(
+    generator = StructRepGenerator()
+    struct_reps_list = generator.generate_struct_reps_parallel(
         struct_reps,
     )
     struct_matcher(

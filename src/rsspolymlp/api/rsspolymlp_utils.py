@@ -5,10 +5,7 @@ from rsspolymlp.analysis.rss_summarize import (
     log_all_unique_structures,
     log_unique_structures,
 )
-from rsspolymlp.analysis.struct_matcher.gen_struct_rep import (
-    generate_struct_reps,
-    generate_struct_reps_parallel,
-)
+from rsspolymlp.analysis.struct_matcher.gen_struct_rep import StructRepGenerator
 from rsspolymlp.analysis.struct_matcher.identify_uniqstr import (
     UniqueStructIdentifier,
 )
@@ -55,16 +52,18 @@ def struct_matcher(
                 struct["poscar_path"] = poscar_path
                 struct["struct_path"] = poscar_path
 
-        struct_reps_list = generate_struct_reps_parallel(
-            struct_list,
-            num_process=num_process,
-            backend=backend,
+        generator = StructRepGenerator(
             primitive_symprecs=primitive_symprecs,
             redrep_symprecs=reduced_symprecs,
             standardize_axis=standardize_axis,
-            refine_cell=refine_cell,
             cartesian_coords=not frac_coords,
+            refine_cell=refine_cell,
             verbose=verbose,
+        )
+        struct_reps_list = generator.generate_struct_reps_parallel(
+            struct_list,
+            num_process=num_process,
+            backend=backend,
         )
 
     analyzer = UniqueStructIdentifier()
@@ -141,22 +140,19 @@ def struct_compare(
             reduced_symprecs = [1e-4, 1e-2, 1e-1]
         else:
             reduced_symprecs = [1e-5, 1e-3, 1e-2]
-    struct_reps_1 = generate_struct_reps(
-        polymlp_st=polymlp_st1,
-        refine_cell=refine_cell,
+    generator = StructRepGenerator(
         redrep_symprecs=reduced_symprecs,
         standardize_axis=standardize_axis,
-        original_axis=original_axis,
         cartesian_coords=not frac_coords,
+        original_axis=original_axis,
+        refine_cell=refine_cell,
+    )
+    struct_reps_1 = generator.generate_struct_reps(
+        polymlp_st=polymlp_st1,
         struct_path="st1",
     )
-    struct_reps_2 = generate_struct_reps(
+    struct_reps_2 = generator.generate_struct_reps(
         polymlp_st=polymlp_st2,
-        refine_cell=refine_cell,
-        redrep_symprecs=reduced_symprecs,
-        standardize_axis=standardize_axis,
-        original_axis=original_axis,
-        cartesian_coords=not frac_coords,
         struct_path="st2",
     )
 

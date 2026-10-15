@@ -2,8 +2,8 @@ import re
 from typing import Literal, Optional
 
 from rsspolymlp.analysis.struct_matcher.gen_struct_rep import (
+    StructRepGenerator,
     StructReps,
-    generate_struct_reps_parallel,
 )
 from rsspolymlp.analysis.struct_matcher.struct_match import (
     struct_match,
@@ -168,15 +168,17 @@ def identify_unique_structure(
 
     if verbose:
         print("   - Converting reduced crystal structure representation...")
-    redreps_list = generate_struct_reps_parallel(
-        struct_list,
-        num_process=num_process,
-        backend=backend,
+    generator = StructRepGenerator(
         primitive_symprecs=primitive_symprecs,
         redrep_symprecs=redrep_symprecs,
         standardize_axis=standardize_axis,
         cartesian_coords=cartesian_coords,
         refine_cell=refine_cell,
+    )
+    redreps_list = generator.generate_struct_reps_parallel(
+        struct_list,
+        num_process=num_process,
+        backend=backend,
     )
 
     if verbose:
