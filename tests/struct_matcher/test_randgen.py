@@ -13,12 +13,12 @@ from rsspolymlp.api.rsspolymlp_utils import struct_matcher
 
 @pytest.mark.parametrize("n_elements", [1, 3, 5])
 def test_sm_random_struct(tmp_path, n_elements):
-    n_atom = 30 * n_elements
+    n_atom = 30 + 10 * (n_elements - 1)
     n_struct_reps = 10 * n_elements
     n_element_duplicates = 5
     n_duplicates = 5
 
-    axis_norm = (n_atom * 3) ** (1 / 3)
+    axis_norm = (n_atom * 10) ** (1 / 3)
     axis = np.array([[axis_norm, 0, 0], [0, axis_norm, 0], [0, 0, axis_norm]])
     element_cands = ["A", "B", "C", "D", "E", "F"]
     proper_matrices, _ = signed_permutation_matrices()
