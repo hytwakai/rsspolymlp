@@ -109,5 +109,4 @@ def bottleneck_assignment(
 
     if max(pos_max_diffs) < pos_tol:
         judge = True
-        print(max(pos_max_diffs))
     return judge
