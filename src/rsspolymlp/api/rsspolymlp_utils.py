@@ -38,6 +38,7 @@ def struct_matcher(
     if poscar_paths is None and struct_list is None and struct_reps_list is None:
         raise ValueError("Set poscar_paths, struct_list, or struct_reps_list")
 
+    time_refine = iter_refine = time_redrep = iter_redrep = None
     if struct_reps_list is None:
         if reduced_symprecs is None:
             if not frac_coords:
@@ -65,6 +66,10 @@ def struct_matcher(
             num_process=num_process,
             backend=backend,
         )
+        time_refine = generator.time_refine
+        iter_refine = generator.iter_refine
+        time_redrep = generator.time_refine
+        iter_redrep = generator.iter_redrep
 
     analyzer = UniqueStructIdentifier()
     if not assign_method == "redrep":
@@ -77,6 +82,13 @@ def struct_matcher(
             pos_tol=pos_tol,
             assign_method=assign_method,
         )
+
+    time_match = analyzer.time_match
+    iter_match = analyzer.iter_match
+    if verbose is True:
+        print("Average time (match):", round(time_match * 1000 / iter_match, 2), "ms")
+        print("Total time (match):", round(time_match, 2), "s")
+        print("Iterations (match):", iter_match)
 
     if log_all:
         unique_structs = analyzer.unique_str_keep
@@ -91,8 +103,22 @@ def struct_matcher(
             reverse=False,
         )
 
-    with open(output_file, "w"):
-        pass
+    with open(output_file, "w") as f:
+        print("timing:", file=f)
+        if time_refine is not None:
+            print("  refine:", file=f)
+            print(f"    average_time_ms: {time_refine * 1000 / iter_refine:.2f}", file=f)
+            print(f"    total_time_s: {time_refine:.2f}", file=f)
+            print(f"    iterations: {iter_refine}", file=f)
+            print("  reduce:", file=f)
+            print(f"    average_time_ms: {time_redrep * 1000 / iter_redrep:.2f}", file=f)
+            print(f"    total_time_s: {time_redrep:.2f}", file=f)
+            print(f"    iterations: {iter_redrep}", file=f)
+        print("  match:", file=f)
+        print(f"    average_time_ms: {time_match * 1000 / iter_match:.2f}", file=f)
+        print(f"    total_time_s: {time_match:.2f}", file=f)
+        print(f"    iterations: {iter_match}", file=f)
+
     if log_all:
         log_all_unique_structures(
             output_file,
@@ -147,11 +173,11 @@ def struct_compare(
         original_axis=original_axis,
         refine_cell=refine_cell,
     )
-    struct_reps_1 = generator.generate_struct_reps(
+    struct_reps_1, _ = generator.generate_struct_reps(
         polymlp_st=polymlp_st1,
         struct_path="st1",
     )
-    struct_reps_2 = generator.generate_struct_reps(
+    struct_reps_2, _ = generator.generate_struct_reps(
         polymlp_st=polymlp_st2,
         struct_path="st2",
     )

@@ -1,4 +1,5 @@
 import re
+import time
 from typing import Literal, Optional
 
 from rsspolymlp.analysis.struct_matcher.gen_struct_rep import (
@@ -18,6 +19,8 @@ class UniqueStructIdentifier:
         self.unique_str_prop: list[dict] = []  # Store unique structure properties
         self.unique_str_keep: list[list[StructReps]] = []
         self.unique_str_prop_keep: list[list[dict]] = []
+        self.time_match = 0
+        self.iter_match = 0
 
     def identify_duplicate_struct(
         self,
@@ -58,6 +61,7 @@ class UniqueStructIdentifier:
         for idx, _uniq_str in enumerate(self.unique_str):
             uniq_str_list = self.unique_str_keep[idx] if keep_unique else [_uniq_str]
             for uniq_str in uniq_str_list:
+                t_start = time.time()
                 if assign_method == "redrep":
                     judge_duplicate = struct_match(
                         uniq_str,
@@ -73,6 +77,9 @@ class UniqueStructIdentifier:
                         pos_tol=pos_tol,
                         assign_method=assign_method,
                     )
+                self.time_match += time.time() - t_start
+                self.iter_match += 1
+
                 if judge_duplicate:
                     is_unique = False
                     if self._spg_count(struct_reps.spg_list) > self._spg_count(

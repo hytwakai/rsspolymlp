@@ -60,10 +60,10 @@ class StructRepGenerator:
         self.refine_cell = refine_cell
         self.verbose = verbose
 
-        self.time_refine = 0
         self.iter_refine = 0
-        self.time_redrep = 0
+        self.time_refine = 0
         self.iter_redrep = 0
+        self.time_redrep = 0
 
     def generate_struct_reps(
         self,
@@ -96,7 +96,7 @@ class StructRepGenerator:
         objprop = PropUtil(polymlp_st.axis.T, polymlp_st.positions.T)
         spg_list = objprop.analyze_space_group(polymlp_st.elements)
 
-        primitive_st_set, spg_number_set = self.generate_primitive_cells(
+        primitive_st_set, spg_number_set, log_refine = self.generate_primitive_cells(
             polymlp_st=polymlp_st,
         )
         if primitive_st_set == []:
@@ -108,27 +108,37 @@ class StructRepGenerator:
                 self.redrep_symprecs,
                 key=lambda x: x if isinstance(x, (int, float)) else sum(x) / len(x),
             )
-            struct_rep = self.generate_struct_rep(
+            struct_rep, log_redrep = self.generate_struct_rep(
                 primitive_st,
                 spg_number_set[i],
             )
             struct_rep_list.append(struct_rep)
 
+        calc_log = {
+            "iter_refine": log_refine[0],
+            "time_refine": log_refine[1],
+            "iter_redrep": log_redrep[0],
+            "time_redrep": log_redrep[1],
+        }
+
         if dupstr_paths is None:
             dupstr_paths = set([struct_path])
-        return StructReps(
-            struct_rep_list=struct_rep_list,
-            original_polymlp_st=polymlp_st,
-            spg_list=spg_list,
-            primitive_symprecs=self.primitive_symprecs,
-            redrep_symprecs=redrep_symprecs,
-            standardize_axis=self.standardize_axis,
-            original_axis=self.original_axis,
-            cartesian_coords=self.cartesian_coords,
-            refine_cell=self.refine_cell,
-            struct_path=struct_path,
-            struct_tag=struct_tag,
-            dupstr_paths=dupstr_paths,
+        return (
+            StructReps(
+                struct_rep_list=struct_rep_list,
+                original_polymlp_st=polymlp_st,
+                spg_list=spg_list,
+                primitive_symprecs=self.primitive_symprecs,
+                redrep_symprecs=redrep_symprecs,
+                standardize_axis=self.standardize_axis,
+                original_axis=self.original_axis,
+                cartesian_coords=self.cartesian_coords,
+                refine_cell=self.refine_cell,
+                struct_path=struct_path,
+                struct_tag=struct_tag,
+                dupstr_paths=dupstr_paths,
+            ),
+            calc_log,
         )
 
     def generate_struct_rep(
@@ -142,14 +152,14 @@ class StructRepGenerator:
 
         Parameters
         ----------
-        st : PolymlpStructure
+        polymlp_st : PolymlpStructure
         spg_number : int
             Space group number corresponding to the given structure.
-        symprec_set : list of float or list of 3-float lists
-            List of symmetry tolerances used to calculate irreducible representations.
         """
         reduced_reps = {"metric_tensors": [], "positions": [], "symprec": []}
         all_reps = {"metric_tensors": [], "positions": [], "symprec": []}
+        iter_redrep = 0
+        time_redrep = 0
 
         symprec_set = self.redrep_symprecs
         for symprec in symprec_set:
@@ -168,8 +178,8 @@ class StructRepGenerator:
                     st.axis.T, st.positions.T, st.elements, spg_number
                 )
             )
-            self.iter_redrep += 1
-            self.time_redrep += time.time() - t_start
+            iter_redrep += 1
+            time_redrep += time.time() - t_start
 
             unique_metric = True
             for mt_ref in reduced_reps["metric_tensors"]:
@@ -193,17 +203,20 @@ class StructRepGenerator:
                 reduced_reps["positions"].append(red_posrep)
                 reduced_reps["symprec"].append(symprec)
 
+        self.iter_redrep += iter_redrep
+        self.time_redrep += time_redrep
+
         return StructRep(
             reduced_reps=reduced_reps,
             all_reps=all_reps,
             elements=sorted_elements,
             element_count=Counter(sorted_elements),
             spg_number=spg_number,
-        )
+        ), (iter_redrep, time_redrep)
 
     def generate_primitive_cells(
         self,
-        poscar_name: Optional[str] = None,
+        poscar_path: Optional[str] = None,
         polymlp_st: Optional[PolymlpStructure] = None,
     ) -> tuple[list[PolymlpStructure], list[int]]:
         """
@@ -211,7 +224,7 @@ class StructRepGenerator:
 
         Parameters
         ----------
-        poscar_name : str, optional
+        poscar_path : str, optional
             Path to a POSCAR file.
         polymlp_st : PolymlpStructure, optional
 
@@ -223,13 +236,15 @@ class StructRepGenerator:
             Corresponding list of space group numbers for each primitive structure.
         """
 
-        if poscar_name is not None and polymlp_st is None:
-            polymlp_st = Poscar(poscar_name).structure
-        elif polymlp_st is None:
-            return [], []
+        if poscar_path is None and polymlp_st is None:
+            raise ValueError("Set poscar_path or poymlp_st")
+        if polymlp_st is None:
+            polymlp_st = Poscar(poscar_path).structure
 
         primitive_st_set = []
         spg_number_set = []
+        iter_refine = 0
+        time_refine = 0
         for symprec in self.primitive_symprecs:
             symutil = SymCell(st=polymlp_st, symprec=symprec)
             spg_str = symutil.get_spacegroup()
@@ -251,9 +266,13 @@ class StructRepGenerator:
                     continue
                 primitive_st_set.append(primitive_st)
                 spg_number_set.append(spg_number)
-                self.iter_refine += 1
-                self.time_refine += time.time() - t_start
-        return primitive_st_set, spg_number_set
+                iter_refine += 1
+                time_refine += time.time() - t_start
+
+        self.iter_refine += iter_refine
+        self.time_refine += time_refine
+
+        return primitive_st_set, spg_number_set, (iter_refine, time_refine)
 
     def generate_struct_reps_parallel(
         self,
@@ -278,8 +297,6 @@ class StructRepGenerator:
             The number of parallel jobs. -1 means using all available processors.
         backend : str, default="loky"
             Backend used by joblib.
-        primitive_symprecs : list of float, default=[1e-5, 1e-4, 1e-3, 1e-2]
-            Symmetry tolerances used to determine distinct primitive cells.
         """
         if num_process == 1:
             redreps_list = []
@@ -294,14 +311,14 @@ class StructRepGenerator:
                         struct_path=res["struct_path"],
                         struct_tag=res.get("struct_tag", None),
                         dupstr_paths=res.get("dupstr_paths", None),
-                    )
+                    )[0]
                 )
         else:
             if self.verbose:
                 joblib_verbose = 10
             else:
                 joblib_verbose = 0
-            redreps_list = joblib.Parallel(
+            joblib_results = joblib.Parallel(
                 n_jobs=num_process, backend=backend, verbose=joblib_verbose
             )(
                 joblib.delayed(self.generate_struct_reps)(
@@ -317,5 +334,28 @@ class StructRepGenerator:
                 for res in struct_list
             )
 
-        redreps_list = [s for s in redreps_list if s is not None]
+        redreps_list = []
+        for res in joblib_results:
+            if res[0] is not None:
+                redreps_list.append(res[0])
+            self.iter_refine += res[1]["iter_refine"]
+            self.time_refine += res[1]["time_refine"]
+            self.iter_redrep += res[1]["iter_redrep"]
+            self.time_redrep += res[1]["time_redrep"]
+        if self.verbose is True:
+            print(
+                "Average time (refine):",
+                round(self.time_refine * 1000 / self.iter_refine, 2),
+                "ms",
+            )
+            print("Total time (refine):", round(self.time_refine, 2), "s")
+            print("Iterations (refine):", self.iter_refine)
+            print(
+                "Average time (reduce):",
+                round(self.time_redrep * 1000 / self.iter_redrep, 2),
+                "ms",
+            )
+            print("Total time (reduce):", round(self.time_redrep, 2), "s")
+            print("Iterations (reduce):", self.iter_redrep)
+
         return redreps_list
