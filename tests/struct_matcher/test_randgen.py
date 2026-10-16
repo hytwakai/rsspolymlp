@@ -5,7 +5,7 @@ import yaml
 from rsspolymlp.analysis.struct_matcher.gen_struct_rep import (
     StructRepGenerator,
 )
-from rsspolymlp.analysis.struct_matcher.reduced_lattice import (
+from rsspolymlp.analysis.struct_matcher.redrep_lattice import (
     signed_permutation_matrices,
 )
 from rsspolymlp.api.rsspolymlp_utils import struct_matcher
