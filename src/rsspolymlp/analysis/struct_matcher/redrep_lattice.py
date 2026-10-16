@@ -7,7 +7,6 @@ def get_reduced_lattice(
     axis: np.ndarray,
     spg_number: int,
     symprec: list[float] = [1e-2, 1e-2, 1e-2],
-    original_axis: bool = False,
 ):
     proper_matrices, improper_matrices = signed_permutation_matrices()
     proper_G_transform, improper_G_transform = metric_tensor_transform()
@@ -47,17 +46,11 @@ def get_reduced_lattice(
     metric_tensor_cands = all_metric_tensor
     signed_permutation_cands = all_signed_permutation_matrices
     for idx in range(6):
-        if original_axis:
-            is_near_max = np.where(
-                np.abs(metric_tensor_cands[:, idx] - metric_tensor[idx])
-                <= symprec[idx % 3]
-            )[0]
-        else:
-            # Get the reduced axis representation
-            min_metric = np.min(metric_tensor_cands[:, idx])
-            is_near_max = np.where(
-                np.abs(metric_tensor_cands[:, idx] - min_metric) <= symprec[idx % 3]
-            )[0]
+        # Get the reduced axis representation
+        min_metric = np.min(metric_tensor_cands[:, idx])
+        is_near_max = np.where(
+            np.abs(metric_tensor_cands[:, idx] - min_metric) <= symprec[idx % 3]
+        )[0]
         # Update the axis candidates
         axis_cands = axis_cands[is_near_max, :]
         metric_tensor_cands = metric_tensor_cands[is_near_max, :]

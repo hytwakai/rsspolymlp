@@ -139,7 +139,6 @@ def struct_compare(
     refine_symprec: float = 1e-3,
     reduced_symprecs: list[float] = None,
     standardize_axis: bool = False,
-    original_axis: bool = False,
     frac_coords: bool = False,
     refine_cell: bool = False,
     verbose: bool = True,
@@ -170,7 +169,6 @@ def struct_compare(
         redrep_symprecs=reduced_symprecs,
         standardize_axis=standardize_axis,
         cartesian_coords=not frac_coords,
-        original_axis=original_axis,
         refine_cell=refine_cell,
     )
     struct_reps_1, _ = generator.generate_struct_reps(

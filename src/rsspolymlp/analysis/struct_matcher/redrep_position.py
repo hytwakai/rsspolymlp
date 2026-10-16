@@ -12,13 +12,11 @@ class PositionRepReducer:
         self,
         symprec: list[float] = [1e-4, 1e-4, 1e-4],
         standardize_axis: bool = False,
-        original_axis: bool = False,
         cartesian_coords: bool = True,
     ):
         """Init method."""
         self.symprec = np.array(symprec)
         self.standardize_axis = standardize_axis
-        self.original_axis = original_axis
         self.cartesian_coords = cartesian_coords
 
     def get_reduced_structure_representation(
@@ -69,7 +67,6 @@ class PositionRepReducer:
             _axis,
             spg_number,
             self.symprec,
-            self.original_axis,
         )
 
         # Trivial case: single‑atom cell → nothing to do

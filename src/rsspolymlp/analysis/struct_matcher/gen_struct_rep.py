@@ -32,7 +32,6 @@ class StructReps:
     primitive_symprecs: list[float]
     redrep_symprecs: list[float]
     standardize_axis: bool
-    original_axis: bool
     cartesian_coords: bool
     refine_cell: bool
     struct_path: Optional[str]
@@ -47,7 +46,6 @@ class StructRepGenerator:
         primitive_symprecs: list[float] = [1e-5, 1e-4, 1e-3, 1e-2],
         redrep_symprecs: list[float] = [1e-4, 1e-2, 1e-1],
         standardize_axis: bool = False,
-        original_axis: bool = False,
         cartesian_coords: bool = True,
         refine_cell: bool = False,
         verbose: bool = False,
@@ -55,7 +53,6 @@ class StructRepGenerator:
         self.primitive_symprecs = primitive_symprecs
         self.redrep_symprecs = redrep_symprecs
         self.standardize_axis = standardize_axis
-        self.original_axis = original_axis
         self.cartesian_coords = cartesian_coords
         self.refine_cell = refine_cell
         self.verbose = verbose
@@ -131,7 +128,6 @@ class StructRepGenerator:
                 primitive_symprecs=self.primitive_symprecs,
                 redrep_symprecs=redrep_symprecs,
                 standardize_axis=self.standardize_axis,
-                original_axis=self.original_axis,
                 cartesian_coords=self.cartesian_coords,
                 refine_cell=self.refine_cell,
                 struct_path=struct_path,
@@ -169,7 +165,6 @@ class StructRepGenerator:
             reducer = PositionRepReducer(
                 symprec=input_symprec,
                 standardize_axis=self.standardize_axis,
-                original_axis=self.original_axis,
                 cartesian_coords=self.cartesian_coords,
             )
             st = polymlp_st

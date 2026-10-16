@@ -89,7 +89,6 @@ def run():
         help="List of symmetry tolerances used to identify reduced structure representation.",
     )
     parser.add_argument("--standardize_axis", action="store_true", help="")
-    parser.add_argument("--original_axis", action="store_true", help="")
     parser.add_argument("--frac_coords", action="store_true", help="")
     parser.add_argument("--refine_cell", action="store_true", help="")
     parser.add_argument("--not_verbose", action="store_true", help="")
@@ -150,7 +149,6 @@ def run():
             refine_symprec=args.refine_symprec,
             reduced_symprecs=args.reduced_symprecs,
             standardize_axis=args.standardize_axis,
-            original_axis=args.original_axis,
             frac_coords=args.frac_coords,
             refine_cell=args.refine_cell,
             verbose=not args.not_verbose,
