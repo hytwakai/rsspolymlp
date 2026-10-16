@@ -2,7 +2,7 @@
 
 `rsspolymlp` is a Python code designed to conduct random structure searches (RSS) using polynomial machine learning potentials (MLPs). 
 The code provides functionalities for generating initial random structures, performing geometry optimization using polynomial MLPs, and eliminating duplicate structures. 
-The formulation and development of polynomial MLPs are detailed in [`pypolymlp`] (https://github.com/sekocha/pypolymlp).
+The formulation and development of polynomial MLPs are detailed in [`pypolymlp`](https://github.com/sekocha/pypolymlp).
 
 ## Installation
 
