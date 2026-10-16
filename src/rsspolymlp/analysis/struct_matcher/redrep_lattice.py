@@ -64,18 +64,18 @@ def get_reduced_lattice(
     G = np.array([[aa, ab, ac], [ab, bb, bc], [ac, bc, cc]], dtype=float)
     w, U = np.linalg.eigh(G)
     w = np.clip(w, 0, None)
-    G_half = (U * np.sqrt(w)) @ U.T
-    metric_tensor_half = np.array(
+    G_sqrt = (U * np.sqrt(w)) @ U.T
+    metric_tensor_sqrt = np.array(
         [
-            G_half[0, 0],
-            G_half[1, 1],
-            G_half[2, 2],
-            G_half[0, 1],
-            G_half[0, 2],
-            G_half[1, 2],
+            G_sqrt[0, 0],
+            G_sqrt[1, 1],
+            G_sqrt[2, 2],
+            G_sqrt[0, 1],
+            G_sqrt[0, 2],
+            G_sqrt[1, 2],
         ]
     )
-    return metric_tensor_half, axis_cands, signed_permutation_cands
+    return metric_tensor_sqrt, axis_cands, signed_permutation_cands
 
 
 def signed_permutation_matrices():

@@ -6,7 +6,7 @@ from rsspolymlp.analysis.struct_matcher.redrep_lattice import get_reduced_lattic
 
 
 class PositionRepReducer:
-    """Identify the reduced crystal structure representation in a periodic cell."""
+    """Identify the reduced crystal structure representation."""
 
     def __init__(
         self,
@@ -17,17 +17,28 @@ class PositionRepReducer:
         symprec: list[float] = [1e-4, 1e-4, 1e-4],
         normalize_axis: bool = False,
     ):
-        """Parameters
+        """Initialize PositionRepReducer class.
+
+        Parameters
         ----------
         axis : (3, 3) array_like
-            Lattice vectors defining the unit cell. Each row represents
-            a lattice vector (a, b, or c) in Cartesian coordinates.
+            Lattice vectors defining the unit cell in Cartesian coordinates.
+            Each row represents one lattice vector (a, b, or c).
             Equivalent to np.array([[a1, a2, a3], [b1, b2, b3], [c1, c2, c3]]).
         positions : (N, 3) array_like
             Fractional atomic coordinates within the unit cell.
-            Each row represents the (x, y, z) coordinate of an atom.
+            Each row represents the coordinates of one atom.
         elements : (N,) array_like
-            Chemical element symbols corresponding to each atomic position."""
+            Chemical element symbols corresponding to the atomic positions.
+        spg_number : int
+            Space group number of the structure.
+        symprec : list of float, default=[1e-4, 1e-4, 1e-4]
+            Tolerances used for structural matching along the three lattice
+            directions.
+        normalize_axis : bool, default=False
+            If True, scale the lattice vectors so that the unit-cell volume
+            per atom is equal to one.
+        """
 
         self.axis = np.asarray(axis, dtype=float)
         self.positions = np.asarray(positions, dtype=float)
@@ -40,27 +51,36 @@ class PositionRepReducer:
             self.axis = self.axis / ((volume / len(self.elements)) ** (1 / 3))
         self.axis_abc = None
 
-    def get_reduced_structure_representation(self):
+    def get_reduced_structure_representation(self) -> dict:
         """Derive the reduced representation of a crystal structure.
 
         Returns
         -------
-        reduced_positions : ndarray
-            One-dimensional vector [X_a, X_b, X_c] that uniquely identifies
-            the structure up to the tolerance `symprec`.
-        all_positions : list[dict]
-            List of dictionaries, each containing:
-            - perm_mat : ndarray, shape (3, 3)
-                Permutation matrix.
-            - pos_reps : list of ndarray
-                List of position representations.
-        elements : ndarray
-            Chemical element symbols ordered starting from the least frequent element
-            (alphabetically first in case of ties), corresponding to the order of
-            atomic coordinates.
+        result : dict
+            Dictionary containing the following entries:
+            - metric_tensor : ndarray, shape (6,)
+                Independent components of the matrix square root of the
+                metric tensor, ordered as [aa, bb, cc, ab, ac, bc].
+            - axis : ndarray
+                Lattice vectors.
+            - axis_abc : ndarray, shape (3,)
+                Lengths of the three lattice vectors.
+            - reduced_positions : ndarray
+                One-dimensional vector [X_a, X_b, X_c] that uniquely identifies
+                the structure up to the tolerance `symprec`.
+            - all_positions : list[dict]
+                List of dictionaries, each containing:
+                - perm_mat : ndarray, shape (3, 3)
+                    Permutation matrix.
+                - pos_reps : list of ndarray
+                    List of position representations.
+            - elements : ndarray
+                Chemical element symbols ordered starting from the least frequent element
+                (alphabetically first in case of ties), corresponding to the order of
+                atomic coordinates.
         """
 
-        metric_tensor_half, axis_cands, signed_permutation_cands = get_reduced_lattice(
+        metric_tensor_sqrt, axis_cands, signed_permutation_cands = get_reduced_lattice(
             self.axis,
             self.spg_number,
             self.symprec,
@@ -86,7 +106,7 @@ class PositionRepReducer:
             )
 
         return {
-            "metric_tensor": metric_tensor_half,
+            "metric_tensor": metric_tensor_sqrt,
             "axis": self.axis,
             "axis_abc": self.axis_abc,
             "reduced_positions": reduced_positions,
