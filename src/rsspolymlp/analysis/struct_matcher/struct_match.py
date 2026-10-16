@@ -199,7 +199,6 @@ def struct_match_allrep(
     judge_st_match = False
     min_axis_l2_norm = 1e8
 
-    s_time = time.time()
     for st_1 in strep_list1:
         for st_2 in strep_list2:
             if judge_st_match or st_1.element_count != st_2.element_count:
@@ -226,6 +225,7 @@ def struct_match_allrep(
             if not np.any(match_axis):
                 continue
 
+            iter_matching = 0
             if len(st_1.elements) == 1:
                 judge_st_match = True
             else:
@@ -243,7 +243,13 @@ def struct_match_allrep(
                     pos1_array = np.array(pos_reps1)
                     pos2_array = np.array(pos_reps2)
                     pre_judge = sort_match_screen(
-                        pos1_array, pos2_array, elements1, elements2, axis_abc, pos_tol
+                        pos1_array,
+                        pos2_array,
+                        elements1,
+                        elements2,
+                        axis_abc,
+                        pos_tol,
+                        verbose,
                     )
                     row, col = np.where(pre_judge)
 
@@ -268,11 +274,13 @@ def struct_match_allrep(
                                 elements2,
                                 axis_abc,
                                 pos_tol,
+                                verbose=verbose,
                             )
                         else:
                             raise ValueError(
                                 f"Unknown assignment method: {assign_method}"
                             )
-    if verbose:
-        print("Elapsed time:", np.round((time.time() - s_time) * 1000, 2), "ms")
+                        iter_matching += 1
+            if verbose:
+                print("Iterations of matching:", iter_matching)
     return judge_st_match
