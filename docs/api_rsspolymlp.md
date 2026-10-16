@@ -36,10 +36,8 @@ rssobj = OptimizationMLP(
     pot="polymlp.yaml",
     pressure=0.0,
     solver_method="CG",
-    c_maxiter=100,
     n_opt_str=1000,
 )
-
 for poscar in poscar_paths_rev:
     rssobj.run_optimization(poscar)
 ```
@@ -47,13 +45,8 @@ for poscar in poscar_paths_rev:
 ## Unique structure identification and RSS summary generation
 ```python
 from rsspolymlp.rss.eliminate_duplicates import RSSResultAnalyzer
-
 analyzer = RSSResultAnalyzer()
-analyzer.run_rss_uniq_struct(
-    num_str=-1,
-    num_process=-1,
-    backend="loky",
-)
+analyzer.run_rss_uniq_struct()
 ```
 
 ## Identification of unique structures across atom counts `n` or pressures `p`
@@ -65,12 +58,9 @@ from rsspolymlp.analysis.rss_summarize import RSSResultSummarizer
 os.makedirs("rss_summary", exist_ok=True)
 os.chdir("rss_summary")
 
-target_paths = glob.glob("~/Al-Cu/0.0GPa/*/rss_result/rss_results.json")
+json_paths = glob.glob("~/Al-Cu/0.0GPa/*/rss_result/rss_results.json")
 analyzer = RSSResultSummarizer(
-    result_paths=paths,
-    num_process=-1,
-    backend="loky,
-    symprec_set=[1e-5, 1e-4, 1e-3, 1e-2],
+    result_paths=json_paths,
     output_poscar=False,
     threshold=None,
 )

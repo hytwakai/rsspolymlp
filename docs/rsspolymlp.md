@@ -50,7 +50,7 @@ rsspolymlp --summarize --paths <rss_directory>/*/rss_result/rss_results.json
 # <rss_directory>: parent directory containing RSS runs at the same pressure
 ```
 
-#### 5. Eliminate ghost minima
+#### 5. (Optional) Eliminate ghost minima
 
 Ghost minimum structures are identified and filtered based on nearest-neighbor distances.
 
