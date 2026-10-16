@@ -1,24 +1,8 @@
 # Framework for random structure search using polynomial machine learning potentials
 
-## How to use rsspolymlp
-
- - [Workflow of RSS with polynomial MLPs](docs/rsspolymlp.md)
-   - Initial structure generation
-   - Global RSS with polynomial MLPs
-   - Unique structure identification and RSS result summarization
-   - Phase stability analysis
- - [Development kit for polynomial MLPs](docs/rsspolymlp_dev.md)
-   - MLP dataset generation
-   - DFT dataset division
-   - Polynomial MLP development
-   - Pareto-optimal MLP selection
- - Python API
-   - [RSS workflow](docs/api_rsspolymlp.md)
-   - [VASP calculation utilities](src/rsspolymlp/utils/vasp_util/readme.md)
-     - Single-point calculation
-     - Local geometry optimization
-   - [Matplotlib utilities](src/rsspolymlp/utils/matplot_util/readme.md)
-
+`rsspolymlp` is a Python code designed to conduct random structure searches (RSS) using polynomial machine learning potentials (MLPs). 
+The code provides functionalities for generating initial random structures, performing geometry optimization using polynomial MLPs, and eliminating duplicate structures. 
+The formulation and development of polynomial MLPs are detailed in [`pypolymlp` code](https://github.com/sekocha/pypolymlp).
 
 ## Installation
 
@@ -55,6 +39,26 @@ conda activate rsspolymlp
 conda install -c conda-forge scikit-learn joblib pypolymlp spglib symfc
 pip install rsspolymlp
 ```
+
+
+## How to use rsspolymlp
+
+ - [Workflow of RSS with polynomial MLPs](docs/rsspolymlp.md)
+   - Initial structure generation
+   - Global RSS with polynomial MLPs
+   - Unique structure identification and RSS result summarization
+   - Phase stability analysis
+ - [Development kit for polynomial MLPs](docs/rsspolymlp_dev.md)
+   - MLP dataset generation
+   - DFT dataset division
+   - Polynomial MLP development
+   - Pareto-optimal MLP selection
+ - Python API
+   - [RSS workflow](docs/api_rsspolymlp.md)
+   - [VASP calculation utilities](src/rsspolymlp/utils/vasp_util/readme.md)
+     - Single-point calculation
+     - Local geometry optimization
+   - [Matplotlib utilities](src/rsspolymlp/utils/matplot_util/readme.md)
 
 
 ## Citation of rsspolymlp
