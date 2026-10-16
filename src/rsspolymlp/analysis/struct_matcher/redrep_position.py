@@ -141,8 +141,8 @@ class PositionRepReducer:
                 redperm_positions = self._reduced_permutation(
                     target_idx, _pos, sorted_types, _cls_id
                 )
-                pos_allreps.append(redperm_positions)
                 redperm_positions = redperm_positions * self.axis_abc
+                pos_allreps.append(redperm_positions)
                 reduced_perm_cands.append(redperm_positions.T.reshape(-1))
                 mask = types == 0
                 target_vals.append(

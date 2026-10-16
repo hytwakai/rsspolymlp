@@ -25,8 +25,7 @@ def struct_match(
     output_file: str = "struct_matcher.yaml",
 ) -> bool:
     """
-    Determine whether two sets of ReducedStructRep objects are structurally
-    equivalent.
+    Determine whether two sets of StructRep objects are structurally equivalent.
 
     This function compares all pairs of irreducible representations from the
     two input sets and checks if any pair matches within the specified lattice
@@ -36,10 +35,10 @@ def struct_match(
 
     Parameters
     ----------
-    redreps_1 : StructReps
-        Set of reduced representations from structure A.
-    redreps_2 : StructReps
-        Set of reduced representations from structure B.
+    struct_reps_1 : StructReps
+        StructRep object from structure A.
+    struct_reps_2 : StructReps
+        StructRep object from structure B.
     axis_tol : float, default=0.01
         Tolerance for lattice vector differences, computed using the squared
         L2 norm along each axis.
