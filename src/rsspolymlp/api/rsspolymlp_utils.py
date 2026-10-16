@@ -29,7 +29,6 @@ def struct_matcher(
     reduced_symprecs: list[float] = None,
     refine_cell: bool = False,
     normalize_axis: bool = False,
-    keep_unique: bool = False,
     output_file: str = "unique_struct.yaml",
     log_all: bool = False,
     verbose: bool = False,
@@ -75,7 +74,7 @@ def struct_matcher(
     for struct_reps in struct_reps_list:
         analyzer.identify_duplicate_struct(
             struct_reps=struct_reps,
-            keep_unique=keep_unique,
+            keep_unique=log_all,
             axis_tol=axis_tol,
             pos_tol=pos_tol,
             assign_method=assign_method,

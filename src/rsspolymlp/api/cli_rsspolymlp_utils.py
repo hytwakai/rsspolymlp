@@ -27,70 +27,82 @@ def run():
         type=str,
         nargs="+",
         default=None,
-        help="Paths of target POSCAR files.",
+        help="Paths of POSCAR files",
     )
     parser.add_argument(
         "--axis_tol",
         type=float,
         default=1e-2,
-        help="",
+        help="Tolerance for comparing lattice axes",
     )
     parser.add_argument(
         "--pos_tol",
         type=float,
         default=1e-2,
-        help="",
+        help="Tolerance for comparing atomic positions",
     )
     parser.add_argument(
         "--assign_method",
         choices=["redrep", "greedy", "HK"],
         default="redrep",
-        help="Choose reduced representation, greedy, or HK (Hopcroft_Karp) methods"
+        help="Method for matching atomic positions: "
+        "reduced representation, greedy, or Hopcroft-Karp",
     )
     parser.add_argument(
         "--num_process",
         type=int,
         default=-1,
-        help="Number of processes to use with joblib. Use -1 to use all available CPU cores.",
+        help="Number of processes for joblib. Use -1 to use all available CPU cores.",
     )
     parser.add_argument(
         "--backend",
         type=str,
         choices=["loky", "threading", "multiprocessing"],
         default="loky",
-        help="Backend for joblib parallelization",
+        help="Parallelization backend for joblib.",
     )
     parser.add_argument(
         "--primitive_symprecs",
         nargs="*",
         type=float,
         default=[1e-5, 1e-4, 1e-3, 1e-2],
-        help="List of symmetry tolerances used to identify distinct primitive cells.",
+        help="Symmetry tolerances for identifying distinct primitive cells",
     )
-    parser.add_argument("--keep_unique", action="store_true", help="")
-    parser.add_argument(
-        "--output_file",
-        type=str,
-        default="unique_struct.yaml",
-        help="Output file name (default: unique_struct.yaml).",
-    )
-    parser.add_argument("--log_all", action="store_true", help="")
     parser.add_argument(
         "--refine_symprec",
         type=float,
         default=1e-3,
-        help="Symmetry tolerance used to identify refine structure.",
+        help="Symmetry tolerance for identifying refine structure.",
     )
     parser.add_argument(
         "--reduced_symprecs",
         nargs="*",
         type=float,
         default=None,
-        help="List of symmetry tolerances used to identify reduced structure representation.",
+        help="Symmetry tolerances for reduced structure representation",
     )
-    parser.add_argument("--normalize_axis", action="store_true", help="")
-    parser.add_argument("--refine_cell", action="store_true", help="")
-    parser.add_argument("--not_verbose", action="store_true", help="")
+    parser.add_argument(
+        "--normalize_axis",
+        action="store_true",
+        help="Normalize lattice axes for reduced structure representation",
+    )
+    parser.add_argument(
+        "--refine_cell",
+        action="store_true",
+        help="Refine structures",
+    )
+    parser.add_argument(
+        "--output_file",
+        type=str,
+        default="unique_struct.yaml",
+        help="Output file name (default: unique_struct.yaml)",
+    )
+    parser.add_argument("--log_all", action="store_true", help="Log all structures")
+    parser.add_argument(
+        "--not_verbose",
+        action="store_true",
+        help="Disable verbose output",
+    )
 
     # --geometry_opt mode
     parser.add_argument(
@@ -133,7 +145,6 @@ def run():
             reduced_symprecs=args.reduced_symprecs,
             refine_cell=args.refine_cell,
             normalize_axis=args.normalize_axis,
-            keep_unique=args.keep_unique,
             output_file=args.output_file,
             log_all=args.log_all,
         )

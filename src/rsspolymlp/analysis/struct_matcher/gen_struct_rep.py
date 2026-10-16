@@ -6,8 +6,8 @@ from typing import Optional
 
 import joblib
 import numpy as np
-
 from pypolymlp.core.data_format import PolymlpStructure
+
 from rsspolymlp.analysis.struct_matcher.redrep_position import PositionRepReducer
 from rsspolymlp.common.composition import compute_composition
 from rsspolymlp.common.interface_vasp import Poscar
@@ -69,7 +69,7 @@ class StructRepGenerator:
         struct_path: Optional[str] = None,
         struct_tag: Optional[str] = None,
         dupstr_paths: Optional[set[str]] = None,
-    ) -> StructReps:
+    ) -> tuple[StructReps, dict]:
         if struct_path is None and poscar_path is None:
             raise ValueError("Set struct_path or poscar_path")
         elif struct_path is None:
@@ -137,10 +137,9 @@ class StructRepGenerator:
         self,
         polymlp_st: PolymlpStructure,
         spg_number: int,
-    ) -> StructRep:
+    ) -> tuple[StructRep, tuple]:
         """
-        Generate an StructRep by computing irreducible atomic positions
-        for a refined structure under different symmetry tolerances.
+        Generate an StructRep object for a structure under different symmetry tolerances.
 
         Parameters
         ----------
@@ -226,7 +225,7 @@ class StructRepGenerator:
         self,
         poscar_path: Optional[str] = None,
         polymlp_st: Optional[PolymlpStructure] = None,
-    ) -> tuple[list[PolymlpStructure], list[int]]:
+    ) -> tuple[list[PolymlpStructure], list[int], tuple]:
         """
         Generate primitive cells of a given structure under different symmetry tolerances.
 
@@ -289,18 +288,22 @@ class StructRepGenerator:
         backend: str = "loky",
     ) -> list[StructReps]:
         """
-        Generate a list of ReducedStructReps objects from the given RSS results.
+        Generate a list of StructReps objects.
 
         Parameters
         ----------
         struct_list : list of dict
-            A list of dictionaries, where each dictionary contains a single structure information.
-            Each dictionary must include "struct_path" keys:
-                - "struct_path": path of POSCAR format file
+            A list of dictionaries, each containing information about a structure.
+            Required keys:
+                - "struct_path": Path to the structure file.
             Optional keys:
-                - "poscar_path": Path of POSCAR file
-                - "structure": PolymlpStructure object
-                - "struct_tag" (optional): structure identifier (e.g., structure number)
+                - "poscar_path": Path to the POSCAR file.
+                - "structure": PolymlpStructure object.
+                - "axis": Lattice vectors.
+                - "positions": Atomic positions.
+                - "elements": Chemical element symbols.
+                - "struct_tag": Structure identifier (e.g., structure number).
+                - "dupstr_paths": List of paths to duplicate structure files.
         num_process : int, default=-1
             The number of parallel jobs. -1 means using all available processors.
         backend : str, default="loky"

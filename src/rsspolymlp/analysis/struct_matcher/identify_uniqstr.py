@@ -33,17 +33,16 @@ class UniqueStructIdentifier:
     ):
         """
         Identify and manage duplicate structures.
-        A structure is considered a duplicate if it matches an existing structure based on
-        equivalence of the reduced crystal structure representation.
+        A structure is considered a duplicate if it matches an existing structure
+        based on equivalence of the crystal structure representation.
 
         Parameters
         ----------
-        struct_reps : StructReps
-            The structure to be compared and registered if unique.
-        other_properties : dict, optional
-            Additional metadata associated with the structure.
-        energy_diff : float
-            Energy tolerance used in energy-based duplicate detection.
+        struct_reps : The structure to be compared and registered if unique.
+        other_properties : Additional metadata associated with the structure.
+        axis_tol : Tolerance for comparing lattice axes
+        pos_tol : Tolerance for comparing atomic positions
+        assign_method : Method for matching atomic positions
 
         Returns
         -------
@@ -160,12 +159,17 @@ def identify_unique_structure(
     Parameters
     ----------
     struct_list : list of dict
-        A list of dictionaries, where each dictionary contains a single structure information.
-        Each dictionary must include "struct_path" keys:
-            - "struct_path": path of POSCAR format file
+        A list of dictionaries, each containing information about a structure.
+        Required keys:
+            - "struct_path": Path to the structure file.
         Optional keys:
-            - "structure": PolymlpStructure object
-            - "struct_tag" (optional): structure identifier (e.g., structure number)
+            - "poscar_path": Path to the POSCAR file.
+            - "structure": PolymlpStructure object.
+            - "axis": Lattice vectors.
+            - "positions": Atomic positions.
+            - "elements": Chemical element symbols.
+            - "struct_tag": Structure identifier (e.g., structure number).
+            - "dupstr_paths": List of paths to duplicate structure files.
     """
     if pre_analyzer is None:
         analyzer = UniqueStructIdentifier()
