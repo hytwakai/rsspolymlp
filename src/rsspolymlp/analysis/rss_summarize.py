@@ -210,7 +210,7 @@ class RSSResultSummarizer:
                 print(f" - Processing result file (parent): {res_path}")
                 self.analyzer = identify_unique_structure(
                     rss_results_c[comp_tag][res_path],
-                    standardize_axis=True,
+                    normalize_axis=True,
                     keep_unique=True,
                     axis_tol=axis_tol,
                     pos_tol=pos_tol,

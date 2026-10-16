@@ -31,8 +31,7 @@ class StructReps:
     spg_list: list[str]
     primitive_symprecs: list[float]
     redrep_symprecs: list[float]
-    standardize_axis: bool
-    cartesian_coords: bool
+    normalize_axis: bool
     refine_cell: bool
     struct_path: Optional[str]
     struct_tag: Optional[int]
@@ -45,15 +44,13 @@ class StructRepGenerator:
         self,
         primitive_symprecs: list[float] = [1e-5, 1e-4, 1e-3, 1e-2],
         redrep_symprecs: list[float] = [1e-4, 1e-2, 1e-1],
-        standardize_axis: bool = False,
-        cartesian_coords: bool = True,
+        normalize_axis: bool = False,
         refine_cell: bool = False,
         verbose: bool = False,
     ):
         self.primitive_symprecs = primitive_symprecs
         self.redrep_symprecs = redrep_symprecs
-        self.standardize_axis = standardize_axis
-        self.cartesian_coords = cartesian_coords
+        self.normalize_axis = normalize_axis
         self.refine_cell = refine_cell
         self.verbose = verbose
 
@@ -127,8 +124,7 @@ class StructRepGenerator:
                 spg_list=spg_list,
                 primitive_symprecs=self.primitive_symprecs,
                 redrep_symprecs=redrep_symprecs,
-                standardize_axis=self.standardize_axis,
-                cartesian_coords=self.cartesian_coords,
+                normalize_axis=self.normalize_axis,
                 refine_cell=self.refine_cell,
                 struct_path=struct_path,
                 struct_tag=struct_tag,
@@ -152,8 +148,18 @@ class StructRepGenerator:
         spg_number : int
             Space group number corresponding to the given structure.
         """
-        reduced_reps = {"metric_tensors": [], "positions": [], "symprec": []}
-        all_reps = {"metric_tensors": [], "positions": [], "symprec": []}
+        reduced_reps = {
+            "metric_tensors": [],
+            "axis_abc": [],
+            "positions": [],
+            "symprec": [],
+        }
+        all_reps = {
+            "metric_tensors": [],
+            "axis_abc": [],
+            "positions": [],
+            "symprec": [],
+        }
         iter_redrep = 0
         time_redrep = 0
 
@@ -162,17 +168,22 @@ class StructRepGenerator:
             if isinstance(symprec, float):
                 input_symprec = [symprec] * 3
             t_start = time.time()
-            reducer = PositionRepReducer(
-                symprec=input_symprec,
-                standardize_axis=self.standardize_axis,
-                cartesian_coords=self.cartesian_coords,
-            )
             st = polymlp_st
-            metric_tensor, red_posrep, all_posrep, sorted_elements = (
-                reducer.get_reduced_structure_representation(
-                    st.axis.T, st.positions.T, st.elements, spg_number
-                )
+            reducer = PositionRepReducer(
+                st.axis.T,
+                st.positions.T,
+                st.elements,
+                spg_number,
+                symprec=input_symprec,
+                normalize_axis=self.normalize_axis,
             )
+            res = reducer.get_reduced_structure_representation()
+            metric_tensor = res["metric_tensor"]
+            axis_abc = res["axis_abc"]
+            red_posrep = res["reduced_positions"]
+            all_posrep = res["all_positions"]
+            sorted_elements = res["elements"]
+
             iter_redrep += 1
             time_redrep += time.time() - t_start
 
@@ -191,10 +202,12 @@ class StructRepGenerator:
                         break
             if unique_metric:
                 all_reps["metric_tensors"].append(metric_tensor)
+                all_reps["axis_abc"].append(axis_abc)
                 all_reps["positions"].append(all_posrep)
                 all_reps["symprec"].append(symprec)
             if unique_metric or unique_pos:
                 reduced_reps["metric_tensors"].append(metric_tensor)
+                reduced_reps["axis_abc"].append(axis_abc)
                 reduced_reps["positions"].append(red_posrep)
                 reduced_reps["symprec"].append(symprec)
 
@@ -343,14 +356,14 @@ class StructRepGenerator:
                 round(self.time_refine * 1000 / self.iter_refine, 2),
                 "ms",
             )
-            print("Total time (refine):", round(self.time_refine, 2), "s")
-            print("Iterations (refine):", self.iter_refine)
             print(
                 "Average time (reduce):",
                 round(self.time_redrep * 1000 / self.iter_redrep, 2),
                 "ms",
             )
+            print("Total time (refine):", round(self.time_refine, 2), "s")
             print("Total time (reduce):", round(self.time_redrep, 2), "s")
+            print("Iterations (refine):", self.iter_refine)
             print("Iterations (reduce):", self.iter_redrep)
 
         return redreps_list

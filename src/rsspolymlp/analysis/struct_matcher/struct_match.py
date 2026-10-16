@@ -212,6 +212,7 @@ def struct_match_allrep(
             allreps2 = st_2.all_reps
             axis1 = np.stack(allreps1["metric_tensors"], axis=0)
             axis2 = np.stack(allreps2["metric_tensors"], axis=0)
+            axis_abc_list1 = allreps1["axis_abc"]
             allpos_list1 = allreps1["positions"]
             allpos_list2 = allreps2["positions"]
             elements1 = np.array(st_1.elements[1:])
@@ -233,6 +234,7 @@ def struct_match_allrep(
                     l2_norm.reshape(axis_d.shape[:2]) < axis_tol
                 )
                 for i1, j1 in zip(match_idx1, match_idx2):
+                    axis_abc = axis_abc_list1[i1]
                     pos1 = allpos_list1[i1]
                     pos2 = allpos_list2[j1]
                     pos_reps1 = pos1[0]["pos_reps"]
@@ -242,7 +244,7 @@ def struct_match_allrep(
                     pos1_array = np.array(pos_reps1)
                     pos2_array = np.array(pos_reps2)
                     pre_judge = sort_match_screen(
-                        pos1_array, pos2_array, elements1, elements2, pos_tol
+                        pos1_array, pos2_array, elements1, elements2, axis_abc, pos_tol
                     )
                     row, col = np.where(pre_judge)
 
@@ -256,6 +258,7 @@ def struct_match_allrep(
                                 pos_reps2[j2],
                                 elements1,
                                 elements2,
+                                axis_abc,
                                 pos_tol,
                             )
                         elif assign_method == "HK":
@@ -264,6 +267,7 @@ def struct_match_allrep(
                                 pos_reps2[j2],
                                 elements1,
                                 elements2,
+                                axis_abc,
                                 pos_tol,
                             )
                         else:

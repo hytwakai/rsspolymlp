@@ -8,6 +8,7 @@ def sort_match_screen(
     pos_reps2: np.ndarray,
     elements1: np.ndarray,
     elements2: np.ndarray,
+    axis_abc: np.ndarray,
     pos_tol: float,
 ):
     # pos1: (N1, n_atoms, 3)
@@ -31,7 +32,8 @@ def sort_match_screen(
     pos2_sorted = sort_positions(pos_reps2, elements2)
 
     diff = pos1_sorted[:, None, :, :] - pos2_sorted[None, :, :, :]
-    diff -= np.round(diff)
+    inv_axis_abc = np.asarray(1 / axis_abc).reshape(1, 1, 1, 3)
+    diff -= axis_abc * np.round(diff * inv_axis_abc)
     return np.all(np.abs(diff) <= pos_tol, axis=(2, 3))
 
 
@@ -40,18 +42,21 @@ def greedy_match(
     pos2: np.ndarray,
     elements1: np.ndarray,
     elements2: np.ndarray,
+    axis_abc: np.ndarray,
     pos_tol: float,
 ):
+    inv_axis_abc = 1 / axis_abc
     for el in np.unique(elements1):
         targets1 = np.where(elements1 == el)[0]
         targets2 = np.where(elements2 == el)[0]
         used = np.zeros(len(targets1), dtype=bool)
         for i in targets1:
-            diff = np.max(np.abs(pos2[targets2] - pos1[i]), axis=1)
-            diff -= np.round(diff)
+            diff = np.abs(pos2[targets2] - pos1[i])
+            diff -= axis_abc * np.round(inv_axis_abc * diff)
+            diff_max = np.max(np.abs(diff), axis=1)
             diff[used] = np.inf
-            j = np.argmin(np.abs(diff))
-            if diff[j] >= pos_tol:
+            j = np.argmin(diff_max)
+            if diff_max[j] >= pos_tol:
                 return False
             used[j] = True
     return True
@@ -62,8 +67,10 @@ def bottleneck_assignment(
     pos2: np.ndarray,
     elements1: np.ndarray,
     elements2: np.ndarray,
+    axis_abc: np.ndarray,
     pos_tol: float,
 ):
+    inv_axis_abc = 1 / axis_abc
     pos_max_diffs = []
     for el in np.unique(elements1):
         targets1 = np.where(elements1 == el)[0]
@@ -72,7 +79,7 @@ def bottleneck_assignment(
         pos2_sub = pos2[targets2]
 
         diff = pos1_sub[:, None, :] - pos2_sub[None, :, :]
-        diff -= np.round(diff)
+        diff -= axis_abc * np.round(diff * inv_axis_abc)
         pos_d = np.max(np.abs(diff), axis=2)
         n = pos_d.shape[0]
 

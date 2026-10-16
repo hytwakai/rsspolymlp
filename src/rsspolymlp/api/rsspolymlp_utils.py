@@ -28,8 +28,7 @@ def struct_matcher(
     primitive_symprecs: list[float] = [1e-5, 1e-4, 1e-3, 1e-2],
     reduced_symprecs: list[float] = None,
     refine_cell: bool = False,
-    standardize_axis: bool = False,
-    frac_coords: bool = False,
+    normalize_axis: bool = False,
     keep_unique: bool = False,
     output_file: str = "unique_struct.yaml",
     log_all: bool = False,
@@ -41,7 +40,7 @@ def struct_matcher(
     time_refine = iter_refine = time_redrep = iter_redrep = None
     if struct_reps_list is None:
         if reduced_symprecs is None:
-            if not frac_coords:
+            if not normalize_axis:
                 reduced_symprecs = [1e-4, 1e-2, 1e-1]
             else:
                 reduced_symprecs = [1e-5, 1e-3, 1e-2]
@@ -56,8 +55,7 @@ def struct_matcher(
         generator = StructRepGenerator(
             primitive_symprecs=primitive_symprecs,
             redrep_symprecs=reduced_symprecs,
-            standardize_axis=standardize_axis,
-            cartesian_coords=not frac_coords,
+            normalize_axis=normalize_axis,
             refine_cell=refine_cell,
             verbose=verbose,
         )
@@ -138,8 +136,7 @@ def struct_compare(
     assign_method: Literal["redrep", "greedy", "HK"] = "redrep",
     refine_symprec: float = 1e-3,
     reduced_symprecs: list[float] = None,
-    standardize_axis: bool = False,
-    frac_coords: bool = False,
+    normalize_axis: bool = False,
     refine_cell: bool = False,
     verbose: bool = True,
 ):
@@ -161,14 +158,13 @@ def struct_compare(
         print(polymlp_st2.positions)
 
     if reduced_symprecs is None:
-        if not frac_coords:
+        if not normalize_axis:
             reduced_symprecs = [1e-4, 1e-2, 1e-1]
         else:
             reduced_symprecs = [1e-5, 1e-3, 1e-2]
     generator = StructRepGenerator(
         redrep_symprecs=reduced_symprecs,
-        standardize_axis=standardize_axis,
-        cartesian_coords=not frac_coords,
+        normalize_axis=normalize_axis,
         refine_cell=refine_cell,
     )
     struct_reps_1, _ = generator.generate_struct_reps(

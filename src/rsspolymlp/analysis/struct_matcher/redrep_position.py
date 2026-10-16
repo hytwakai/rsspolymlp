@@ -10,21 +10,14 @@ class PositionRepReducer:
 
     def __init__(
         self,
+        axis: np.ndarray,
+        positions: np.ndarray,
+        elements: np.ndarray,
+        spg_number: int,
         symprec: list[float] = [1e-4, 1e-4, 1e-4],
-        standardize_axis: bool = False,
-        cartesian_coords: bool = True,
+        normalize_axis: bool = False,
     ):
-        """Init method."""
-        self.symprec = np.array(symprec)
-        self.standardize_axis = standardize_axis
-        self.cartesian_coords = cartesian_coords
-
-    def get_reduced_structure_representation(
-        self, axis, positions, elements, spg_number
-    ):
-        """Derive the reduced representation of a crystal structure.
-
-        Parameters
+        """Parameters
         ----------
         axis : (3, 3) array_like
             Lattice vectors defining the unit cell. Each row represents
@@ -34,7 +27,21 @@ class PositionRepReducer:
             Fractional atomic coordinates within the unit cell.
             Each row represents the (x, y, z) coordinate of an atom.
         elements : (N,) array_like
-            Chemical element symbols corresponding to each atomic position.
+            Chemical element symbols corresponding to each atomic position."""
+
+        self.axis = np.asarray(axis, dtype=float)
+        self.positions = np.asarray(positions, dtype=float)
+        self.elements = np.asarray(elements, dtype=str)
+        self.spg_number = spg_number
+        self.symprec = np.array(symprec)
+        self.normalize_axis = normalize_axis
+        if self.normalize_axis:
+            volume = abs(np.linalg.det(self.axis))
+            self.axis = self.axis / ((volume / len(self.elements)) ** (1 / 3))
+        self.axis_abc = None
+
+    def get_reduced_structure_representation(self):
+        """Derive the reduced representation of a crystal structure.
 
         Returns
         -------
@@ -47,54 +54,62 @@ class PositionRepReducer:
                 Permutation matrix.
             - pos_reps : list of ndarray
                 List of position representations.
-        sorted_elements : ndarray
+        elements : ndarray
             Chemical element symbols ordered starting from the least frequent element
             (alphabetically first in case of ties), corresponding to the order of
             atomic coordinates.
         """
 
-        self.axis = np.asarray(axis, dtype=float)
-        self.positions = np.asarray(positions, dtype=float)
-        self.elements = np.asarray(elements, dtype=str)
-
-        if self.standardize_axis:
-            volume = abs(np.linalg.det(self.axis))
-            _axis = self.axis / ((volume / len(elements)) ** (1 / 3))
-        else:
-            _axis = self.axis
-
         metric_tensor_half, axis_cands, signed_permutation_cands = get_reduced_lattice(
-            _axis,
-            spg_number,
+            self.axis,
+            self.spg_number,
             self.symprec,
         )
 
+        self.axis = axis_cands[0]
+        a, b, c = np.array(self.axis)
+        norm_a = np.linalg.norm(a)
+        norm_b = np.linalg.norm(b)
+        norm_c = np.linalg.norm(c)
+        self.axis_abc = np.array([norm_a, norm_b, norm_c])
+
         # Trivial case: single‑atom cell → nothing to do
         if self.positions.shape[0] == 1:
-            return metric_tensor_half, [], [], self.elements
+            reduced_positions = []
+            all_positions = []
+            sorted_elements = self.elements
+        else:
+            reduced_positions, all_positions, sorted_elements = (
+                self.get_reduced_positions(
+                    signed_permutation_cands,
+                )
+            )
 
-        if self.cartesian_coords:
-            a, b, c = np.array(axis_cands[0])
+        return {
+            "metric_tensor": metric_tensor_half,
+            "axis": self.axis,
+            "axis_abc": self.axis_abc,
+            "reduced_positions": reduced_positions,
+            "all_positions": all_positions,
+            "elements": sorted_elements,
+        }
+
+    def get_reduced_positions(
+        self,
+        signed_permutation_cands,
+        axis_abc=None,
+    ):
+        """Derive a reduced representation of atomic positions."""
+        if self.axis_abc is None and axis_abc is not None:
+            self.axis_abc = axis_abc
+        else:
+            a, b, c = np.array(self.axis)
             norm_a = np.linalg.norm(a)
             norm_b = np.linalg.norm(b)
             norm_c = np.linalg.norm(c)
             self.axis_abc = np.array([norm_a, norm_b, norm_c])
 
-        reduced_positions, all_positions, sorted_elements = self.get_reduced_positions(
-            self.positions,
-            self.elements,
-            signed_permutation_cands,
-        )
-
-        return metric_tensor_half, reduced_positions, all_positions, sorted_elements
-
-    def get_reduced_positions(
-        self,
-        positions,
-        elements,
-        signed_permutation_cands,
-    ):
-        """Derive a reduced representation of atomic positions."""
+        elements = self.elements.copy()
         unique_elements = np.sort(np.unique(elements))
         types = np.array([np.where(unique_elements == el)[0][0] for el in elements])
 
@@ -108,10 +123,11 @@ class PositionRepReducer:
         sort_idx = np.argsort(types)
         sorted_elements = elements[sort_idx]
         sorted_types = types[sort_idx]
-        positions = positions[sort_idx, :]
 
-        position_cands = self.position_candidates(
-            positions, sorted_types, signed_permutation_cands
+        positions = self.positions.copy()
+        sorted_positions = positions[sort_idx, :]
+        position_cands = self._position_candidates(
+            sorted_positions, sorted_types, signed_permutation_cands
         )
 
         all_positions = []
@@ -122,12 +138,11 @@ class PositionRepReducer:
             for target_idx in pos_cand["cands_idx"]:
                 _pos = pos_cand["positions"].copy()
                 _cls_id = pos_cand["cluster_id"].copy()
-                redperm_positions = self.reduced_permutation(
+                redperm_positions = self._reduced_permutation(
                     target_idx, _pos, sorted_types, _cls_id
                 )
                 pos_allreps.append(redperm_positions)
-                if self.cartesian_coords:
-                    redperm_positions = redperm_positions @ self.axis
+                redperm_positions = redperm_positions * self.axis_abc
                 reduced_perm_cands.append(redperm_positions.T.reshape(-1))
                 mask = types == 0
                 target_vals.append(
@@ -142,21 +157,21 @@ class PositionRepReducer:
 
         reduced_perm_cands = np.array(reduced_perm_cands)
         target_vals = np.array(target_vals)
-        reduced_positions = self.reduced_translation(
+        reduced_positions = self._reduced_translation(
             reduced_perm_cands,
             target_vals,
         )
 
         return reduced_positions, all_positions, sorted_elements
 
-    def position_candidates(
+    def _position_candidates(
         self,
         positions: np.ndarray,
         types: np.ndarray,
         signed_permutation_cands: np.ndarray,
     ):
         _positions = positions.copy()
-        cluster_id, positions_by_axis = self.assign_clusters(
+        cluster_id, positions_by_axis = self._assign_clusters(
             _positions, signed_permutation_cands
         )
 
@@ -184,7 +199,7 @@ class PositionRepReducer:
             )
         return position_cands
 
-    def reduced_permutation(
+    def _reduced_permutation(
         self,
         target_idx: int,
         positions: np.ndarray,
@@ -214,7 +229,7 @@ class PositionRepReducer:
         redperm_positions = pos[sort_idx]
         return redperm_positions
 
-    def reduced_translation(
+    def _reduced_translation(
         self,
         reduced_perm_cands: np.ndarray,
         target_vals: np.ndarray,
@@ -245,7 +260,7 @@ class PositionRepReducer:
         reduced_perm_cands = _reduced_perm_cands[0, :]
         return reduced_perm_cands
 
-    def assign_clusters(
+    def _assign_clusters(
         self,
         positions: np.ndarray,
         signed_permutation_cands: np.ndarray,
@@ -277,11 +292,10 @@ class PositionRepReducer:
             # Compute forward differences with periodic wrapping
             gap = np.roll(pos_sorted, -1, axis=0) - pos_sorted
             gap[-1, :] += 1.0
-            if self.cartesian_coords:
-                gap = gap * self.axis_abc
 
             # New cluster starts where gap > symprec
-            is_new_cluster = gap > self.symprec
+            gap_normalized = gap * self.axis_abc
+            is_new_cluster = gap_normalized > self.symprec
             cluster_id_sorted = np.zeros_like(_positions, dtype=np.int32)
             cluster_id_sorted[1:, :] = np.cumsum(is_new_cluster[:-1, :], axis=0)
 
