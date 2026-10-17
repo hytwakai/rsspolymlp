@@ -37,7 +37,7 @@ def struct_matcher(
     if poscar_paths is None and struct_list is None and struct_reps_list is None:
         raise ValueError("Set poscar_paths, struct_list, or struct_reps_list")
 
-    time_refine = iter_refine = time_redrep = iter_redrep = None
+    time_refine = iter_refine = time_redrep = iter_redrep = 0
     if struct_reps_list is None:
         if reduced_symprecs is None:
             if not normalize_axis:
@@ -66,7 +66,7 @@ def struct_matcher(
         )
         time_refine = generator.time_refine
         iter_refine = generator.iter_refine
-        time_redrep = generator.time_refine
+        time_redrep = generator.time_redrep
         iter_redrep = generator.iter_redrep
 
     analyzer = UniqueStructIdentifier(
@@ -74,6 +74,7 @@ def struct_matcher(
         axis_tol=axis_tol,
         pos_tol=pos_tol,
         assign_method=assign_method,
+        verbose=verbose,
     )
     if not assign_method == "redrep":
         pos_tol /= 10
@@ -81,13 +82,23 @@ def struct_matcher(
         analyzer.identify_duplicate_struct(
             struct_reps=struct_reps,
         )
-
     time_match = analyzer.time_match
     iter_match = analyzer.iter_match
-    if verbose is True:
-        print("Average time (match):", round(time_match * 1000 / iter_match, 2), "ms")
-        print("Total time (match):", round(time_match, 2), "s")
-        print("Iterations (match):", iter_match)
+
+    print("[rsspolymlp_utils.struct_matcher]")
+    print("assign_method:", assign_method)
+    print("timing:")
+    print(
+        f"{'  Process':<7} {'Iterations':>12} {'Avg. time (ms)':>15} {'Total time (s)':>15}"
+    )
+    print("  " + "-" * 52)
+    for name, iterations, total_time in [
+        ("Refine", iter_refine, time_refine),
+        ("Reduce", iter_redrep, time_redrep),
+        ("Match", analyzer.iter_match, analyzer.time_match),
+    ]:
+        avg_time = total_time * 1000 / iterations if iterations > 0 else 0.0
+        print(f"  {name:<7} {iterations:>12} " f"{avg_time:>15.2f} {total_time:>15.2f}")
 
     if log_all:
         unique_structs = analyzer.unique_str_keep
@@ -104,7 +115,7 @@ def struct_matcher(
 
     with open(output_file, "w") as f:
         print("timing:", file=f)
-        if time_refine is not None:
+        if iter_refine > 0:
             print("  refine:", file=f)
             print(
                 f"    average_time_ms: {time_refine * 1000 / iter_refine:.2f}", file=f

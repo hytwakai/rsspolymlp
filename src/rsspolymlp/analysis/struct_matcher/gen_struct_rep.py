@@ -353,20 +353,4 @@ class StructRepGenerator:
             self.time_refine += res[1]["time_refine"]
             self.iter_redrep += res[1]["iter_redrep"]
             self.time_redrep += res[1]["time_redrep"]
-        if self.verbose is True:
-            print(
-                "Average time (refine):",
-                round(self.time_refine * 1000 / self.iter_refine, 2),
-                "ms",
-            )
-            print(
-                "Average time (reduce):",
-                round(self.time_redrep * 1000 / self.iter_redrep, 2),
-                "ms",
-            )
-            print("Total time (refine):", round(self.time_refine, 2), "s")
-            print("Total time (reduce):", round(self.time_redrep, 2), "s")
-            print("Iterations (refine):", self.iter_refine)
-            print("Iterations (reduce):", self.iter_redrep)
-
         return redreps_list
