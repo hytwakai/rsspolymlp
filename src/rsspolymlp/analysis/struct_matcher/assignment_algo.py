@@ -12,7 +12,7 @@ def sort_match_screen(
     elements2: np.ndarray,
     axis_abc: np.ndarray,
     pos_tol: float,
-    verbose: bool = False
+    verbose: bool = False,
 ):
     # pos1: (N1, n_atoms, 3)
     # pos2: (N2, n_atoms, 3)
@@ -67,9 +67,15 @@ def greedy_match(
     elements2: np.ndarray,
     axis_abc: np.ndarray,
     pos_tol: float,
+    verbose: bool = False,
 ):
+    judge = True
     inv_axis_abc = 1 / axis_abc
+
+    t_start_g = time.time()
     for el in np.unique(elements1):
+        if not judge:
+            break
         targets1 = np.where(elements1 == el)[0]
         targets2 = np.where(elements2 == el)[0]
         used = np.zeros(len(targets1), dtype=bool)
@@ -80,9 +86,17 @@ def greedy_match(
             diff[used] = np.inf
             j = np.argmin(diff_max)
             if diff_max[j] >= pos_tol:
-                return False
+                judge = False
+                break
             used[j] = True
-    return True
+    if verbose:
+        print("[greedy_match]")
+        print(f"  Matching: {round((time.time() - t_start_g) * 1000, 2)} ms")
+
+    if judge:
+        return True
+    else:
+        return False
 
 
 def bottleneck_assignment(

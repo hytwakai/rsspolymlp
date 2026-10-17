@@ -9,15 +9,14 @@ from time import time
 from typing import Optional
 
 import numpy as np
-
 from pypolymlp.utils.vasp_utils import write_poscar_file
+
 from rsspolymlp.analysis.ghost_minima import detect_ghost_minima
 from rsspolymlp.analysis.struct_matcher.gen_struct_rep import (
     StructRepGenerator,
     StructReps,
 )
 from rsspolymlp.analysis.struct_matcher.identify_uniqstr import (
-    UniqueStructIdentifier,
     identify_unique_structure,
 )
 from rsspolymlp.common.composition import compute_composition
@@ -58,7 +57,7 @@ class RSSResultSummarizer:
         self.update_parent = update_parent
 
         self.pressure = None
-        self.analyzer = UniqueStructIdentifier()
+        self.analyzer = None
 
     def run_summarize(self):
         os.makedirs("json", exist_ok=True)
@@ -92,8 +91,6 @@ class RSSResultSummarizer:
 
         for comp_tag, res_paths in json_paths_c.items():
             print(f"Composition {comp_tag}: summarizing...")
-            self.analyzer = UniqueStructIdentifier()
-
             time_start = time()
 
             processed_paths = set()
@@ -196,8 +193,6 @@ class RSSResultSummarizer:
 
         for comp_tag, res_paths in json_paths_c.items():
             print(f"Composition {comp_tag}: summarizing...")
-            self.analyzer = UniqueStructIdentifier()
-
             if not self.parse_vasp:
                 axis_tol = 0.03
                 pos_tol = 0.03

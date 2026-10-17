@@ -14,7 +14,36 @@ from rsspolymlp.analysis.struct_matcher.struct_match import (
 
 class UniqueStructIdentifier:
 
-    def __init__(self):
+    def __init__(
+        self,
+        axis_tol: float = 0.01,
+        pos_tol: float = 0.01,
+        assign_method: Literal["redrep", "greedy", "HK"] = "redrep",
+        keep_unique: bool = False,
+        verbose: bool = False,
+    ):
+        """
+        Initialize UniqueStructIdentifier class.
+
+        Parameters
+        ----------
+        axis_tol : float
+            Tolerance for comparing lattice axes.
+        pos_tol : float
+            Tolerance for comparing atomic positions.
+        assign_method : {"redrep", "greedy", "HK"}
+            Method used to match atomic positions.
+        keep_unique : bool
+            Whether to retain all structures.
+        verbose : bool
+            Whether to print detailed information.
+        """
+        self.axis_tol = axis_tol
+        self.pos_tol = pos_tol
+        self.assign_method = assign_method
+        self.keep_unique = keep_unique
+        self.verbose = verbose
+
         self.unique_str: list[StructReps] = []  # Store unique structures
         self.unique_str_prop: list[dict] = []  # Store unique structure properties
         self.unique_str_keep: list[list[StructReps]] = []
@@ -26,10 +55,6 @@ class UniqueStructIdentifier:
         self,
         struct_reps: StructReps,
         other_properties: Optional[dict] = None,
-        axis_tol: float = 0.01,
-        pos_tol: float = 0.01,
-        assign_method: Literal["redrep", "greedy", "HK"] = "redrep",
-        keep_unique: bool = False,
     ):
         """
         Identify and manage duplicate structures.
@@ -38,11 +63,10 @@ class UniqueStructIdentifier:
 
         Parameters
         ----------
-        struct_reps : The structure to be compared and registered if unique.
-        other_properties : Additional metadata associated with the structure.
-        axis_tol : Tolerance for comparing lattice axes
-        pos_tol : Tolerance for comparing atomic positions
-        assign_method : Method for matching atomic positions
+        struct_reps : StructReps
+            The structure to be compared and registered if unique.
+        other_properties : Optional[dict]
+            Additional metadata associated with the structure.
 
         Returns
         -------
@@ -58,23 +82,26 @@ class UniqueStructIdentifier:
             other_properties = {}
 
         for idx, _uniq_str in enumerate(self.unique_str):
-            uniq_str_list = self.unique_str_keep[idx] if keep_unique else [_uniq_str]
+            uniq_str_list = (
+                self.unique_str_keep[idx] if self.keep_unique else [_uniq_str]
+            )
             for uniq_str in uniq_str_list:
                 t_start = time.time()
-                if assign_method == "redrep":
+                if self.assign_method == "redrep":
                     judge_duplicate = struct_match(
                         uniq_str,
                         struct_reps,
-                        axis_tol=axis_tol,
-                        pos_tol=pos_tol,
+                        axis_tol=self.axis_tol,
+                        pos_tol=self.pos_tol,
                     )
                 else:
                     judge_duplicate = struct_match_allrep(
                         uniq_str,
                         struct_reps,
-                        axis_tol=axis_tol,
-                        pos_tol=pos_tol,
-                        assign_method=assign_method,
+                        axis_tol=self.axis_tol,
+                        pos_tol=self.pos_tol,
+                        assign_method=self.assign_method,
+                        verbose=self.verbose,
                     )
                 self.time_match += time.time() - t_start
                 self.iter_match += 1
@@ -102,13 +129,13 @@ class UniqueStructIdentifier:
                 struct_reps.struct_tag = self.unique_str[idx].struct_tag
                 self.unique_str[idx] = struct_reps
                 self.unique_str_prop[idx] = other_properties
-            if keep_unique:
+            if self.keep_unique:
                 self.unique_str_keep[idx].append(struct_reps)
                 self.unique_str_prop_keep[idx].append(other_properties)
         else:
             self.unique_str.append(struct_reps)
             self.unique_str_prop.append(other_properties)
-            if keep_unique:
+            if self.keep_unique:
                 self.unique_str_keep.append([struct_reps])
                 self.unique_str_prop_keep.append([other_properties])
 
@@ -172,7 +199,12 @@ def identify_unique_structure(
             - "dupstr_paths": List of paths to duplicate structure files.
     """
     if pre_analyzer is None:
-        analyzer = UniqueStructIdentifier()
+        analyzer = UniqueStructIdentifier(
+            axis_tol=axis_tol,
+            pos_tol=pos_tol,
+            assign_method=assign_method,
+            keep_unique=keep_unique,
+        )
     else:
         analyzer = pre_analyzer
 
@@ -196,9 +228,5 @@ def identify_unique_structure(
         analyzer.identify_duplicate_struct(
             redreps,
             other_properties=struct_list[idx],
-            axis_tol=axis_tol,
-            pos_tol=pos_tol,
-            assign_method=assign_method,
-            keep_unique=keep_unique,
         )
     return analyzer

@@ -10,8 +10,8 @@ from collections import Counter, defaultdict
 from time import time
 
 import numpy as np
-
 from pypolymlp.calculator.properties import Properties
+
 from rsspolymlp.analysis.ghost_minima import detect_ghost_minima
 from rsspolymlp.analysis.rss_summarize import (
     dump_json_rss_results,
@@ -251,13 +251,13 @@ class RSSResultAnalyzer:
         num_process: int = -1,
         backend: str = "locky",
     ):
-        analyzer = UniqueStructIdentifier()
         generator = StructRepGenerator()
         struct_reps_list = generator.generate_struct_reps_parallel(
             struct_properties,
             num_process=num_process,
             backend=backend,
         )
+        analyzer = UniqueStructIdentifier()
         for idx, unique_struct in enumerate(struct_reps_list):
             is_unique, _ = analyzer.identify_duplicate_struct(
                 unique_struct,

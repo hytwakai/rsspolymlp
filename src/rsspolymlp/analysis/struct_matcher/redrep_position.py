@@ -17,7 +17,8 @@ class PositionRepReducer:
         symprec: list[float] = [1e-4, 1e-4, 1e-4],
         normalize_axis: bool = False,
     ):
-        """Initialize PositionRepReducer class.
+        """
+        Initialize PositionRepReducer class.
 
         Parameters
         ----------

@@ -1,6 +1,7 @@
 from typing import Literal, Optional
 
 from pypolymlp.utils.spglib_utils import SymCell
+
 from rsspolymlp.analysis.rss_summarize import (
     log_all_unique_structures,
     log_unique_structures,
@@ -68,16 +69,17 @@ def struct_matcher(
         time_redrep = generator.time_refine
         iter_redrep = generator.iter_redrep
 
-    analyzer = UniqueStructIdentifier()
+    analyzer = UniqueStructIdentifier(
+        keep_unique=log_all,
+        axis_tol=axis_tol,
+        pos_tol=pos_tol,
+        assign_method=assign_method,
+    )
     if not assign_method == "redrep":
         pos_tol /= 10
     for struct_reps in struct_reps_list:
         analyzer.identify_duplicate_struct(
             struct_reps=struct_reps,
-            keep_unique=log_all,
-            axis_tol=axis_tol,
-            pos_tol=pos_tol,
-            assign_method=assign_method,
         )
 
     time_match = analyzer.time_match
@@ -104,11 +106,15 @@ def struct_matcher(
         print("timing:", file=f)
         if time_refine is not None:
             print("  refine:", file=f)
-            print(f"    average_time_ms: {time_refine * 1000 / iter_refine:.2f}", file=f)
+            print(
+                f"    average_time_ms: {time_refine * 1000 / iter_refine:.2f}", file=f
+            )
             print(f"    total_time_s: {time_refine:.2f}", file=f)
             print(f"    iterations: {iter_refine}", file=f)
             print("  reduce:", file=f)
-            print(f"    average_time_ms: {time_redrep * 1000 / iter_redrep:.2f}", file=f)
+            print(
+                f"    average_time_ms: {time_redrep * 1000 / iter_redrep:.2f}", file=f
+            )
             print(f"    total_time_s: {time_redrep:.2f}", file=f)
             print(f"    iterations: {iter_redrep}", file=f)
         print("  match:", file=f)

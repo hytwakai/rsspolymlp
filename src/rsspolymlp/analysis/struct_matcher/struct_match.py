@@ -249,7 +249,7 @@ def struct_match_allrep(
                         elements2,
                         axis_abc,
                         pos_tol,
-                        verbose,
+                        verbose=verbose,
                     )
                     row, col = np.where(pre_judge)
 
@@ -265,6 +265,7 @@ def struct_match_allrep(
                                 elements2,
                                 axis_abc,
                                 pos_tol,
+                                verbose=verbose,
                             )
                         elif assign_method == "HK":
                             judge_st_match = bottleneck_assignment(
