@@ -225,6 +225,8 @@ def struct_match_allrep(
             if not np.any(match_axis):
                 continue
 
+            if verbose:
+                print("--- Matching start ------")
             iter_matching = 0
             if len(st_1.elements) == 1:
                 judge_st_match = True
@@ -284,4 +286,5 @@ def struct_match_allrep(
                         iter_matching += 1
             if verbose:
                 print("Iterations of matching:", iter_matching)
+                print("--- Matching finished ---")
     return judge_st_match

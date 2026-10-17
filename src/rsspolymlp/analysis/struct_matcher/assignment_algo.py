@@ -47,7 +47,7 @@ def sort_match_screen(
         pos1_axis = sort_positions_axis(pos_reps1, elements1, axis)
         pos2_axis = sort_positions_axis(pos_reps2, elements2, axis)
         if verbose:
-            print(f"[sort_match_screen (axis {axis})]")
+            print(f"code: sort_match_screen (axis {axis})")
             print(f"  Sorting: {round((time.time() - t_start_s) * 1000, 2)} ms")
 
         t_start_m = time.time()
@@ -90,7 +90,7 @@ def greedy_match(
                 break
             used[j] = True
     if verbose:
-        print("[greedy_match]")
+        print("code: greedy_match")
         print(f"  Matching: {round((time.time() - t_start_g) * 1000, 2)} ms")
 
     if judge:
@@ -122,7 +122,7 @@ def bottleneck_assignment(
         pos_d = np.max(np.abs(diff), axis=2)
         n = pos_d.shape[0]
         if verbose:
-            print("[bottleneck_assignment]")
+            print("code: bottleneck_assignment")
             print(
                 f"  Difference Calc.: {round((time.time() - t_start_d) * 1000, 2)} ms"
             )

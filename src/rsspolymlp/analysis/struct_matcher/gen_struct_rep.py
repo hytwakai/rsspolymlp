@@ -356,16 +356,17 @@ class StructRepGenerator:
                 self.time_redrep += res[1]["time_redrep"]
 
         if verbose:
-            print("[struct_matcher.gen_struct_rep]")
-            print("time:")
-            print(
-                f"{'  Process':<7} {'Iterations':>12} {'Avg. time (ms)':>15} {'Total time (s)':>15}"
-            )
-            print("  " + "-" * 52)
+            print("code: struct_matcher.gen_struct_rep")
+            print("  time:")
+            print("    Process   Iterations  Avg. time (ms)  Total time (s)")
+            print("    " + "-" * 52)
             for name, iterations, total_time in [
                 ("Refine", self.iter_refine, self.time_refine),
                 ("Reduce", self.iter_redrep, self.time_redrep),
             ]:
                 avg_time = total_time * 1000 / iterations
-                print(f"  {name:<7} {iterations:>12} " f"{avg_time:>15.2f} {total_time:>15.2f}")
+                print(
+                    f"    {name:<7} {iterations:>12} "
+                    f"{avg_time:>15.2f} {total_time:>15.2f}"
+                )
         return redreps_list

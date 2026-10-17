@@ -54,6 +54,9 @@ class PositionRepReducer:
             self.axis = self.axis / ((volume / len(self.elements)) ** (1 / 3))
         self.verbose = verbose
         self.axis_abc = None
+        if self.verbose:
+            print("code: struct_matcher.redrep_position")
+            print("  symprec:", symprec)
 
     def get_reduced_structure_representation(self) -> dict:
         """Derive the reduced representation of a crystal structure.
@@ -91,7 +94,6 @@ class PositionRepReducer:
             self.symprec,
         )
         if self.verbose:
-            print("[struct_matcher.redrep_position]")
             print(f"  Lattice: {round((time.time() - t_lattice) * 1000, 2)} ms")
 
         self.axis = axis_cands[0]
@@ -156,7 +158,7 @@ class PositionRepReducer:
         positions = self.positions.copy()
         sorted_positions = positions[sort_idx, :]
         position_cands = self._position_candidates(
-            sorted_positions, sorted_types, signed_permutation_cands
+            sorted_positions, signed_permutation_cands
         )
         if self.verbose:
             print(f"  Candidates: {round((time.time() - t_pos_cands) * 1000, 2)} ms")
@@ -169,7 +171,6 @@ class PositionRepReducer:
         target_vals = []
         for pos_cand in position_cands:
             redperm_positions_list = self._reduced_permutations(
-                pos_cand["cands_idx"],
                 pos_cand["positions"],
                 sorted_types,
                 pos_cand["cluster_id"],
@@ -177,9 +178,7 @@ class PositionRepReducer:
             mask = np.where(sorted_types == 0)[0]
             for redperm_positions in redperm_positions_list:
                 reduced_perm_cands.append(redperm_positions.T.reshape(-1))
-                target_vals.append(
-                    redperm_positions[0 : len(mask), :].T.reshape(-1)
-                )
+                target_vals.append(redperm_positions[0 : len(mask), :].T.reshape(-1))
             all_positions.append(
                 {
                     "perm_mat": pos_cand["perm_mat"],
@@ -204,7 +203,6 @@ class PositionRepReducer:
     def _position_candidates(
         self,
         positions: np.ndarray,
-        types: np.ndarray,
         signed_permutation_cands: np.ndarray,
     ):
         _positions = positions.copy()
@@ -212,7 +210,6 @@ class PositionRepReducer:
             _positions, signed_permutation_cands
         )
 
-        mask = types == 0
         position_cands = []
         for perm_mat in signed_permutation_cands:
             _pos = np.zeros_like(_positions)
@@ -230,7 +227,6 @@ class PositionRepReducer:
                 {
                     "positions": _pos,
                     "cluster_id": _cls_id,
-                    "cands_idx": np.where(mask)[0],
                     "perm_mat": perm_mat,
                 }
             )
@@ -238,12 +234,11 @@ class PositionRepReducer:
 
     def _reduced_permutations(
         self,
-        target_indices: np.ndarray,
         positions: np.ndarray,
         types: np.ndarray,
         cluster_id: np.ndarray,
     ) -> list[np.ndarray]:
-        target_indices = np.asarray(target_indices, dtype=int)
+        target_indices = np.where(types == 0)[0]
         positions = np.asarray(positions)
         types = np.asarray(types)
         cluster_id = np.asarray(cluster_id)

@@ -89,16 +89,16 @@ def struct_matcher(
     iter_match = analyzer.iter_match
     time_log.append(("Match", iter_match, time_match))
 
-    print("[rsspolymlp_utils.struct_matcher]")
-    print("assign_method:", assign_method)
-    print("time:")
-    print(
-        f"{'  Process':<7} {'Iterations':>12} {'Avg. time (ms)':>15} {'Total time (s)':>15}"
-    )
-    print("  " + "-" * 52)
+    print("code: rsspolymlp_utils.struct_matcher")
+    print("  assign_method:", assign_method)
+    print("  time:")
+    print("    Process   Iterations  Avg. time (ms)  Total time (s)")
+    print("    " + "-" * 52)
     for name, iterations, total_time in time_log:
         avg_time = total_time * 1000 / iterations
-        print(f"  {name:<7} {iterations:>12} " f"{avg_time:>15.2f} {total_time:>15.2f}")
+        print(
+            f"    {name:<7} {iterations:>12} " f"{avg_time:>15.2f} {total_time:>15.2f}"
+        )
 
     if log_all:
         unique_structs = analyzer.unique_str_keep
