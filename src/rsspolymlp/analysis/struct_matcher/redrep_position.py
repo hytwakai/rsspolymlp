@@ -160,6 +160,8 @@ class PositionRepReducer:
         )
         if self.verbose:
             print(f"  Candidates: {round((time.time() - t_pos_cands) * 1000, 2)} ms")
+            print(f"    N_atoms: {len(positions)}")
+            print(f"    N_trans: {len(position_cands)}")
 
         t_permutation = time.time()
         all_positions = []
@@ -186,7 +188,6 @@ class PositionRepReducer:
             )
         if self.verbose:
             print(f"  Permutation: {round((time.time() - t_permutation) * 1000, 2)} ms")
-            print(f"  N_permtaion: {len(position_cands)}")
 
         t_translation = time.time()
         reduced_perm_cands = np.array(reduced_perm_cands)
