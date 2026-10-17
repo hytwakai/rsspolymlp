@@ -74,6 +74,7 @@ def test_sm_random_struct(tmp_path, n_elements):
     generator = StructRepGenerator()
     struct_reps_list = generator.generate_struct_reps_parallel(
         struct_reps,
+        verbose=True,
     )
     struct_matcher(
         struct_reps_list=struct_reps_list,

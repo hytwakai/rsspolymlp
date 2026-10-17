@@ -175,6 +175,7 @@ class StructRepGenerator:
                 spg_number,
                 symprec=input_symprec,
                 normalize_axis=self.normalize_axis,
+                verbose=self.verbose,
             )
             res = reducer.get_reduced_structure_representation()
             metric_tensor = res["metric_tensor"]
@@ -286,6 +287,7 @@ class StructRepGenerator:
         struct_list: list[dict],
         num_process: int = -1,
         backend: str = "loky",
+        verbose: bool = False,
     ) -> list[StructReps]:
         """
         Generate a list of StructReps objects.
@@ -344,13 +346,26 @@ class StructRepGenerator:
                 )
                 for res in struct_list
             )
+            redreps_list = []
+            for res in joblib_results:
+                if res[0] is not None:
+                    redreps_list.append(res[0])
+                self.iter_refine += res[1]["iter_refine"]
+                self.time_refine += res[1]["time_refine"]
+                self.iter_redrep += res[1]["iter_redrep"]
+                self.time_redrep += res[1]["time_redrep"]
 
-        redreps_list = []
-        for res in joblib_results:
-            if res[0] is not None:
-                redreps_list.append(res[0])
-            self.iter_refine += res[1]["iter_refine"]
-            self.time_refine += res[1]["time_refine"]
-            self.iter_redrep += res[1]["iter_redrep"]
-            self.time_redrep += res[1]["time_redrep"]
+        if verbose:
+            print("[struct_matcher.gen_struct_rep]")
+            print("time:")
+            print(
+                f"{'  Process':<7} {'Iterations':>12} {'Avg. time (ms)':>15} {'Total time (s)':>15}"
+            )
+            print("  " + "-" * 52)
+            for name, iterations, total_time in [
+                ("Refine", self.iter_refine, self.time_refine),
+                ("Reduce", self.iter_redrep, self.time_redrep),
+            ]:
+                avg_time = total_time * 1000 / iterations
+                print(f"  {name:<7} {iterations:>12} " f"{avg_time:>15.2f} {total_time:>15.2f}")
         return redreps_list

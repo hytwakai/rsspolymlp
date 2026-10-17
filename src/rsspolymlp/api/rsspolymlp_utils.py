@@ -37,6 +37,7 @@ def struct_matcher(
     if poscar_paths is None and struct_list is None and struct_reps_list is None:
         raise ValueError("Set poscar_paths, struct_list, or struct_reps_list")
 
+    time_log = []
     time_refine = iter_refine = time_redrep = iter_redrep = 0
     if struct_reps_list is None:
         if reduced_symprecs is None:
@@ -68,6 +69,8 @@ def struct_matcher(
         iter_refine = generator.iter_refine
         time_redrep = generator.time_redrep
         iter_redrep = generator.iter_redrep
+        time_log.append(("Refine", iter_refine, time_refine))
+        time_log.append(("Reduce", iter_redrep, time_redrep))
 
     analyzer = UniqueStructIdentifier(
         keep_unique=log_all,
@@ -84,20 +87,17 @@ def struct_matcher(
         )
     time_match = analyzer.time_match
     iter_match = analyzer.iter_match
+    time_log.append(("Match", iter_match, time_match))
 
     print("[rsspolymlp_utils.struct_matcher]")
     print("assign_method:", assign_method)
-    print("timing:")
+    print("time:")
     print(
         f"{'  Process':<7} {'Iterations':>12} {'Avg. time (ms)':>15} {'Total time (s)':>15}"
     )
     print("  " + "-" * 52)
-    for name, iterations, total_time in [
-        ("Refine", iter_refine, time_refine),
-        ("Reduce", iter_redrep, time_redrep),
-        ("Match", analyzer.iter_match, analyzer.time_match),
-    ]:
-        avg_time = total_time * 1000 / iterations if iterations > 0 else 0.0
+    for name, iterations, total_time in time_log:
+        avg_time = total_time * 1000 / iterations
         print(f"  {name:<7} {iterations:>12} " f"{avg_time:>15.2f} {total_time:>15.2f}")
 
     if log_all:

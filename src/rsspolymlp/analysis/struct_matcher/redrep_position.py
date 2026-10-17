@@ -1,3 +1,4 @@
+import time
 from collections import Counter
 
 import numpy as np
@@ -16,6 +17,7 @@ class PositionRepReducer:
         spg_number: int,
         symprec: list[float] = [1e-4, 1e-4, 1e-4],
         normalize_axis: bool = False,
+        verbose: bool = False,
     ):
         """
         Initialize PositionRepReducer class.
@@ -50,6 +52,7 @@ class PositionRepReducer:
         if self.normalize_axis:
             volume = abs(np.linalg.det(self.axis))
             self.axis = self.axis / ((volume / len(self.elements)) ** (1 / 3))
+        self.verbose = verbose
         self.axis_abc = None
 
     def get_reduced_structure_representation(self) -> dict:
@@ -81,11 +84,15 @@ class PositionRepReducer:
                 atomic coordinates.
         """
 
+        t_lattice = time.time()
         metric_tensor_sqrt, axis_cands, signed_permutation_cands = get_reduced_lattice(
             self.axis,
             self.spg_number,
             self.symprec,
         )
+        if self.verbose:
+            print("[struct_matcher.redrep_position]")
+            print(f"  Lattice: {round((time.time() - t_lattice) * 1000, 2)} ms")
 
         self.axis = axis_cands[0]
         a, b, c = np.array(self.axis)
@@ -145,15 +152,19 @@ class PositionRepReducer:
         sorted_elements = elements[sort_idx]
         sorted_types = types[sort_idx]
 
+        t_pos_cands = time.time()
         positions = self.positions.copy()
         sorted_positions = positions[sort_idx, :]
         position_cands = self._position_candidates(
             sorted_positions, sorted_types, signed_permutation_cands
         )
+        if self.verbose:
+            print(f"  Candidates: {round((time.time() - t_pos_cands) * 1000, 2)} ms")
 
         all_positions = []
         reduced_perm_cands = []
         target_vals = []
+        t_permutation = time.time()
         for pos_cand in position_cands:
             pos_allreps = []
             for target_idx in pos_cand["cands_idx"]:
@@ -175,13 +186,18 @@ class PositionRepReducer:
                     "pos_reps": pos_allreps,
                 }
             )
+        if self.verbose:
+            print(f"  Permutation: {round((time.time() - t_permutation) * 1000, 2)} ms")
 
+        t_translation = time.time()
         reduced_perm_cands = np.array(reduced_perm_cands)
         target_vals = np.array(target_vals)
         reduced_positions = self._reduced_translation(
             reduced_perm_cands,
             target_vals,
         )
+        if self.verbose:
+            print(f"  Translation: {round((time.time() - t_translation) * 1000, 2)} ms")
 
         return reduced_positions, all_positions, sorted_elements
 
@@ -231,23 +247,25 @@ class PositionRepReducer:
         cls_id = cluster_id.copy()
         id_max = np.max(cls_id, axis=0) + 1
 
+        t_diff = time.time()
         pos = pos - pos[target_idx]
         pos %= 1.0
         pos = np.delete(pos, target_idx, axis=0)
+        print(f"  Diff: {round((time.time() - t_diff) * 1000, 4)} ms")
 
+        t_diff = time.time()
         cls_id = np.mod(cls_id - cls_id[target_idx], id_max).astype(int)
         cls_id = np.delete(cls_id, target_idx, axis=0).astype(int)
-        for ax in range(3):
-            near_zero_mask = cls_id[:, ax] == 0
-            vals = pos[near_zero_mask, ax]
-            dist_to_0 = vals
-            dist_to_1 = 1.0 - vals
-            pos[near_zero_mask, ax] = np.where(dist_to_0 < dist_to_1, vals, vals - 1.0)
+        near_zero_mask = cls_id == 0
+        pos[near_zero_mask & (pos > 0.5)] -= 1.0
+        print(f"  Diff: {round((time.time() - t_diff) * 1000, 4)} ms")
 
         # Stable lexicographic sort by (ids_z, ids_y, ids_x)
+        t_sort = time.time()
         types = np.delete(types, target_idx, axis=0)
         sort_idx = np.lexsort((cls_id[:, 0], cls_id[:, 1], cls_id[:, 2], types))
         redperm_positions = pos[sort_idx]
+        print(f"  Sort: {round((time.time() - t_sort) * 1000, 4)} ms")
         return redperm_positions
 
     def _reduced_translation(
