@@ -161,33 +161,32 @@ class PositionRepReducer:
         if self.verbose:
             print(f"  Candidates: {round((time.time() - t_pos_cands) * 1000, 2)} ms")
 
+        t_permutation = time.time()
         all_positions = []
         reduced_perm_cands = []
         target_vals = []
-        t_permutation = time.time()
         for pos_cand in position_cands:
-            pos_allreps = []
-            for target_idx in pos_cand["cands_idx"]:
-                _pos = pos_cand["positions"].copy()
-                _cls_id = pos_cand["cluster_id"].copy()
-                redperm_positions = self._reduced_permutation(
-                    target_idx, _pos, sorted_types, _cls_id
-                )
-                redperm_positions = redperm_positions * self.axis_abc
-                pos_allreps.append(redperm_positions)
+            redperm_positions_list = self._reduced_permutations(
+                pos_cand["cands_idx"],
+                pos_cand["positions"],
+                sorted_types,
+                pos_cand["cluster_id"],
+            )
+            mask = np.where(sorted_types == 0)[0]
+            for redperm_positions in redperm_positions_list:
                 reduced_perm_cands.append(redperm_positions.T.reshape(-1))
-                mask = types == 0
                 target_vals.append(
-                    redperm_positions[0 : len(mask) - 1, :].T.reshape(-1)
+                    redperm_positions[0 : len(mask), :].T.reshape(-1)
                 )
             all_positions.append(
                 {
                     "perm_mat": pos_cand["perm_mat"],
-                    "pos_reps": pos_allreps,
+                    "pos_reps": redperm_positions_list,
                 }
             )
         if self.verbose:
             print(f"  Permutation: {round((time.time() - t_permutation) * 1000, 2)} ms")
+            print(f"  N_permtaion: {len(position_cands)}")
 
         t_translation = time.time()
         reduced_perm_cands = np.array(reduced_perm_cands)
@@ -236,36 +235,53 @@ class PositionRepReducer:
             )
         return position_cands
 
-    def _reduced_permutation(
+    def _reduced_permutations(
         self,
-        target_idx: int,
+        target_indices: np.ndarray,
         positions: np.ndarray,
         types: np.ndarray,
         cluster_id: np.ndarray,
-    ):
-        pos = positions.copy()
-        cls_id = cluster_id.copy()
-        id_max = np.max(cls_id, axis=0) + 1
+    ) -> list[np.ndarray]:
+        target_indices = np.asarray(target_indices, dtype=int)
+        positions = np.asarray(positions)
+        types = np.asarray(types)
+        cluster_id = np.asarray(cluster_id)
 
-        t_diff = time.time()
-        pos = pos - pos[target_idx]
+        n_cands = len(target_indices)
+        n_atoms = len(positions)
+
+        # Calculate relative positions and cluster IDs for all candidates.
+        # (N_cands, N_atoms, 3)
+        pos = positions[None, :, :] - positions[target_indices, None, :]
         pos %= 1.0
-        pos = np.delete(pos, target_idx, axis=0)
-        print(f"  Diff: {round((time.time() - t_diff) * 1000, 4)} ms")
+        id_max = np.max(cluster_id, axis=0) + 1
+        cls_id = np.mod(
+            cluster_id[None, :, :] - cluster_id[target_indices, None, :],
+            id_max,
+        )
 
-        t_diff = time.time()
-        cls_id = np.mod(cls_id - cls_id[target_idx], id_max).astype(int)
-        cls_id = np.delete(cls_id, target_idx, axis=0).astype(int)
-        near_zero_mask = cls_id == 0
-        pos[near_zero_mask & (pos > 0.5)] -= 1.0
-        print(f"  Diff: {round((time.time() - t_diff) * 1000, 4)} ms")
+        # Remove the target atom from each candidate.
+        keep_mask = np.broadcast_to(
+            np.arange(n_atoms)[None, :] != target_indices[:, None],
+            (n_cands, n_atoms),
+        )  # (N_cands, N_atoms)
+        pos = pos[keep_mask].reshape(n_cands, n_atoms - 1, 3)
+        cls_id = cls_id[keep_mask].reshape(n_cands, n_atoms - 1, 3)
 
-        # Stable lexicographic sort by (ids_z, ids_y, ids_x)
-        t_sort = time.time()
-        types = np.delete(types, target_idx, axis=0)
-        sort_idx = np.lexsort((cls_id[:, 0], cls_id[:, 1], cls_id[:, 2], types))
-        redperm_positions = pos[sort_idx]
-        print(f"  Sort: {round((time.time() - t_sort) * 1000, 4)} ms")
+        # Correct positions near the periodic boundary.
+        pos[(cls_id == 0) & (pos > 0.5)] -= 1.0
+        pos = pos * self.axis_abc
+
+        # Sort each candidate lexicographically.
+        redperm_positions = []
+        for (
+            pos_i,
+            cls_id_i,
+        ) in zip(pos, cls_id):
+            sort_idx = np.lexsort(
+                (cls_id_i[:, 0], cls_id_i[:, 1], cls_id_i[:, 2], types[1:])
+            )
+            redperm_positions.append(pos_i[sort_idx])
         return redperm_positions
 
     def _reduced_translation(

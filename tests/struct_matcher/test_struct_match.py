@@ -38,7 +38,10 @@ def test_struct_matcher(tmp_path, assign_method):
 
 
 def test_struct_compare(tmp_path):
-    files = [f"{test_dir}/../files/struct_matcher/case2/POSCAR*"]
+    files = [
+        f"{test_dir}/../files/struct_matcher/case2/POSCAR*",
+        f"{test_dir}/../files/struct_matcher/case3/POSCAR*",
+    ]
     for file in files:
         os.makedirs(f"{tmp_path}/{file.split('/')[-2]}")
         os.chdir(f"{tmp_path}/{file.split('/')[-2]}")
