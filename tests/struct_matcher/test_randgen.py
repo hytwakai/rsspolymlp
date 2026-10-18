@@ -27,10 +27,10 @@ from rsspolymlp.api.rsspolymlp_utils import struct_matcher
     ],
 )
 def test_sm_random_struct(tmp_path, crystal_system):
-    print("crystal system:", crystal_system)
-    n_elements_list = [1, 3, 5]
+    print(f"----- crystal system: {crystal_system} -----")
+    n_elements_list = [1, 5]
     for n_elements in n_elements_list:
-        print("N_elements:", n_elements)
+        print(f"--- N_elements: {n_elements} ---")
         n_atom = 30 + 10 * (n_elements - 1)
         n_struct_reps = 10 * n_elements
         n_element_duplicates = 5

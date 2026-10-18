@@ -359,7 +359,6 @@ class StructRepGenerator:
             print("code: struct_matcher.gen_struct_rep")
             print("  time:")
             print("    Process   Iterations  Avg. time (ms)  Total time (s)")
-            print("    " + "-" * 52)
             for name, iterations, total_time in [
                 ("Refine", self.iter_refine, self.time_refine),
                 ("Reduce", self.iter_redrep, self.time_redrep),

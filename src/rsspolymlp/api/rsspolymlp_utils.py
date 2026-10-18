@@ -93,7 +93,6 @@ def struct_matcher(
     print("  assign_method:", assign_method)
     print("  time:")
     print("    Process   Iterations  Avg. time (ms)  Total time (s)")
-    print("    " + "-" * 52)
     for name, iterations, total_time in time_log:
         avg_time = total_time * 1000 / iterations
         print(
