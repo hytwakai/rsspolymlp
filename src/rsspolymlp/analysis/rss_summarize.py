@@ -9,14 +9,15 @@ from time import time
 from typing import Optional
 
 import numpy as np
-from pypolymlp.utils.vasp_utils import write_poscar_file
 
+from pypolymlp.utils.vasp_utils import write_poscar_file
 from rsspolymlp.analysis.ghost_minima import detect_ghost_minima
 from rsspolymlp.analysis.struct_matcher.gen_struct_rep import (
     StructRepGenerator,
     StructReps,
 )
 from rsspolymlp.analysis.struct_matcher.identify_uniqstr import (
+    UniqueStructIdentifier,
     identify_unique_structure,
 )
 from rsspolymlp.common.composition import compute_composition
@@ -89,6 +90,10 @@ class RSSResultSummarizer:
             axis_tol = 0.1
             pos_tol = 0.1
 
+        self.analyzer = UniqueStructIdentifier(
+            axis_tol=axis_tol,
+            pos_tol=pos_tol,
+        )
         for comp_tag, res_paths in json_paths_c.items():
             print(f"Composition {comp_tag}: summarizing...")
             time_start = time()
@@ -124,11 +129,11 @@ class RSSResultSummarizer:
             unique_structs = self.analyzer.unique_str
             unique_str_prop = self.analyzer.unique_str_prop
             enthalpies = np.array([s["energy"] for s in unique_str_prop])
-            distances = np.array([s["least_distance"] for s in unique_str_prop])
             sort_idx = np.argsort(enthalpies)
 
             if not self.parse_vasp:
                 os.makedirs("ghost_minima", exist_ok=True)
+                distances = np.array([s["least_distance"] for s in unique_str_prop])
                 is_ghost_minima, ghost_minima_info = detect_ghost_minima(
                     enthalpies[sort_idx], distances[sort_idx]
                 )
@@ -220,7 +225,7 @@ class RSSResultSummarizer:
             sort_idx = np.argsort(enthalpies)
             sort_idx = sorted(
                 sort_idx,
-                key=lambda i: len(unique_str_sorted[i]),
+                key=lambda i: len(unique_structs[i]),
                 reverse=True,
             )
             unique_str_sorted = [unique_structs[i] for i in sort_idx]
@@ -260,12 +265,12 @@ class RSSResultSummarizer:
 
         print("   - Converting reduced crystal structure representation...")
         generator = StructRepGenerator(
-            num_process=self.num_process,
-            backend=self.backend,
             primitive_symprecs=self.primitive_symprecs,
         )
         struct_reps_list = generator.generate_struct_reps_parallel(
             rss_results,
+            num_process=self.num_process,
+            backend=self.backend,
         )
         if self.update_parent:
             print("   - Eliminating duplicate structures...")
@@ -597,7 +602,9 @@ def log_all_unique_structures(
                 objprop = PropUtil(polymlp_st.axis.T, polymlp_st.positions.T)
                 print(f"    - sub_struct_No: '{idx1 + 1}_{idx2 + 1}'", file=f)
                 print(f"      struct_path: {_str.struct_path}", file=f)
-                print(f"      pressure: {_str.pressure}", file=f)
+                print(
+                    f"      pressure: {unique_str_prop[idx1][idx2]['pressure']}", file=f
+                )
                 print(f"      enthalpy: {e}", file=f)
                 print(f"      axis: {objprop.abc}", file=f)
                 print(
@@ -627,7 +634,7 @@ def log_all_unique_structures(
             if unique_other_prop is not None:
                 print("    properties:", unique_other_prop[idx1], file=f)
 
-    comp_res = compute_composition(unique_structs[0][0].original_structure.elements)
+    comp_res = compute_composition(unique_structs[0][0].original_polymlp_st.elements)
 
     rss_result_all = {
         "elements": comp_res.unique_elements.tolist(),

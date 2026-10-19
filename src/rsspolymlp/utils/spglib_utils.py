@@ -117,7 +117,11 @@ class SymCell:
 
     def get_spacegroup(self):
         """Return space group."""
-        return spglib.get_spacegroup(self.cell, symprec=self.symprec)
+        try:
+            spg = spglib.get_spacegroup(self.cell, symprec=self.symprec)
+        except spglib._spglib.SpglibCppError:
+            spg = None
+        return spg
 
     def get_spacegroup_multiple_prec(self, symprecs=[1e-2, 1e-3, 1e-4, 1e-5]):
         """Return list of space groups using multiple precisions."""
