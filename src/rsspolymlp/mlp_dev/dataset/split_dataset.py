@@ -32,7 +32,8 @@ def parse_vasp_results(elements, vasprun_paths):
     for vasprun_path in vasprun_paths:
         try:
             structure, (energy, force, stress) = parse_properties_from_vasprun(
-                vasprun_path, units="GPa",
+                vasprun_path,
+                units="GPa",
             )
         except Exception:
             print(vasprun_path, "failed")
@@ -119,8 +120,8 @@ def split_dataset(
             e_tag = ""
 
         # Filter by stress tensor components
-        if max_stress > threshold_s_large * 10 or (
-            threshold_s_small is not None and min_stress < threshold_s_small * 10
+        if max_stress > threshold_s_large or (
+            threshold_s_small is not None and min_stress < threshold_s_small
         ):
             vasprun_dict[f"s_large{e_tag}"].append(vasprun_path)
             return
