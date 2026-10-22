@@ -6,7 +6,7 @@ import xml.etree.ElementTree as ET
 from collections import defaultdict
 from pathlib import Path
 from time import time
-from typing import Optional
+from typing import Literal, Optional
 
 import numpy as np
 
@@ -38,6 +38,7 @@ class RSSResultSummarizer:
         element_order: list = None,
         num_process: int = -1,
         backend: str = "loky",
+        assign_method: Literal["redrep", "greedy", "HK", "pymatgen"] = "redrep",
         primitive_symprecs: list[float] = [1e-5, 1e-4, 1e-3, 1e-2],
         output_poscar: bool = False,
         thresholds: list[float] = None,
@@ -51,6 +52,7 @@ class RSSResultSummarizer:
         self.element_order = element_order
         self.num_process = num_process
         self.backend = backend
+        self.assign_method = assign_method
         self.primitive_symprecs = primitive_symprecs
         self.output_poscar = output_poscar
         self.thresholds = thresholds
@@ -93,6 +95,7 @@ class RSSResultSummarizer:
         self.analyzer = UniqueStructIdentifier(
             axis_tol=axis_tol,
             pos_tol=pos_tol,
+            assign_method=self.assign_method,
         )
         for comp_tag, res_paths in json_paths_c.items():
             print(f"Composition {comp_tag}: summarizing...")
@@ -121,6 +124,7 @@ class RSSResultSummarizer:
                             rss_results_c[comp_tag][res_path],
                             axis_tol=axis_tol,
                             pos_tol=pos_tol,
+                            assign_method=self.assign_method,
                             pre_analyzer=self.analyzer,
                         )
 
@@ -214,6 +218,7 @@ class RSSResultSummarizer:
                     keep_unique=True,
                     axis_tol=axis_tol,
                     pos_tol=pos_tol,
+                    assign_method=self.assign_method,
                     pre_analyzer=self.analyzer,
                 )
             time_finish = time() - time_start

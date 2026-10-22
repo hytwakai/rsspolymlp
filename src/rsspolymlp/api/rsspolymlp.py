@@ -1,6 +1,7 @@
 import glob
 import os
 import time
+from typing import Literal
 
 from rsspolymlp.analysis.ghost_minima import (
     detect_actual_ghost_minima,
@@ -182,6 +183,7 @@ def rss_summarize(
     element_order: list = None,
     num_process=-1,
     backend="loky",
+    assign_method: Literal["redrep", "greedy", "HK", "pymatgen"] = "redrep",
     primitive_symprecs: list[float] = [1e-5, 1e-4, 1e-3, 1e-2],
     output_poscar: bool = False,
     thresholds: list[float] = None,
@@ -195,6 +197,7 @@ def rss_summarize(
         element_order=element_order,
         num_process=num_process,
         backend=backend,
+        assign_method=assign_method,
         primitive_symprecs=primitive_symprecs,
         output_poscar=output_poscar,
         thresholds=thresholds,

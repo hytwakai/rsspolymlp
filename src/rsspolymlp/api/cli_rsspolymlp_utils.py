@@ -43,7 +43,7 @@ def run():
     )
     parser.add_argument(
         "--assign_method",
-        choices=["redrep", "greedy", "HK"],
+        choices=["redrep", "greedy", "HK", "pymatgen"],
         default="redrep",
         help="Method for matching atomic positions: "
         "reduced representation, greedy, or Hopcroft-Karp",

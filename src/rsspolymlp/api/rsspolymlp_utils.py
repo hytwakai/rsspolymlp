@@ -1,7 +1,6 @@
 from typing import Literal, Optional
 
 from pypolymlp.utils.spglib_utils import SymCell
-
 from rsspolymlp.analysis.rss_summarize import (
     log_all_unique_structures,
     log_unique_structures,
@@ -23,7 +22,7 @@ def struct_matcher(
     struct_reps_list: Optional[list[dict]] = None,
     axis_tol: float = 0.05,
     pos_tol: float = 0.03,
-    assign_method: Literal["redrep", "greedy", "HK"] = "redrep",
+    assign_method: Literal["redrep", "greedy", "HK", "pymatgen"] = "redrep",
     num_process: int = -1,
     backend: str = "loky",
     primitive_symprecs: list[float] = [1e-5, 1e-4, 1e-3, 1e-2],
@@ -148,7 +147,7 @@ def struct_compare(
     poscar_paths,
     axis_tol: float = 0.01,
     pos_tol: float = 0.01,
-    assign_method: Literal["redrep", "greedy", "HK"] = "redrep",
+    assign_method: Literal["redrep", "greedy", "HK", "pymatgen"] = "redrep",
     refine_symprec: float = 1e-3,
     reduced_symprecs: list[float] = None,
     normalize_axis: bool = False,

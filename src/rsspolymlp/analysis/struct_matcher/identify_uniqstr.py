@@ -18,7 +18,7 @@ class UniqueStructIdentifier:
         self,
         axis_tol: float = 0.01,
         pos_tol: float = 0.01,
-        assign_method: Literal["redrep", "greedy", "HK"] = "redrep",
+        assign_method: Literal["redrep", "greedy", "HK", "pymatgen"] = "redrep",
         keep_unique: bool = False,
         verbose: bool = False,
     ):
@@ -43,6 +43,10 @@ class UniqueStructIdentifier:
         self.assign_method = assign_method
         self.keep_unique = keep_unique
         self.verbose = verbose
+        if self.assign_method == "pymatgen":
+            from rsspolymlp.utils.pymatgen_utils import PymatUtil
+
+            self.pymat = PymatUtil()
 
         self.unique_str: list[StructReps] = []  # Store unique structures
         self.unique_str_prop: list[dict] = []  # Store unique structure properties
@@ -94,6 +98,12 @@ class UniqueStructIdentifier:
                         axis_tol=self.axis_tol,
                         pos_tol=self.pos_tol,
                     )
+                elif self.assign_method == "pymatgen":
+                    st1 = self.pymat.polymlp_to_pymat_st(uniq_str.original_polymlp_st)
+                    st2 = self.pymat.polymlp_to_pymat_st(
+                        struct_reps.original_polymlp_st
+                    )
+                    judge_duplicate = self.pymat.match_str(st1, st2)
                 else:
                     judge_duplicate = struct_match_allrep(
                         uniq_str,
@@ -171,7 +181,7 @@ def identify_unique_structure(
     struct_list: list[dict],
     axis_tol: float = 0.01,
     pos_tol: float = 0.01,
-    assign_method: Literal["redrep", "greedy", "HK"] = "redrep",
+    assign_method: Literal["redrep", "greedy", "HK", "pymatgen"] = "redrep",
     keep_unique: bool = False,
     num_process: int = -1,
     backend: str = "loky",

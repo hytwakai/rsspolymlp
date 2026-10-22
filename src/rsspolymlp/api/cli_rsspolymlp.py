@@ -212,6 +212,13 @@ def run():
         help="List of element symbols",
     )
     parser.add_argument(
+        "--assign_method",
+        choices=["redrep", "greedy", "HK", "pymatgen"],
+        default="redrep",
+        help="Method for matching atomic positions: "
+        "reduced representation, greedy, or Hopcroft-Karp",
+    )
+    parser.add_argument(
         "--primitive_symprecs",
         nargs="*",
         type=float,
@@ -314,6 +321,7 @@ def run():
             element_order=args.element_order,
             num_process=args.num_process,
             backend=args.backend,
+            assign_method=args.assign_method,
             primitive_symprecs=args.primitive_symprecs,
             output_poscar=args.output_poscar,
             thresholds=args.thresholds,
