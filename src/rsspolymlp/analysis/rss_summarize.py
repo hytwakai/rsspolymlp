@@ -596,6 +596,14 @@ def log_all_unique_structures(
     with open(file_name, "a") as f:
         print("unique_structures:", file=f)
         for idx1, _str in enumerate(unique_structs):
+            if unique_str_prop is not None:
+                sorted_data = sorted(
+                    zip(unique_structs[idx1], unique_str_prop[idx1]),
+                    key=lambda x: x[1]["energy"],
+                )
+                unique_structs[idx1], unique_str_prop[idx1] = map(
+                    list, zip(*sorted_data)
+                )
             print(f"  - struct_No: {idx1 + 1}", file=f)
             print("    structures:", file=f)
             for idx2, _str in enumerate(unique_structs[idx1]):
