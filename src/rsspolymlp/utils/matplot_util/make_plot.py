@@ -230,14 +230,17 @@ class MakePlot:
                     rasterized=rasterized,
                 )
 
-    def ax_hist(self, dist, bins=50, range=None):
+    def ax_hist(self, dist, bins=50, range=None, density=False, fraction=False):
         if range is None:
             range = [min(dist), max(dist)]
+        weights = np.ones(len(dist)) / len(dist) if fraction else None
         self.ax.hist(
             dist,
             bins=bins,
             range=range,
             color=self.color,
+            density=density,
+            weights=weights,
         )
 
     def finalize_ax(
@@ -288,7 +291,9 @@ class MakePlot:
         """
         self._set_axis_scale(xlog, ylog, xlog_grid, ylog_grid)
         self._set_axis_limits(x_limits, x_limits_hide, y_limits, y_limits_hide)
-        self._set_axis_grid(x_limits, y_limits, x_grid, y_grid)
+        self._set_axis_grid(
+            x_limits, y_limits, x_grid, y_grid, x_limits_hide, y_limits_hide
+        )
         self._set_axis_labels(xlabel, ylabel, title)
         self._set_twiny(twiny, x_limits, x_grid)
         if legend_ncol:
@@ -323,7 +328,9 @@ class MakePlot:
         if y_limits_hide:
             self.ax.tick_params(labelleft=False)
 
-    def _set_axis_grid(self, x_limits, y_limits, x_grid, y_grid):
+    def _set_axis_grid(
+        self, x_limits, y_limits, x_grid, y_grid, x_limits_hide, y_limits_hide
+    ):
         """Set grid spacing for axes."""
         if x_grid:
             if x_grid[1]:
@@ -341,6 +348,10 @@ class MakePlot:
                     np.append(np.arange(*y_limits, y_grid[0]), y_limits[1]), 6
                 )
                 self.ax.set_yticks(y_values)
+        if x_limits_hide:
+            self.ax.set_xticks([])
+        if y_limits_hide:
+            self.ax.set_yticks([])
 
     def _set_axis_labels(self, xlabel, ylabel, title):
         """Set labels and title for axes."""
