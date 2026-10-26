@@ -125,6 +125,7 @@ class RSSResultSummarizer:
                             axis_tol=axis_tol,
                             pos_tol=pos_tol,
                             assign_method=self.assign_method,
+                            primitive_symprecs=self.primitive_symprecs,
                             pre_analyzer=self.analyzer,
                         )
 
@@ -219,6 +220,7 @@ class RSSResultSummarizer:
                     axis_tol=axis_tol,
                     pos_tol=pos_tol,
                     assign_method=self.assign_method,
+                    primitive_symprecs=self.primitive_symprecs,
                     pre_analyzer=self.analyzer,
                 )
             time_finish = time() - time_start
@@ -519,6 +521,7 @@ def log_unique_structures(
     enthalpy_lists: Optional[list[float]] = None,
     is_ghost_minima=None,
     unique_struct_iters=None,
+    print_duplicates: bool = False,
 ):
     if is_ghost_minima is None:
         is_ghost_minima = np.full_like(struct_reps_list, False, dtype=bool)
@@ -581,7 +584,8 @@ def log_unique_structures(
                 if unique_struct_iters is not None:
                     info.append(f"iteration {unique_struct_iters[idx]}")
                 print(f"    other_info: {' / '.join(info)}", file=f)
-
+                if print_duplicates:
+                    print("    duplicate_paths:", _str.dupstr_paths, file=f)
                 if is_ghost_minima[idx]:
                     print("    ghost_minima_flag: true", file=f)
 

@@ -30,6 +30,7 @@ def struct_matcher(
     refine_cell: bool = False,
     normalize_axis: bool = False,
     output_file: str = "unique_struct.yaml",
+    print_duplicates: bool = False,
     log_all: bool = False,
     verbose: bool = False,
 ):
@@ -140,6 +141,7 @@ def struct_matcher(
         log_unique_structures(
             output_file,
             unique_structs_sorted,
+            print_duplicates=print_duplicates,
         )
 
 
