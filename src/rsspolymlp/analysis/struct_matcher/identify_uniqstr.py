@@ -120,9 +120,6 @@ class UniqueStructIdentifier:
                     is_unique = False
                     if self._spg_count(struct_reps.spg_list) > self._spg_count(
                         uniq_str.spg_list
-                    ) or (
-                        self._spg_count(struct_reps.spg_list)
-                        == self._spg_count(uniq_str.spg_list)
                     ):
                         is_change_struct = True
                     break

@@ -79,8 +79,6 @@ def struct_matcher(
         assign_method=assign_method,
         verbose=verbose,
     )
-    if not assign_method == "redrep":
-        pos_tol /= 10
     for struct_reps in struct_reps_list:
         analyzer.identify_duplicate_struct(
             struct_reps=struct_reps,

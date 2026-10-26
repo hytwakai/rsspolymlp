@@ -242,6 +242,7 @@ def struct_match_allrep(
                     pos_reps2 = [
                         pos for pos_dict in pos2 for pos in pos_dict["pos_reps"]
                     ]
+
                     pos1_array = np.array(pos_reps1)
                     pos2_array = np.array(pos_reps2)
                     pre_judge = sort_match_screen(
@@ -250,7 +251,7 @@ def struct_match_allrep(
                         elements1,
                         elements2,
                         axis_abc,
-                        pos_tol,
+                        pos_tol * 2,
                         verbose=verbose,
                     )
                     row, col = np.where(pre_judge)

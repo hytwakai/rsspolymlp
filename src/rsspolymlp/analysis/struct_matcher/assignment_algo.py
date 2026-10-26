@@ -22,17 +22,16 @@ def sort_match_screen(
 
     def sort_positions_axis(pos_reps, elements, axis):
         pos_reps = np.asarray(pos_reps)
-        sorted_reps = np.empty_like(pos_reps[:, :, axis])
+        reps_diff = np.empty_like(pos_reps[:, :, axis])
         start = 0
         for el in unique_elements:
             idx = np.flatnonzero(elements == el)
-            n = len(idx)
-            sorted_reps[:, start : start + n] = np.sort(
-                pos_reps[:, idx, axis],
-                axis=1,
-            )
-            start += n
-        return sorted_reps
+            sorted_reps = np.sort(pos_reps[:, idx, axis], axis=1)
+            diff = np.roll(sorted_reps, -1, axis=1) - sorted_reps
+            diff[:, -1] += axis_abc[axis]
+            reps_diff[:, start : start + len(idx)] = np.sort(diff, axis=1)
+            start += len(idx)
+        return reps_diff
 
     matched = np.ones(
         (len(pos_reps1), len(pos_reps2)),
