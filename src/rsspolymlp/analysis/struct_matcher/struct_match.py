@@ -228,6 +228,7 @@ def struct_match_allrep(
             if verbose:
                 print("--- Matching start ------")
             iter_matching = 0
+            t_matching = 0
             if len(st_1.elements) == 1:
                 judge_st_match = True
             else:
@@ -238,7 +239,7 @@ def struct_match_allrep(
                     axis_abc = axis_abc_list1[i1]
                     pos1 = allpos_list1[i1]
                     pos2 = allpos_list2[j1]
-                    pos_reps1 = pos1[0]["pos_reps"]
+                    pos_reps1 = [pos1[0]["pos_reps"][0]]
                     pos_reps2 = [
                         pos for pos_dict in pos2 for pos in pos_dict["pos_reps"]
                     ]
@@ -260,6 +261,7 @@ def struct_match_allrep(
                     for i2, j2 in zip(row, col):
                         if judge_st_match:
                             break
+                        t_start_match = time.time()
                         if assign_method == "greedy":
                             judge_st_match = greedy_match(
                                 pos_reps1[i2],
@@ -268,7 +270,6 @@ def struct_match_allrep(
                                 elements2,
                                 axis_abc,
                                 pos_tol,
-                                verbose=verbose,
                             )
                         elif assign_method == "HK":
                             judge_st_match = bottleneck_assignment(
@@ -278,14 +279,18 @@ def struct_match_allrep(
                                 elements2,
                                 axis_abc,
                                 pos_tol,
-                                verbose=verbose,
                             )
                         else:
                             raise ValueError(
                                 f"Unknown assignment method: {assign_method}"
                             )
+                        t_matching += time.time() - t_start_match
                         iter_matching += 1
             if verbose:
                 print("Iterations of matching:", iter_matching)
+                if iter_matching > 0:
+                    print(
+                        f"Time average of matching: {round((t_matching / iter_matching) * 1000, 2)} ms"
+                    )
                 print("--- Matching finished ---")
     return judge_st_match
