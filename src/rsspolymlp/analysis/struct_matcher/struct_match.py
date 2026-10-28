@@ -227,8 +227,8 @@ def struct_match_allrep(
 
             if verbose:
                 print("--- Matching start ------")
-            iter_matching = 0
-            t_matching = 0
+            iter_match = 0
+            t_match = 0
             if len(st_1.elements) == 1:
                 judge_st_match = True
             else:
@@ -284,13 +284,13 @@ def struct_match_allrep(
                             raise ValueError(
                                 f"Unknown assignment method: {assign_method}"
                             )
-                        t_matching += time.time() - t_start_match
-                        iter_matching += 1
+                        t_match += time.time() - t_start_match
+                        iter_match += 1
             if verbose:
-                print("Iterations of matching:", iter_matching)
-                if iter_matching > 0:
+                print("Iterations of matching:", iter_match)
+                if iter_match > 0:
                     print(
-                        f"Time average of matching: {round((t_matching / iter_matching) * 1000, 2)} ms"
+                        f"Time average of matching: {round((t_match / iter_match) * 1000, 2)} ms"
                     )
                 print("--- Matching finished ---")
     return judge_st_match
