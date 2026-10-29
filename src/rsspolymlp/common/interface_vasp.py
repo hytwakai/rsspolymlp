@@ -1,4 +1,8 @@
-"""Interfaces for vasp."""
+"""
+Interfaces for vasp.
+Copyright (c) 2026, pypolymlp, Atsuto Seko
+Copyright (c) 2026, rsspolymlp, Hayato Wakai
+"""
 
 import re
 import xml.etree.ElementTree as ET
