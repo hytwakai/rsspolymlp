@@ -1,6 +1,5 @@
 from typing import Literal, Optional
 
-from pypolymlp.utils.spglib_utils import SymCell
 from rsspolymlp.analysis.rss_summarize import (
     log_all_unique_structures,
     log_unique_structures,
@@ -9,6 +8,7 @@ from rsspolymlp.analysis.struct_matcher.gen_struct_rep import StructRepGenerator
 from rsspolymlp.analysis.struct_matcher.identify_uniqstr import (
     UniqueStructIdentifier,
 )
+from rsspolymlp.analysis.struct_matcher.spglib_utils import SymCell
 from rsspolymlp.analysis.struct_matcher.struct_match import (
     struct_match,
     struct_match_allrep,

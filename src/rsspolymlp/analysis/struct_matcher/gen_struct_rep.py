@@ -6,13 +6,13 @@ from typing import Optional
 
 import joblib
 import numpy as np
-from pypolymlp.core.data_format import PolymlpStructure
 
+from pypolymlp.core.data_format import PolymlpStructure
 from rsspolymlp.analysis.struct_matcher.redrep_position import PositionRepReducer
+from rsspolymlp.analysis.struct_matcher.spglib_utils import SymCell
 from rsspolymlp.common.composition import compute_composition
 from rsspolymlp.common.interface_vasp import Poscar
 from rsspolymlp.common.property import PropUtil
-from rsspolymlp.utils.spglib_utils import SymCell
 
 
 @dataclass
