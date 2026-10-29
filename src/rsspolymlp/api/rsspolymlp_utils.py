@@ -8,12 +8,12 @@ from rsspolymlp.analysis.struct_matcher.gen_struct_rep import StructRepGenerator
 from rsspolymlp.analysis.struct_matcher.identify_uniqstr import (
     UniqueStructIdentifier,
 )
-from rsspolymlp.analysis.struct_matcher.spglib_utils import SymCell
 from rsspolymlp.analysis.struct_matcher.struct_match import (
     struct_match,
     struct_match_allrep,
 )
 from rsspolymlp.rss.optimization_mlp import OptimizationMLP
+from rsspolymlp.utils.spglib_utils import SymCell
 
 
 def struct_matcher(

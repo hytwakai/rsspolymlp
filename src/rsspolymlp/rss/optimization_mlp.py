@@ -7,7 +7,7 @@ import numpy as np
 
 from pypolymlp.calculator.opt_geometry import GeometryOptimization
 from pypolymlp.calculator.properties import Properties
-from rsspolymlp.analysis.struct_matcher.spglib_utils import SymCell
+from rsspolymlp.utils.spglib_utils import SymCell
 from rsspolymlp.common.interface_vasp import Poscar
 
 

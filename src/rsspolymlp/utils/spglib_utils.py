@@ -137,31 +137,6 @@ class SymCell:
         )
         return st
 
-    def niggli_reduce(self):
-        """Niggli reduction."""
-        axis_niggli = spglib.niggli_reduce(
-            self.axis,
-            eps=self.symprec,
-        )
-        M_float = axis_niggli @ np.linalg.inv(self.axis)
-        M = np.rint(M_float).astype(np.int64)
-        pos = self.positions @ np.linalg.inv(M)
-        pos %= 1.0
-
-        assert np.allclose(M @ self.axis, axis_niggli, atol=1e-5)
-        assert abs(round(np.linalg.det(M))) == 1
-
-        st = PolymlpStructure(
-            axis=axis_niggli.T,
-            positions=pos.T,
-            n_atoms=self.n_atoms,
-            elements=self.elements,
-            types=self.types,
-            volume=np.linalg.det(axis_niggli),
-            comment=self.comment,
-        )
-        return st, M
-
     def get_spacegroup(self):
         """Return space group."""
         try:

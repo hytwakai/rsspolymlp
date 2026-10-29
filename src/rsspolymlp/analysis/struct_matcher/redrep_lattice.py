@@ -1,6 +1,11 @@
-import numpy as np
+from typing import Optional
 
+import numpy as np
+import spglib
+
+from pypolymlp.core.data_format import PolymlpStructure
 from rsspolymlp.analysis.struct_matcher.chiral_spg import is_chiral
+from rsspolymlp.common.interface_vasp import Poscar
 
 
 def calc_metric_tensor(axis: np.ndarray):
@@ -142,3 +147,35 @@ def signed_permutation_matrices():
     )
 
     return proper_matrices, improper_matrices
+
+
+def niggli_reduce(
+    poscar_name: str = None,
+    st: Optional[PolymlpStructure] = None,
+    axis: Optional[np.ndarray] = None,
+    positions: Optional[np.ndarray] = None,
+    symprec: float = 1e-5,
+):
+    """Niggli reduction."""
+    if poscar_name is not None:
+        st = Poscar(poscar_name).structure
+
+    if st is None:
+        axis = np.array(axis)
+        positions = np.array(positions)
+    else:
+        axis = st.axis.T
+        positions = st.positions.T
+
+    axis_niggli = spglib.niggli_reduce(
+        axis,
+        eps=symprec,
+    )
+    M_float = axis_niggli @ np.linalg.inv(axis)
+    M = np.rint(M_float).astype(np.int64)
+    pos = positions @ np.linalg.inv(M)
+    pos %= 1.0
+
+    assert np.allclose(M @ axis, axis_niggli, atol=1e-5)
+    assert abs(round(np.linalg.det(M))) == 1
+    return axis_niggli, pos, M
