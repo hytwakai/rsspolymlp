@@ -20,11 +20,11 @@ from rsspolymlp.analysis.struct_matcher.identify_uniqstr import (
     UniqueStructIdentifier,
     identify_unique_structure,
 )
-from rsspolymlp.common.composition import compute_composition
-from rsspolymlp.common.convert_dict import (
+from rsspolymlp.analysis.utils.convert_data_format import (
     polymlp_struct_from_dict,
     polymlp_struct_to_dict,
 )
+from rsspolymlp.common.composition import compute_composition
 from rsspolymlp.common.interface_vasp import Vasprun, parse_properties_from_vasprun
 from rsspolymlp.common.property import PropUtil
 

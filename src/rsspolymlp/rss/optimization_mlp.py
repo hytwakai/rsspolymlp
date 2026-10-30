@@ -7,7 +7,8 @@ import numpy as np
 
 from pypolymlp.calculator.opt_geometry import GeometryOptimization
 from pypolymlp.calculator.properties import Properties
-from rsspolymlp.utils.spglib_utils import SymCell
+from rsspolymlp.common.interface_pypolymlp import gen_polymlp_structure
+from rsspolymlp.common.interface_spglib import SymCell
 from rsspolymlp.common.interface_vasp import Poscar
 
 
@@ -197,8 +198,11 @@ class OptimizationMLP:
         refine_success = False
         for sp in symprec_list:
             try:
-                sym = SymCell(poscar_name=poscar_path, symprec=sp)
-                self.minobj.structure = sym.refine_cell()
+                st = Poscar(poscar_path).structure
+                sym = SymCell(st.axis.T, st.positions.T, st.elements, symprec=sp)
+                axis, positions, elements = sym.refine_cell()
+                polymlp_st = gen_polymlp_structure(axis, positions, elements)
+                self.minobj.structure = polymlp_st
                 refine_success = True
                 break
             except TypeError:
@@ -239,7 +243,8 @@ class OptimizationMLP:
         spg_sets = []
         for tol in [1e-5, 1e-4, 1e-3, 1e-2]:
             try:
-                sym = SymCell(poscar_name=poscar_path, symprec=tol)
+                st = Poscar(poscar_path).structure
+                sym = SymCell(st.axis.T, st.positions.T, st.elements, symprec=tol)
                 spg = sym.get_spacegroup()
                 spg_sets.append(spg)
                 print(f"Space group ({tol}):", spg, flush=True)

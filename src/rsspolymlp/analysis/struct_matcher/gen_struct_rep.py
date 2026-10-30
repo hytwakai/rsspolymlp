@@ -12,9 +12,9 @@ from rsspolymlp.analysis.struct_matcher.primitive_transform import get_primitive
 from rsspolymlp.analysis.struct_matcher.redrep_lattice import niggli_reduce
 from rsspolymlp.analysis.struct_matcher.redrep_position import PositionRepReducer
 from rsspolymlp.common.composition import compute_composition
+from rsspolymlp.common.interface_spglib import SymCell
 from rsspolymlp.common.interface_vasp import Poscar
 from rsspolymlp.common.property import PropUtil
-from rsspolymlp.utils.spglib_utils import SymCell
 
 
 @dataclass
@@ -262,7 +262,12 @@ class StructRepGenerator:
             primitive_cell = get_primitive_cell(
                 axis=axis, positions=pos, elements=elements, tol=symprec
             )
-            symutil = SymCell(st=polymlp_st, symprec=symprec)
+            symutil = SymCell(
+                primitive_cell.axis,
+                primitive_cell.positions,
+                primitive_cell.elements,
+                symprec=symprec,
+            )
             spg_str = symutil.get_spacegroup()
             if spg_str is None:
                 spg_number = 1

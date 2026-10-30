@@ -12,8 +12,10 @@ from rsspolymlp.analysis.struct_matcher.struct_match import (
     struct_match,
     struct_match_allrep,
 )
+from rsspolymlp.common.interface_pypolymlp import gen_polymlp_structure
+from rsspolymlp.common.interface_spglib import SymCell
+from rsspolymlp.common.interface_vasp import Poscar
 from rsspolymlp.rss.optimization_mlp import OptimizationMLP
-from rsspolymlp.utils.spglib_utils import SymCell
 
 
 def struct_matcher(
@@ -151,10 +153,15 @@ def struct_compare(
     normalize_axis: bool = False,
     verbose: bool = True,
 ):
-    sym = SymCell(poscar_name=poscar_paths[0], symprec=refine_symprec)
-    polymlp_st1 = sym.refine_cell()
-    sym = SymCell(poscar_name=poscar_paths[1], symprec=refine_symprec)
-    polymlp_st2 = sym.refine_cell()
+    st = Poscar(poscar_paths[0]).structure
+    sym = SymCell(st.axis.T, st.positions.T, st.elements, symprec=refine_symprec)
+    axis, positions, elements = sym.refine_cell()
+    polymlp_st1 = gen_polymlp_structure(axis, positions, elements)
+
+    st = Poscar(poscar_paths[1]).structure
+    sym = SymCell(st.axis.T, st.positions.T, st.elements, symprec=refine_symprec)
+    axis, positions, elements = sym.refine_cell()
+    polymlp_st2 = gen_polymlp_structure(axis, positions, elements)
 
     if verbose:
         print("Structure 1:")
