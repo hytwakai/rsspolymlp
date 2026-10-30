@@ -37,7 +37,7 @@ class PropUtil:
         alpha = self.angle_between(b, c)
         beta = self.angle_between(a, c)
         gamma = self.angle_between(a, b)
-        return np.array([norm_a, norm_b, norm_c, alpha, beta, gamma]).tolist()
+        return [norm_a, norm_b, norm_c, alpha, beta, gamma]
 
     @property
     def metric_tensor(self):

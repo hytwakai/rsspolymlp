@@ -87,11 +87,6 @@ def run():
         help="Normalize lattice axes for reduced structure representation",
     )
     parser.add_argument(
-        "--refine_cell",
-        action="store_true",
-        help="Refine structures",
-    )
-    parser.add_argument(
         "--output_file",
         type=str,
         default="unique_struct.yaml",
@@ -143,7 +138,6 @@ def run():
             backend=args.backend,
             primitive_symprecs=args.primitive_symprecs,
             reduced_symprecs=args.reduced_symprecs,
-            refine_cell=args.refine_cell,
             normalize_axis=args.normalize_axis,
             output_file=args.output_file,
             log_all=args.log_all,
@@ -158,7 +152,6 @@ def run():
             refine_symprec=args.refine_symprec,
             reduced_symprecs=args.reduced_symprecs,
             normalize_axis=args.normalize_axis,
-            refine_cell=args.refine_cell,
             verbose=not args.not_verbose,
         )
 

@@ -185,7 +185,6 @@ def identify_unique_structure(
     primitive_symprecs: list[float] = [1e-5, 1e-4, 1e-3, 1e-2],
     redrep_symprecs: list[float] = [1e-4, 1e-2, 1e-1],
     normalize_axis: bool = False,
-    refine_cell: bool = False,
     pre_analyzer: Optional[UniqueStructIdentifier] = None,
     verbose: bool = False,
 ):
@@ -221,7 +220,6 @@ def identify_unique_structure(
         primitive_symprecs=primitive_symprecs,
         redrep_symprecs=redrep_symprecs,
         normalize_axis=normalize_axis,
-        refine_cell=refine_cell,
     )
     redreps_list = generator.generate_struct_reps_parallel(
         struct_list,

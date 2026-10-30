@@ -43,7 +43,9 @@ class SymCell:
             self.axis = st.axis.T
             self.positions = st.positions.T
             self.elements = st.elements
-            self.types = st.types.tolist() if isinstance(st.types, np.ndarray) else st.types
+            self.types = (
+                st.types.tolist() if isinstance(st.types, np.ndarray) else st.types
+            )
             if st.comment is not None:
                 self.comment = st.comment
 

@@ -24,11 +24,6 @@ def get_reduced_lattice(
     spg_number: int,
     symprec: list[float] = [1e-2, 1e-2, 1e-2],
 ):
-    metric_tensor = calc_metric_tensor(axis)
-    is_rhombohedral = np.all(
-        np.abs(metric_tensor[:3] - metric_tensor[0]) <= np.min(symprec)
-    ) and np.all(np.abs(metric_tensor[3:] - metric_tensor[3]) <= np.min(symprec))
-
     proper_matrices, improper_matrices = signed_permutation_matrices()
     if not is_chiral(spg_number):
         all_signed_permutation_matrices = np.concatenate(
@@ -53,10 +48,7 @@ def get_reduced_lattice(
     signed_permutation_cands = all_signed_permutation_matrices
     for idx in range(6):
         # Get the reduced axis representation
-        if is_rhombohedral:
-            ref_metric = metric_tensor[idx]
-        else:
-            ref_metric = np.min(metric_tensor_cands[:, idx])
+        ref_metric = np.min(metric_tensor_cands[:, idx])
         is_near_max = np.where(
             np.abs(metric_tensor_cands[:, idx] - ref_metric) <= symprec[idx % 3]
         )[0]

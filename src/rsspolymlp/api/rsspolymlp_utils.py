@@ -27,7 +27,6 @@ def struct_matcher(
     backend: str = "loky",
     primitive_symprecs: list[float] = [1e-5, 1e-4, 1e-3, 1e-2],
     reduced_symprecs: list[float] = None,
-    refine_cell: bool = False,
     normalize_axis: bool = False,
     output_file: str = "unique_struct.yaml",
     print_duplicates: bool = False,
@@ -57,7 +56,6 @@ def struct_matcher(
             primitive_symprecs=primitive_symprecs,
             redrep_symprecs=reduced_symprecs,
             normalize_axis=normalize_axis,
-            refine_cell=refine_cell,
             verbose=verbose,
         )
         struct_reps_list = generator.generate_struct_reps_parallel(
@@ -151,7 +149,6 @@ def struct_compare(
     refine_symprec: float = 1e-3,
     reduced_symprecs: list[float] = None,
     normalize_axis: bool = False,
-    refine_cell: bool = False,
     verbose: bool = True,
 ):
     sym = SymCell(poscar_name=poscar_paths[0], symprec=refine_symprec)
@@ -179,7 +176,6 @@ def struct_compare(
     generator = StructRepGenerator(
         redrep_symprecs=reduced_symprecs,
         normalize_axis=normalize_axis,
-        refine_cell=refine_cell,
     )
     struct_reps_1, _ = generator.generate_struct_reps(
         polymlp_st=polymlp_st1,

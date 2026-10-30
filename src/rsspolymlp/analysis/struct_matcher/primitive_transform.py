@@ -24,23 +24,22 @@ from sympy.matrices.normalforms import hermite_normal_form
 
 
 @dataclass
-class PrimitiveTransformResult:
+class PrimitiveCell:
     """Result of primitive-cell transformation recovery."""
 
     M: np.ndarray  # integer 3x3 matrix
     index: int  # |det(M)|, number of original cells in primitive cell
     translations: np.ndarray  # valid translations in original fractional coordinates
-    primitive_lattice: np.ndarray  # inv(M) @ original lattice matrix
-    primitive_positions: (
-        np.ndarray
-    )  # unique sites in primitive-cell fractional coordinates
-    primitive_elements: np.ndarray  # elements corresponding to primitive_positions
+    axis: np.ndarray  # inv(M) @ original lattice matrix
+    positions: np.ndarray  # unique sites in primitive-cell fractional coordinates
+    elements: np.ndarray  # elements corresponding to primitive_positions
+    axis_abc: np.ndarray
     mapped_positions: (
         np.ndarray
     )  # all original sites transformed by M, wrapped to [0, 1)
 
 
-def find_primitive_transform(
+def get_primitive_cell(
     axis: np.ndarray,
     positions: np.ndarray,
     elements: np.ndarray | list[str],
@@ -48,7 +47,7 @@ def find_primitive_transform(
     translation_tol: float | None = None,
     integer_tol: float = 1e-2,
     verbose: bool = True,
-) -> PrimitiveTransformResult:
+) -> PrimitiveCell:
     """Find a primitive-cell transformation from lattice and atom arrays.
 
     Parameters
@@ -68,7 +67,7 @@ def find_primitive_transform(
 
     Returns
     -------
-    PrimitiveTransformResult
+    PrimitiveCell
         Integer transformation M, index |det(M)|, valid translations, and the
         transformed lattice and fractional coordinates.
 
@@ -142,7 +141,7 @@ def find_primitive_transform(
     M = _get_transformation_matrix(translations, index, integer_tol=integer_tol)
     primitive_lattice = np.linalg.inv(M.astype(float)) @ axis
     mapped_positions = np.mod(positions @ M, 1.0)
-    primitive_positions, primitive_elements = _extract_unique_primitive_sites(
+    primitive_positions, primitive_elements = _extract_primitive_positions(
         mapped_positions, elements, primitive_lattice, tol
     )
 
@@ -154,13 +153,14 @@ def find_primitive_transform(
             "Check the tolerance and translation detection."
         )
 
-    return PrimitiveTransformResult(
+    return PrimitiveCell(
         M=M,
         index=index,
         translations=translations,
-        primitive_lattice=primitive_lattice,
-        primitive_positions=primitive_positions,
-        primitive_elements=primitive_elements,
+        axis=primitive_lattice,
+        positions=primitive_positions,
+        elements=primitive_elements,
+        axis_abc=axis_abc(primitive_lattice),
         mapped_positions=mapped_positions,
     )
 
@@ -292,38 +292,51 @@ def _get_transformation_matrix(
     return M
 
 
-def _extract_unique_primitive_sites(
+def _extract_primitive_positions(
     mapped_positions: np.ndarray,
     elements: np.ndarray,
     primitive_lattice: np.ndarray,
     tol: float,
 ) -> tuple[np.ndarray, np.ndarray]:
     """Merge equivalent sites modulo the primitive lattice using mean coordinates."""
-    clusters: list[list[np.ndarray]] = []
-    unique_elements: list[str] = []
-
+    matched_positions: list[list[np.ndarray]] = []
+    primitive_elements: list[str] = []
     for coord, element in zip(mapped_positions, elements):
         coord = np.asarray(coord, dtype=float)
         is_duplicate = False
-        for cluster, old_element in zip(clusters, unique_elements):
+        for positions, old_element in zip(matched_positions, primitive_elements):
             if element != old_element:
                 continue
             if (
-                _periodic_cartesian_distance_frac(coord, cluster[0], primitive_lattice)
+                _periodic_cartesian_distance_frac(coord, positions[0], primitive_lattice)
                 <= tol
             ):
-                cluster.append(coord)
+                positions.append(coord)
                 is_duplicate = True
                 break
         if not is_duplicate:
-            clusters.append([coord])
-            unique_elements.append(str(element))
+            matched_positions.append([coord])
+            primitive_elements.append(str(element))
 
-    unique_coords = np.asarray(
-        [np.mean(cluster, axis=0) for cluster in clusters],
-        dtype=float,
-    ).reshape(-1, 3)
-    return unique_coords, np.asarray(unique_elements, dtype=str)
+    primitive_positions = []
+    shifts = np.asarray(list(product((-1, 0, 1), repeat=3)), dtype=int)
+    for cluster in matched_positions:
+        # Find periodic images nearest to the reference coordinate.
+        cluster_array = np.asarray(cluster, dtype=float)
+        delta = cluster_array - cluster[0]
+        fracs_candidates = delta[:, None, :] + shifts[None, :, :]
+        distances = np.linalg.norm(fracs_candidates, axis=2)
+        best_shifts = shifts[np.argmin(distances, axis=1)]
+
+        # Average coordinates after applying periodic corrections.
+        unwrapped = cluster_array + best_shifts
+        mean_coord = np.mean(unwrapped, axis=0) % 1.0
+        primitive_positions.append(mean_coord)
+
+    return (
+        np.asarray(primitive_positions, dtype=float).reshape(-1, 3),
+        np.asarray(primitive_elements, dtype=str),
+    )
 
 
 def _periodic_cartesian_distance_frac(
@@ -334,3 +347,21 @@ def _periodic_cartesian_distance_frac(
     shifts = np.asarray(list(product((-1, 0, 1), repeat=3)), dtype=float)
     cart = (delta[None, :] + shifts) @ axis
     return float(np.min(np.linalg.norm(cart, axis=1)))
+
+
+def axis_abc(axis):
+    """Convert lattice vectors to unit cell parameters."""
+
+    def angle_between(v1, v2):
+        dot_product = np.dot(v1, v2)
+        norms = np.linalg.norm(v1) * np.linalg.norm(v2)
+        return np.degrees(np.arccos(np.clip(dot_product / norms, -1.0, 1.0)))
+
+    a, b, c = np.array(axis)
+    norm_a = np.linalg.norm(a)
+    norm_b = np.linalg.norm(b)
+    norm_c = np.linalg.norm(c)
+    alpha = angle_between(b, c)
+    beta = angle_between(a, c)
+    gamma = angle_between(a, b)
+    return np.array([norm_a, norm_b, norm_c, alpha, beta, gamma])

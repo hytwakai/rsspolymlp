@@ -8,6 +8,8 @@ import joblib
 import numpy as np
 
 from pypolymlp.core.data_format import PolymlpStructure
+from rsspolymlp.analysis.struct_matcher.primitive_transform import get_primitive_cell
+from rsspolymlp.analysis.struct_matcher.redrep_lattice import niggli_reduce
 from rsspolymlp.analysis.struct_matcher.redrep_position import PositionRepReducer
 from rsspolymlp.common.composition import compute_composition
 from rsspolymlp.common.interface_vasp import Poscar
@@ -32,7 +34,6 @@ class StructReps:
     primitive_symprecs: list[float]
     redrep_symprecs: list[float]
     normalize_axis: bool
-    refine_cell: bool
     struct_path: Optional[str]
     struct_tag: Optional[int]
     dupstr_paths: set[str]
@@ -42,16 +43,14 @@ class StructRepGenerator:
 
     def __init__(
         self,
-        primitive_symprecs: list[float] = [1e-5, 1e-4, 1e-3, 1e-2],
+        primitive_symprecs: list[float] = [1e-2],
         redrep_symprecs: list[float] = [1e-4, 1e-2, 1e-1],
         normalize_axis: bool = False,
-        refine_cell: bool = False,
         verbose: bool = False,
     ):
         self.primitive_symprecs = primitive_symprecs
         self.redrep_symprecs = redrep_symprecs
         self.normalize_axis = normalize_axis
-        self.refine_cell = refine_cell
         self.verbose = verbose
 
         self.iter_refine = 0
@@ -103,7 +102,9 @@ class StructRepGenerator:
                 key=lambda x: x if isinstance(x, (int, float)) else sum(x) / len(x),
             )
             struct_rep, log_redrep = self.generate_struct_rep(
-                primitive_st,
+                primitive_st.axis,
+                primitive_st.positions,
+                primitive_st.elements,
                 spg_number_set[i],
             )
             struct_rep_list.append(struct_rep)
@@ -125,7 +126,6 @@ class StructRepGenerator:
                 primitive_symprecs=self.primitive_symprecs,
                 redrep_symprecs=redrep_symprecs,
                 normalize_axis=self.normalize_axis,
-                refine_cell=self.refine_cell,
                 struct_path=struct_path,
                 struct_tag=struct_tag,
                 dupstr_paths=dupstr_paths,
@@ -135,7 +135,9 @@ class StructRepGenerator:
 
     def generate_struct_rep(
         self,
-        polymlp_st: PolymlpStructure,
+        axis: np.ndarray,
+        positions: np.ndarray,
+        elements: np.ndarray,
         spg_number: int,
     ) -> tuple[StructRep, tuple]:
         """
@@ -167,11 +169,10 @@ class StructRepGenerator:
             if isinstance(symprec, float):
                 input_symprec = [symprec] * 3
             t_start = time.time()
-            st = polymlp_st
             reducer = PositionRepReducer(
-                st.axis.T,
-                st.positions.T,
-                st.elements,
+                axis,
+                positions,
+                elements,
                 spg_number,
                 symprec=input_symprec,
                 normalize_axis=self.normalize_axis,
@@ -248,12 +249,19 @@ class StructRepGenerator:
             raise ValueError("Set poscar_path or poymlp_st")
         if polymlp_st is None:
             polymlp_st = Poscar(poscar_path).structure
+        axis = polymlp_st.axis.T
+        pos = polymlp_st.positions.T
+        elements = polymlp_st.elements
 
         primitive_st_set = []
         spg_number_set = []
         iter_refine = 0
         time_refine = 0
         for symprec in self.primitive_symprecs:
+            t_start = time.time()
+            primitive_cell = get_primitive_cell(
+                axis=axis, positions=pos, elements=elements, tol=symprec
+            )
             symutil = SymCell(st=polymlp_st, symprec=symprec)
             spg_str = symutil.get_spacegroup()
             if spg_str is None:
@@ -261,21 +269,16 @@ class StructRepGenerator:
             else:
                 spg_number = int(re.search(r"\((\d+)\)", spg_str).group(1))
 
-            if spg_number in spg_number_set:
-                continue
-            else:
-                t_start = time.time()
-                try:
-                    if not self.refine_cell:
-                        primitive_st = symutil.primitive_cell()
-                    else:
-                        primitive_st = symutil.refine_cell()
-                except TypeError:
-                    continue
-                primitive_st_set.append(primitive_st)
-                spg_number_set.append(spg_number)
-                iter_refine += 1
-                time_refine += time.time() - t_start
+            primitive_st_set.append(primitive_cell)
+            spg_number_set.append(spg_number)
+            iter_refine += 1
+            time_refine += time.time() - t_start
+
+            axis, positions, M = niggli_reduce(
+                axis=primitive_cell.axis, positions=primitive_cell.positions
+            )
+            primitive_cell.axis = axis
+            primitive_cell.positions = positions
 
         self.iter_refine += iter_refine
         self.time_refine += time_refine
