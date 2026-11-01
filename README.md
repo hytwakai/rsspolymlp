@@ -10,6 +10,7 @@ The formulation and development of polynomial MLPs are detailed in [`pypolymlp`]
 
 - python >= 3.10
 - scikit-learn
+- sympy
 - joblib
 - pypolymlp
 - spglib
@@ -36,7 +37,7 @@ conda install -c conda-forge rsspolymlp
 ```shell
 conda create -n rsspolymlp
 conda activate rsspolymlp
-conda install -c conda-forge scikit-learn joblib pypolymlp spglib symfc
+conda install -c conda-forge scikit-learn sympy joblib pypolymlp spglib symfc
 pip install rsspolymlp
 ```
 

@@ -14,7 +14,6 @@ from rsspolymlp.analysis.struct_matcher.struct_match import (
     struct_match,
     struct_match_allrep,
 )
-from rsspolymlp.common.interface_spglib import SymCell
 from rsspolymlp.common.interface_vasp import Poscar
 from rsspolymlp.rss.optimization_mlp import OptimizationMLP
 
@@ -152,21 +151,16 @@ def struct_compare(
     axis_tol: float = 0.01,
     pos_tol: float = 0.01,
     assign_method: Literal["redrep", "greedy", "HK", "pymatgen"] = "redrep",
-    refine_symprec: float = 1e-5,
     reduced_symprecs: list[float] = None,
     normalize_axis: bool = False,
     verbose: bool = True,
 ):
     st = Poscar(poscar_paths[0]).structure
-    # sym = SymCell(st.axis.T, st.positions.T, st.elements, symprec=refine_symprec)
-    # axis1, positions1, elements1 = sym.refine_cell()
     axis1 = st.axis.T
     positions1 = st.positions.T
     elements1 = st.elements
 
     st = Poscar(poscar_paths[1]).structure
-    # sym = SymCell(st.axis.T, st.positions.T, st.elements, symprec=refine_symprec)
-    # axis2, positions2, elements2 = sym.refine_cell()
     axis2 = st.axis.T
     positions2 = st.positions.T
     elements2 = st.elements
