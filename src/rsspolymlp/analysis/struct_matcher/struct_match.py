@@ -20,7 +20,6 @@ def struct_match(
     struct_reps_2: StructReps,
     axis_tol: float = 0.01,
     pos_tol: float = 0.01,
-    spg_match: bool = True,
     verbose: bool = False,
     output_file: str = "struct_matcher.yaml",
 ) -> bool:
@@ -63,8 +62,6 @@ def struct_match(
     for st_1 in strep_list1:
         for st_2 in strep_list2:
             if struct_match or st_1.element_count != st_2.element_count:
-                continue
-            if spg_match and st_1.spg_number != st_2.spg_number:
                 continue
 
             redreps1 = st_1.reduced_reps

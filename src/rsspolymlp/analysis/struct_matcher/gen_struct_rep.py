@@ -7,13 +7,12 @@ from typing import Optional
 import joblib
 import numpy as np
 
-from pypolymlp.core.data_format import PolymlpStructure
-from rsspolymlp.analysis.struct_matcher.primitive_transform import get_primitive_cell
-from rsspolymlp.analysis.struct_matcher.redrep_lattice import niggli_reduce
+from rsspolymlp.analysis.struct_matcher.primitive_transform import (
+    PrimitiveCell,
+    get_primitive_cell,
+)
 from rsspolymlp.analysis.struct_matcher.redrep_position import PositionRepReducer
-from rsspolymlp.common.composition import compute_composition
 from rsspolymlp.common.interface_spglib import SymCell
-from rsspolymlp.common.interface_vasp import Poscar
 from rsspolymlp.common.property import PropUtil
 
 
@@ -29,7 +28,9 @@ class StructRep:
 @dataclass
 class StructReps:
     struct_rep_list: list[StructRep]
-    original_polymlp_st: PolymlpStructure
+    original_axis: np.ndarray
+    original_positions: np.ndarray
+    original_elements: np.ndarray
     spg_list: list[str]
     primitive_symprecs: list[float]
     redrep_symprecs: list[float]
@@ -60,37 +61,40 @@ class StructRepGenerator:
 
     def generate_struct_reps(
         self,
-        poscar_path: Optional[str] = None,
-        polymlp_st: Optional[PolymlpStructure] = None,
-        axis: Optional[np.ndarray] = None,
-        positions: Optional[np.ndarray] = None,
-        elements: Optional[np.ndarray] = None,
-        struct_path: Optional[str] = None,
+        axis: np.ndarray,
+        positions: np.ndarray,
+        elements: np.ndarray,
+        struct_path: str,
         struct_tag: Optional[str] = None,
         dupstr_paths: Optional[set[str]] = None,
     ) -> tuple[StructReps, dict]:
-        if struct_path is None and poscar_path is None:
-            raise ValueError("Set struct_path or poscar_path")
-        elif struct_path is None:
-            struct_path = poscar_path
+        """
+        Parameters
+        ----------
+        axis : (3, 3) array_like
+            Lattice vectors defining the unit cell in Cartesian coordinates.
+            Each row represents one lattice vector (a, b, or c).
+            Equivalent to np.array([[a1, a2, a3], [b1, b2, b3], [c1, c2, c3]]).
+        positions : (N, 3) array_like
+            Fractional atomic coordinates within the unit cell.
+            Each row represents the coordinates of one atom.
+        elements : (N,) array_like
+            Chemical element symbols corresponding to the atomic positions.
+        struct_path: str
+            Path to the structure file.
+        struct_tag: str, Optional
+            Structure identifier (e.g., structure number).
+        dupstr_paths: set[str], Optional
+            List of paths to duplicate structure files.
+        """
 
-        if poscar_path is None and polymlp_st is None:
-            comp_res = compute_composition(elements)
-            polymlp_st = PolymlpStructure(
-                axis.T,
-                positions.T,
-                comp_res.atom_counts,
-                elements,
-                comp_res.types,
-            )
-        else:
-            if polymlp_st is None:
-                polymlp_st = Poscar(poscar_path).structure
-        objprop = PropUtil(polymlp_st.axis.T, polymlp_st.positions.T)
-        spg_list = objprop.analyze_space_group(polymlp_st.elements)
+        objprop = PropUtil(axis, positions)
+        spg_list = objprop.analyze_space_group(elements)
 
         primitive_st_set, spg_number_set, log_refine = self.generate_primitive_cells(
-            polymlp_st=polymlp_st,
+            axis,
+            positions,
+            elements,
         )
         if primitive_st_set == []:
             return None
@@ -121,7 +125,9 @@ class StructRepGenerator:
         return (
             StructReps(
                 struct_rep_list=struct_rep_list,
-                original_polymlp_st=polymlp_st,
+                original_axis=axis,
+                original_positions=positions,
+                original_elements=np.asarray(elements, dtype=str),
                 spg_list=spg_list,
                 primitive_symprecs=self.primitive_symprecs,
                 redrep_symprecs=redrep_symprecs,
@@ -133,6 +139,44 @@ class StructRepGenerator:
             calc_log,
         )
 
+    def generate_primitive_cells(
+        self,
+        axis: np.ndarray,
+        positions: np.ndarray,
+        elements: np.ndarray,
+    ) -> tuple[list[PrimitiveCell], list[int], tuple]:
+        """Generate primitive cells of a given structure under different symmetry tolerances."""
+        primitive_st_set = []
+        spg_number_set = []
+        iter_refine = 0
+        time_refine = 0
+        for symprec in self.primitive_symprecs:
+            t_start = time.time()
+            primitive_cell = get_primitive_cell(
+                axis=axis, positions=positions, elements=elements, tol=symprec
+            )
+            symutil = SymCell(
+                primitive_cell.axis,
+                primitive_cell.positions,
+                primitive_cell.elements,
+                symprec=symprec,
+            )
+            spg_str = symutil.get_spacegroup()
+            if spg_str is None:
+                spg_number = 1
+            else:
+                spg_number = int(re.search(r"\((\d+)\)", spg_str).group(1))
+
+            primitive_st_set.append(primitive_cell)
+            spg_number_set.append(spg_number)
+            iter_refine += 1
+            time_refine += time.time() - t_start
+
+        self.iter_refine += iter_refine
+        self.time_refine += time_refine
+
+        return primitive_st_set, spg_number_set, (iter_refine, time_refine)
+
     def generate_struct_rep(
         self,
         axis: np.ndarray,
@@ -140,15 +184,7 @@ class StructRepGenerator:
         elements: np.ndarray,
         spg_number: int,
     ) -> tuple[StructRep, tuple]:
-        """
-        Generate an StructRep object for a structure under different symmetry tolerances.
-
-        Parameters
-        ----------
-        polymlp_st : PolymlpStructure
-        spg_number : int
-            Space group number corresponding to the given structure.
-        """
+        """Generate an StructRep object for a structure under different symmetry tolerances."""
         reduced_reps = {
             "metric_tensors": [],
             "axis_abc": [],
@@ -223,73 +259,6 @@ class StructRepGenerator:
             spg_number=spg_number,
         ), (iter_redrep, time_redrep)
 
-    def generate_primitive_cells(
-        self,
-        poscar_path: Optional[str] = None,
-        polymlp_st: Optional[PolymlpStructure] = None,
-    ) -> tuple[list[PolymlpStructure], list[int], tuple]:
-        """
-        Generate primitive cells of a given structure under different symmetry tolerances.
-
-        Parameters
-        ----------
-        poscar_path : str, optional
-            Path to a POSCAR file.
-        polymlp_st : PolymlpStructure, optional
-
-        Returns
-        -------
-        primitive_st_set : list of PolymlpStructure
-            List of primitive cells determined from the given structure under each tolerance.
-        spg_number_set : list of int
-            Corresponding list of space group numbers for each primitive structure.
-        """
-
-        if poscar_path is None and polymlp_st is None:
-            raise ValueError("Set poscar_path or poymlp_st")
-        if polymlp_st is None:
-            polymlp_st = Poscar(poscar_path).structure
-        axis = polymlp_st.axis.T
-        pos = polymlp_st.positions.T
-        elements = polymlp_st.elements
-
-        primitive_st_set = []
-        spg_number_set = []
-        iter_refine = 0
-        time_refine = 0
-        for symprec in self.primitive_symprecs:
-            t_start = time.time()
-            primitive_cell = get_primitive_cell(
-                axis=axis, positions=pos, elements=elements, tol=symprec
-            )
-            symutil = SymCell(
-                primitive_cell.axis,
-                primitive_cell.positions,
-                primitive_cell.elements,
-                symprec=symprec,
-            )
-            spg_str = symutil.get_spacegroup()
-            if spg_str is None:
-                spg_number = 1
-            else:
-                spg_number = int(re.search(r"\((\d+)\)", spg_str).group(1))
-
-            primitive_st_set.append(primitive_cell)
-            spg_number_set.append(spg_number)
-            iter_refine += 1
-            time_refine += time.time() - t_start
-
-            axis, positions, M = niggli_reduce(
-                axis=primitive_cell.axis, positions=primitive_cell.positions
-            )
-            primitive_cell.axis = axis
-            primitive_cell.positions = positions
-
-        self.iter_refine += iter_refine
-        self.time_refine += time_refine
-
-        return primitive_st_set, spg_number_set, (iter_refine, time_refine)
-
     def generate_struct_reps_parallel(
         self,
         struct_list: list[dict],
@@ -306,12 +275,10 @@ class StructRepGenerator:
             A list of dictionaries, each containing information about a structure.
             Required keys:
                 - "struct_path": Path to the structure file.
-            Optional keys:
-                - "poscar_path": Path to the POSCAR file.
-                - "structure": PolymlpStructure object.
                 - "axis": Lattice vectors.
                 - "positions": Atomic positions.
                 - "elements": Chemical element symbols.
+            Optional keys:
                 - "struct_tag": Structure identifier (e.g., structure number).
                 - "dupstr_paths": List of paths to duplicate structure files.
         num_process : int, default=-1
@@ -324,11 +291,9 @@ class StructRepGenerator:
             for res in struct_list:
                 redreps_list.append(
                     self.generate_struct_reps(
-                        poscar_path=res.get("poscar_path", None),
-                        polymlp_st=res.get("structure", None),
-                        axis=res.get("axis", None),
-                        positions=res.get("positions", None),
-                        elements=res.get("elements", None),
+                        axis=res["axis"],
+                        positions=res["positions"],
+                        elements=res["elements"],
                         struct_path=res["struct_path"],
                         struct_tag=res.get("struct_tag", None),
                         dupstr_paths=res.get("dupstr_paths", None),
@@ -343,11 +308,9 @@ class StructRepGenerator:
                 n_jobs=num_process, backend=backend, verbose=joblib_verbose
             )(
                 joblib.delayed(self.generate_struct_reps)(
-                    poscar_path=res.get("poscar_path", None),
-                    polymlp_st=res.get("structure", None),
-                    axis=res.get("axis", None),
-                    positions=res.get("positions", None),
-                    elements=res.get("elements", None),
+                    axis=res["axis"],
+                    positions=res["positions"],
+                    elements=res["elements"],
                     struct_path=res["struct_path"],
                     struct_tag=res.get("struct_tag", None),
                     dupstr_paths=res.get("dupstr_paths", None),

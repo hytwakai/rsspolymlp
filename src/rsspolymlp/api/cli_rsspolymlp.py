@@ -222,7 +222,7 @@ def run():
         "--primitive_symprecs",
         nargs="*",
         type=float,
-        default=[1e-5, 1e-4, 1e-3, 1e-2],
+        default=[1e-2],
         help="List of symmetry tolerances used to identify distinct primitive cells.",
     )
     parser.add_argument(

@@ -10,8 +10,8 @@ from collections import Counter, defaultdict
 from time import time
 
 import numpy as np
-from pypolymlp.calculator.properties import Properties
 
+from pypolymlp.calculator.properties import Properties
 from rsspolymlp.analysis.ghost_minima import detect_ghost_minima
 from rsspolymlp.analysis.rss_summarize import (
     dump_json_rss_results,
@@ -231,9 +231,11 @@ class RSSResultAnalyzer:
             polymlp_st = Poscar(optimized_poscar).structure
             objprop = PropUtil(polymlp_st.axis.T, polymlp_st.positions.T)
             axis_abc = objprop.abc
+            struct_prop["axis"] = polymlp_st.axis.T
+            struct_prop["positions"] = polymlp_st.positions.T
+            struct_prop["elements"] = np.array(polymlp_st.elements)
             struct_prop["axis_abc"] = axis_abc
             struct_prop["least_distance"] = objprop.least_distance
-            struct_prop["structure"] = polymlp_st
 
             judge = self._validate_optimized_struct(optimized_poscar, struct_prop)
             if not judge:
@@ -320,8 +322,7 @@ class RSSResultAnalyzer:
                 self.cutoff = 1e6
 
         axis_abc = struct_prop["axis_abc"]
-        polymlp_st = struct_prop["structure"]
-        positions = polymlp_st.positions.T
+        positions = struct_prop["positions"]
         if positions.shape[0] == 1:
             max_gap = np.array(axis_abc[0:3])
             return False if np.any(max_gap > self.cutoff - 2.0) else True
@@ -374,7 +375,7 @@ class RSSResultAnalyzer:
             inplane_axes = [ax for ax in range(3) if ax != stack_axis]
             df[:, :, inplane_axes] -= np.rint(df[:, :, inplane_axes])
 
-            dr = df @ polymlp_st.axis.T
+            dr = df @ struct_prop["axis"]
             dist = np.linalg.norm(dr, axis=2)
             if dmin < np.min(dist):
                 dmin = np.min(dist)

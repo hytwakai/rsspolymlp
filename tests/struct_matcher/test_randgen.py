@@ -38,9 +38,6 @@ def test_sm_random_struct(tmp_path, crystal_system):
         element_cands = ["A", "B", "C", "D", "E", "F"]
 
         axis = generate_lattice(crystal_system, n_atom * 10)
-        _, axis_cands, signed_permutation_cands = get_reduced_lattice(
-            axis, spg_number=1
-        )
 
         struct_reps = []
         for i in range(n_struct_reps):
@@ -71,21 +68,17 @@ def test_sm_random_struct(tmp_path, crystal_system):
                 pos_rep = pos_rep[random_permutation]
                 _elements = _elements[random_permutation]
 
-                random_transformation = signed_permutation_cands[
-                    np.random.randint(len(signed_permutation_cands))
+                _axis, pos_rep, _, trans_matrices = get_reduced_lattice(
+                    axis, pos_rep, spg_number=1
+                )
+                random_transformation = trans_matrices[
+                    np.random.randint(len(trans_matrices))
                 ]
-                trans_pos_rep = np.zeros_like(pos_rep)
-                for axis_idx, val in enumerate(random_transformation):
-                    target_axis = np.where(val != 0)[0][0]
-                    sign = val[target_axis]
-                    if sign == 1:
-                        trans_pos_rep[:, axis_idx] = pos_rep[:, target_axis]
-                    else:
-                        trans_pos_rep[:, axis_idx] = 1 - pos_rep[:, target_axis]
-                pos_rep = trans_pos_rep
+                pos_rep = pos_rep @ np.linalg.inv(random_transformation)
+                pos_rep %= 1.0
                 struct_reps.append(
                     {
-                        "axis": axis_cands[0],
+                        "axis": _axis,
                         "positions": pos_rep,
                         "elements": _elements.tolist(),
                         "struct_path": f"{i}_{h}",

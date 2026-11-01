@@ -180,11 +180,11 @@ def identify_unique_structure(
     pos_tol: float = 0.01,
     assign_method: Literal["redrep", "greedy", "HK", "pymatgen"] = "redrep",
     keep_unique: bool = False,
-    num_process: int = -1,
-    backend: str = "loky",
     primitive_symprecs: list[float] = [1e-5, 1e-4, 1e-3, 1e-2],
     redrep_symprecs: list[float] = [1e-4, 1e-2, 1e-1],
     normalize_axis: bool = False,
+    num_process: int = -1,
+    backend: str = "loky",
     pre_analyzer: Optional[UniqueStructIdentifier] = None,
     verbose: bool = False,
 ):
@@ -195,12 +195,10 @@ def identify_unique_structure(
         A list of dictionaries, each containing information about a structure.
         Required keys:
             - "struct_path": Path to the structure file.
-        Optional keys:
-            - "poscar_path": Path to the POSCAR file.
-            - "structure": PolymlpStructure object.
             - "axis": Lattice vectors.
             - "positions": Atomic positions.
             - "elements": Chemical element symbols.
+        Optional keys:
             - "struct_tag": Structure identifier (e.g., structure number).
             - "dupstr_paths": List of paths to duplicate structure files.
     """

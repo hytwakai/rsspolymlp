@@ -1,68 +1,30 @@
-from typing import Optional
+import itertools
 
 import numpy as np
 import spglib
 
-from pypolymlp.core.data_format import PolymlpStructure
 from rsspolymlp.analysis.struct_matcher.chiral_spg import is_chiral
-from rsspolymlp.common.interface_vasp import Poscar
-
-
-def calc_metric_tensor(axis: np.ndarray):
-    a, b, c = np.array(axis)
-    aa = np.sum(a**2)
-    bb = np.sum(b**2)
-    cc = np.sum(c**2)
-    ab = a @ b
-    ac = a @ c
-    bc = b @ c
-    return np.array([aa, bb, cc, ab, ac, bc])
 
 
 def get_reduced_lattice(
     axis: np.ndarray,
+    positions: np.ndarray,
     spg_number: int,
-    symprec: list[float] = [1e-2, 1e-2, 1e-2],
+    symprec: float = 1e-2,
 ):
-    proper_matrices, improper_matrices = signed_permutation_matrices()
-    if not is_chiral(spg_number):
-        all_signed_permutation_matrices = np.concatenate(
-            [proper_matrices, improper_matrices], axis=0
-        )
-    else:
-        all_signed_permutation_matrices = proper_matrices
+    axis_niggli, positions_niggli, _ = niggli_reduce(
+        axis=axis, positions=positions, symprec=symprec
+    )
+    axis = axis_niggli
+    positions = positions_niggli
 
-    all_axis = []
-    for P in all_signed_permutation_matrices:
-        trans_axis = P @ axis
-        all_axis.append(trans_axis)
-    all_axis = np.array(all_axis)
-
-    all_metric_tensor = []
-    for one_axis in all_axis:
-        all_metric_tensor.append(calc_metric_tensor(one_axis))
-    all_metric_tensor = np.array(all_metric_tensor)
-
-    axis_cands = all_axis
-    metric_tensor_cands = all_metric_tensor
-    signed_permutation_cands = all_signed_permutation_matrices
-    for idx in range(6):
-        # Get the reduced axis representation
-        ref_metric = np.min(metric_tensor_cands[:, idx])
-        is_near_max = np.where(
-            np.abs(metric_tensor_cands[:, idx] - ref_metric) <= symprec[idx % 3]
-        )[0]
-        # Update the axis candidates
-        axis_cands = axis_cands[is_near_max, :]
-        metric_tensor_cands = metric_tensor_cands[is_near_max, :]
-        signed_permutation_cands = signed_permutation_cands[is_near_max, :]
-        if metric_tensor_cands.shape[0] == 1:
-            break
-
-    reduced_metric_tensor = metric_tensor_cands[0]
-
-    aa, bb, cc, ab, ac, bc = reduced_metric_tensor
+    metric_tensor = calc_metric_tensor(axis)
+    aa, bb, cc, ab, ac, bc = metric_tensor
     G = np.array([[aa, ab, ac], [ab, bb, bc], [ac, bc, cc]], dtype=float)
+    transformation_matrices = enumerate_metric_symmetries(
+        G, is_chiral(spg_number), tol=symprec
+    )
+
     w, U = np.linalg.eigh(G)
     w = np.clip(w, 0, None)
     G_sqrt = (U * np.sqrt(w)) @ U.T
@@ -76,88 +38,28 @@ def get_reduced_lattice(
             G_sqrt[1, 2],
         ]
     )
-    return metric_tensor_sqrt, axis_cands, signed_permutation_cands
+    return axis, positions, metric_tensor_sqrt, transformation_matrices
 
 
-def signed_permutation_matrices():
-    proper_matrices = np.array(
-        [
-            [[1, 0, 0], [0, 1, 0], [0, 0, 1]],
-            [[1, 0, 0], [0, -1, 0], [0, 0, -1]],
-            [[-1, 0, 0], [0, 1, 0], [0, 0, -1]],
-            [[-1, 0, 0], [0, -1, 0], [0, 0, 1]],
-            [[1, 0, 0], [0, 0, 1], [0, -1, 0]],
-            [[1, 0, 0], [0, 0, -1], [0, 1, 0]],
-            [[-1, 0, 0], [0, 0, 1], [0, 1, 0]],
-            [[-1, 0, 0], [0, 0, -1], [0, -1, 0]],
-            [[0, 1, 0], [1, 0, 0], [0, 0, -1]],
-            [[0, 1, 0], [-1, 0, 0], [0, 0, 1]],
-            [[0, -1, 0], [1, 0, 0], [0, 0, 1]],
-            [[0, -1, 0], [-1, 0, 0], [0, 0, -1]],
-            [[0, 1, 0], [0, 0, 1], [1, 0, 0]],
-            [[0, 1, 0], [0, 0, -1], [-1, 0, 0]],
-            [[0, -1, 0], [0, 0, 1], [-1, 0, 0]],
-            [[0, -1, 0], [0, 0, -1], [1, 0, 0]],
-            [[0, 0, 1], [1, 0, 0], [0, 1, 0]],
-            [[0, 0, 1], [-1, 0, 0], [0, -1, 0]],
-            [[0, 0, -1], [1, 0, 0], [0, -1, 0]],
-            [[0, 0, -1], [-1, 0, 0], [0, 1, 0]],
-            [[0, 0, 1], [0, 1, 0], [-1, 0, 0]],
-            [[0, 0, 1], [0, -1, 0], [1, 0, 0]],
-            [[0, 0, -1], [0, 1, 0], [1, 0, 0]],
-            [[0, 0, -1], [0, -1, 0], [-1, 0, 0]],
-        ]
-    )
-
-    improper_matrices = np.array(
-        [
-            [[1, 0, 0], [0, 1, 0], [0, 0, -1]],
-            [[1, 0, 0], [0, -1, 0], [0, 0, 1]],
-            [[-1, 0, 0], [0, 1, 0], [0, 0, 1]],
-            [[-1, 0, 0], [0, -1, 0], [0, 0, -1]],
-            [[1, 0, 0], [0, 0, 1], [0, 1, 0]],
-            [[1, 0, 0], [0, 0, -1], [0, -1, 0]],
-            [[-1, 0, 0], [0, 0, 1], [0, -1, 0]],
-            [[-1, 0, 0], [0, 0, -1], [0, 1, 0]],
-            [[0, 1, 0], [1, 0, 0], [0, 0, 1]],
-            [[0, 1, 0], [-1, 0, 0], [0, 0, -1]],
-            [[0, -1, 0], [1, 0, 0], [0, 0, -1]],
-            [[0, -1, 0], [-1, 0, 0], [0, 0, 1]],
-            [[0, 1, 0], [0, 0, 1], [-1, 0, 0]],
-            [[0, 1, 0], [0, 0, -1], [1, 0, 0]],
-            [[0, -1, 0], [0, 0, 1], [1, 0, 0]],
-            [[0, -1, 0], [0, 0, -1], [-1, 0, 0]],
-            [[0, 0, 1], [1, 0, 0], [0, -1, 0]],
-            [[0, 0, 1], [-1, 0, 0], [0, 1, 0]],
-            [[0, 0, -1], [1, 0, 0], [0, 1, 0]],
-            [[0, 0, -1], [-1, 0, 0], [0, -1, 0]],
-            [[0, 0, 1], [0, 1, 0], [1, 0, 0]],
-            [[0, 0, 1], [0, -1, 0], [-1, 0, 0]],
-            [[0, 0, -1], [0, 1, 0], [-1, 0, 0]],
-            [[0, 0, -1], [0, -1, 0], [1, 0, 0]],
-        ]
-    )
-
-    return proper_matrices, improper_matrices
+def calc_metric_tensor(axis: np.ndarray):
+    a, b, c = np.array(axis)
+    aa = np.sum(a**2)
+    bb = np.sum(b**2)
+    cc = np.sum(c**2)
+    ab = a @ b
+    ac = a @ c
+    bc = b @ c
+    return np.array([aa, bb, cc, ab, ac, bc])
 
 
 def niggli_reduce(
-    poscar_name: str = None,
-    st: Optional[PolymlpStructure] = None,
-    axis: Optional[np.ndarray] = None,
-    positions: Optional[np.ndarray] = None,
+    axis: np.ndarray,
+    positions: np.ndarray,
     symprec: float = 1e-5,
 ):
     """Niggli reduction."""
-    if poscar_name is not None:
-        st = Poscar(poscar_name).structure
-
-    if st is None:
-        axis = np.array(axis)
-        positions = np.array(positions)
-    else:
-        axis = st.axis.T
-        positions = st.positions.T
+    axis = np.array(axis)
+    positions = np.array(positions)
 
     axis_niggli = spglib.niggli_reduce(
         axis,
@@ -171,3 +73,71 @@ def niggli_reduce(
     assert np.allclose(M @ axis, axis_niggli, atol=1e-5)
     assert abs(round(np.linalg.det(M))) == 1
     return axis_niggli, pos, M
+
+
+def enumerate_integer_vectors(
+    G: np.ndarray,
+    q: float,
+    tol: float = 1e-8,
+) -> np.ndarray:
+    """Enumerate integer vectors satisfying v.T @ G @ v ~= q."""
+    G = np.asarray(G, dtype=float)
+
+    # Upper bound from the minimum eigenvalue.
+    lambda_min = np.linalg.eigvalsh(G)[0]
+    if lambda_min <= 0:
+        raise ValueError("G must be positive definite.")
+
+    bound = int(np.ceil(np.sqrt((q + tol) / lambda_min)))
+
+    vectors = []
+    for v in itertools.product(range(-bound, bound + 1), repeat=3):
+        v = np.asarray(v, dtype=int)
+
+        if abs(v @ G @ v - q) <= tol:
+            vectors.append(v)
+
+    return np.asarray(vectors, dtype=int).reshape(-1, 3)
+
+
+def enumerate_metric_symmetries(
+    G: np.ndarray,
+    is_chiral: bool = False,
+    tol: float = 1e-5,
+) -> list[np.ndarray]:
+    """Enumerate unimodular integer matrices satisfying M @ G @ M.T = G."""
+    G = np.asarray(G, dtype=float)
+
+    if G.shape != (3, 3):
+        raise ValueError("G must be a 3x3 matrix.")
+
+    if not np.allclose(G, G.T, atol=tol):
+        raise ValueError("G must be symmetric.")
+
+    if np.linalg.eigvalsh(G)[0] <= 0:
+        raise ValueError("G must be positive definite.")
+
+    # Enumerate candidate column vectors.
+    candidates = [enumerate_integer_vectors(G, G[i, i], tol) for i in range(3)]
+    matrices = []
+
+    # Enumerate combinations of the three columns.
+    for m1, m2, m3 in itertools.product(*candidates):
+        # Inner-product conditions.
+        if abs(m1 @ G @ m2 - G[0, 1]) > tol:
+            continue
+        if abs(m1 @ G @ m3 - G[0, 2]) > tol:
+            continue
+        if abs(m2 @ G @ m3 - G[1, 2]) > tol:
+            continue
+        M = np.column_stack((m1, m2, m3))
+
+        # Unimodularity condition.
+        det = round(np.linalg.det(M))
+        if abs(det) != 1:
+            continue
+        if is_chiral and det == -1:
+            continue
+        matrices.append(M)
+
+    return matrices

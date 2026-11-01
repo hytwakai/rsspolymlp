@@ -1,5 +1,7 @@
 from typing import Literal, Optional
 
+import numpy as np
+
 from rsspolymlp.analysis.rss_summarize import (
     log_all_unique_structures,
     log_unique_structures,
@@ -12,7 +14,6 @@ from rsspolymlp.analysis.struct_matcher.struct_match import (
     struct_match,
     struct_match_allrep,
 )
-from rsspolymlp.common.interface_pypolymlp import gen_polymlp_structure
 from rsspolymlp.common.interface_spglib import SymCell
 from rsspolymlp.common.interface_vasp import Poscar
 from rsspolymlp.rss.optimization_mlp import OptimizationMLP
@@ -27,7 +28,7 @@ def struct_matcher(
     assign_method: Literal["redrep", "greedy", "HK", "pymatgen"] = "redrep",
     num_process: int = -1,
     backend: str = "loky",
-    primitive_symprecs: list[float] = [1e-5, 1e-4, 1e-3, 1e-2],
+    primitive_symprecs: list[float] = [1e-2],
     reduced_symprecs: list[float] = None,
     normalize_axis: bool = False,
     output_file: str = "unique_struct.yaml",
@@ -51,7 +52,10 @@ def struct_matcher(
             struct_list = [{} for _ in poscar_paths]
         if poscar_paths is not None:
             for struct, poscar_path in zip(struct_list, poscar_paths):
-                struct["poscar_path"] = poscar_path
+                st = Poscar(poscar_path).structure
+                struct["axis"] = st.axis.T
+                struct["positions"] = st.positions.T
+                struct["elements"] = np.array(st.elements)
                 struct["struct_path"] = poscar_path
 
         generator = StructRepGenerator(
@@ -106,7 +110,7 @@ def struct_matcher(
         unique_structs = analyzer.unique_str
         unique_structs_sorted = sorted(
             unique_structs,
-            key=lambda x: len(x.original_polymlp_st.positions.T),
+            key=lambda x: len(x.original_positions.T),
             reverse=False,
         )
 
@@ -148,32 +152,36 @@ def struct_compare(
     axis_tol: float = 0.01,
     pos_tol: float = 0.01,
     assign_method: Literal["redrep", "greedy", "HK", "pymatgen"] = "redrep",
-    refine_symprec: float = 1e-3,
+    refine_symprec: float = 1e-5,
     reduced_symprecs: list[float] = None,
     normalize_axis: bool = False,
     verbose: bool = True,
 ):
     st = Poscar(poscar_paths[0]).structure
-    sym = SymCell(st.axis.T, st.positions.T, st.elements, symprec=refine_symprec)
-    axis, positions, elements = sym.refine_cell()
-    polymlp_st1 = gen_polymlp_structure(axis, positions, elements)
+    # sym = SymCell(st.axis.T, st.positions.T, st.elements, symprec=refine_symprec)
+    # axis1, positions1, elements1 = sym.refine_cell()
+    axis1 = st.axis.T
+    positions1 = st.positions.T
+    elements1 = st.elements
 
     st = Poscar(poscar_paths[1]).structure
-    sym = SymCell(st.axis.T, st.positions.T, st.elements, symprec=refine_symprec)
-    axis, positions, elements = sym.refine_cell()
-    polymlp_st2 = gen_polymlp_structure(axis, positions, elements)
+    # sym = SymCell(st.axis.T, st.positions.T, st.elements, symprec=refine_symprec)
+    # axis2, positions2, elements2 = sym.refine_cell()
+    axis2 = st.axis.T
+    positions2 = st.positions.T
+    elements2 = st.elements
 
     if verbose:
         print("Structure 1:")
         print("- Axis:")
-        print(polymlp_st1.axis.T)
+        print(axis1)
         print("- Positions:")
-        print(polymlp_st1.positions)
+        print(positions1)
         print("Structure 2:")
         print("- Axis:")
-        print(polymlp_st2.axis.T)
+        print(axis2)
         print("- Positions:")
-        print(polymlp_st2.positions)
+        print(positions2)
 
     if reduced_symprecs is None:
         if not normalize_axis:
@@ -185,11 +193,15 @@ def struct_compare(
         normalize_axis=normalize_axis,
     )
     struct_reps_1, _ = generator.generate_struct_reps(
-        polymlp_st=polymlp_st1,
+        axis=axis1,
+        positions=positions1,
+        elements=elements1,
         struct_path="st1",
     )
     struct_reps_2, _ = generator.generate_struct_reps(
-        polymlp_st=polymlp_st2,
+        axis=axis2,
+        positions=positions2,
+        elements=elements2,
         struct_path="st2",
     )
 
@@ -200,7 +212,6 @@ def struct_compare(
             axis_tol=axis_tol,
             pos_tol=pos_tol,
             verbose=verbose,
-            spg_match=False,
         )
     else:
         judge = struct_match_allrep(

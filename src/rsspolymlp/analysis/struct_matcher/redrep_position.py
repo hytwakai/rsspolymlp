@@ -88,15 +88,17 @@ class PositionRepReducer:
         """
 
         t_lattice = time.time()
-        metric_tensor_sqrt, axis_cands, signed_permutation_cands = get_reduced_lattice(
-            self.axis,
-            self.spg_number,
-            self.symprec,
+        self.axis, self.positions, metric_tensor_sqrt, transformation_matrices = (
+            get_reduced_lattice(
+                self.axis,
+                self.positions,
+                self.spg_number,
+                np.max(self.symprec),
+            )
         )
         if self.verbose:
             print(f"  Lattice: {round((time.time() - t_lattice) * 1000, 2)} ms")
 
-        self.axis = axis_cands[0]
         a, b, c = np.array(self.axis)
         norm_a = np.linalg.norm(a)
         norm_b = np.linalg.norm(b)
@@ -111,7 +113,7 @@ class PositionRepReducer:
         else:
             reduced_positions, all_positions, sorted_elements = (
                 self.get_reduced_positions(
-                    signed_permutation_cands,
+                    transformation_matrices,
                 )
             )
 
@@ -126,7 +128,7 @@ class PositionRepReducer:
 
     def get_reduced_positions(
         self,
-        signed_permutation_cands,
+        transformation_matrices,
         axis_abc=None,
     ):
         """Derive a reduced representation of atomic positions."""
@@ -157,9 +159,18 @@ class PositionRepReducer:
         t_pos_cands = time.time()
         positions = self.positions.copy()
         sorted_positions = positions[sort_idx, :]
-        position_cands = self._position_candidates(
-            sorted_positions, signed_permutation_cands
-        )
+        position_cands = []
+        for trans_mat in transformation_matrices:
+            cluster_id, position_cand = self._assign_clusters(
+                sorted_positions, trans_mat
+            )
+            position_cands.append(
+                {
+                    "positions": position_cand,
+                    "cluster_id": cluster_id,
+                    "perm_mat": trans_mat,
+                }
+            )
         if self.verbose:
             print(f"  Candidates: {round((time.time() - t_pos_cands) * 1000, 2)} ms")
             print(f"    N_atoms: {len(positions)}")
@@ -199,38 +210,6 @@ class PositionRepReducer:
             print(f"  Translation: {round((time.time() - t_translation) * 1000, 2)} ms")
 
         return reduced_positions, all_positions, sorted_elements
-
-    def _position_candidates(
-        self,
-        positions: np.ndarray,
-        signed_permutation_cands: np.ndarray,
-    ):
-        _positions = positions.copy()
-        cluster_id, positions_by_axis = self._assign_clusters(
-            _positions, signed_permutation_cands
-        )
-
-        position_cands = []
-        for perm_mat in signed_permutation_cands:
-            _pos = np.zeros_like(_positions)
-            _cls_id = np.zeros_like(_positions, dtype=np.int32)
-            for axis, val in enumerate(perm_mat):
-                target_axis = np.where(val != 0)[0][0]
-                sign = val[target_axis]
-                if sign == 1:
-                    _pos[:, axis] = positions_by_axis[:, target_axis]
-                    _cls_id[:, axis] = cluster_id[:, target_axis]
-                else:
-                    _pos[:, axis] = positions_by_axis[:, target_axis + 3]
-                    _cls_id[:, axis] = cluster_id[:, target_axis + 3]
-            position_cands.append(
-                {
-                    "positions": _pos,
-                    "cluster_id": _cls_id,
-                    "perm_mat": perm_mat,
-                }
-            )
-        return position_cands
 
     def _reduced_permutations(
         self,
@@ -314,58 +293,41 @@ class PositionRepReducer:
     def _assign_clusters(
         self,
         positions: np.ndarray,
-        signed_permutation_cands: np.ndarray,
+        transformation_matrix: np.ndarray,
     ):
         """
         Assigns cluster IDs along each axis; atoms at identical positions share the same ID.
         """
-        invert_list = [False]
-        cluster_id = np.full_like(positions, -1, dtype=np.int32)
-        positions_by_axis = np.zeros_like(positions)
-        if any(np.any(v == -1) for v in signed_permutation_cands):
-            invert_list = [False, True]
-            n_rows, n_cols = positions.shape
-            cluster_id = np.full((n_rows, n_cols * 2), -1, dtype=np.int32)
-            positions_by_axis = np.zeros((n_rows, n_cols * 2), dtype=positions.dtype)
+        _positions = positions.copy()
+        _positions = _positions @ np.linalg.inv(transformation_matrix)
+        _positions %= 1.0
 
-        for invert in invert_list:
-            if not invert:
-                _positions = positions.copy()
-                target_idx = slice(0, 3)
-            else:
-                _positions = -positions.copy() % 1.0
-                target_idx = slice(3, 6)
-            positions_by_axis[:, target_idx] = _positions
+        sort_idx = np.argsort(_positions, axis=0, kind="mergesort")
+        pos_sorted = np.take_along_axis(_positions, sort_idx, axis=0)
 
-            sort_idx = np.argsort(_positions, axis=0, kind="mergesort")
-            pos_sorted = np.take_along_axis(_positions, sort_idx, axis=0)
+        # Compute forward differences with periodic wrapping
+        gap = np.roll(pos_sorted, -1, axis=0) - pos_sorted
+        gap[-1, :] += 1.0
 
-            # Compute forward differences with periodic wrapping
-            gap = np.roll(pos_sorted, -1, axis=0) - pos_sorted
-            gap[-1, :] += 1.0
+        # New cluster starts where gap > symprec
+        gap_normalized = gap * self.axis_abc
+        is_new_cluster = gap_normalized > self.symprec
+        cluster_id_sorted = np.zeros_like(_positions, dtype=np.int32)
+        cluster_id_sorted[1:, :] = np.cumsum(is_new_cluster[:-1, :], axis=0)
 
-            # New cluster starts where gap > symprec
-            gap_normalized = gap * self.axis_abc
-            is_new_cluster = gap_normalized > self.symprec
-            cluster_id_sorted = np.zeros_like(_positions, dtype=np.int32)
-            cluster_id_sorted[1:, :] = np.cumsum(is_new_cluster[:-1, :], axis=0)
+        # Merge last cluster if gap is small (periodic condition)
+        merge_mask = ~is_new_cluster[-1, :]
+        for ax in np.where(merge_mask)[0]:
+            max_id = cluster_id_sorted[-1, ax]
+            merged = cluster_id_sorted[:, ax] == max_id
+            pos_sorted[merged, ax] -= 1.0
+            cluster_id_sorted[merged, ax] = 0
 
-            # Merge last cluster if gap is small (periodic condition)
-            merge_mask = ~is_new_cluster[-1, :]
-            for ax in np.where(merge_mask)[0]:
-                max_id = cluster_id_sorted[-1, ax]
-                merged = cluster_id_sorted[:, ax] == max_id
-                pos_sorted[merged, ax] -= 1.0
-                cluster_id_sorted[merged, ax] = 0
+        # Restore original order
+        cluster_id = np.empty_like(pos_sorted, dtype=np.int32)
+        snapped_positions = np.empty_like(pos_sorted)
+        for ax in range(3):
+            cluster_id[sort_idx[:, ax], ax] = cluster_id_sorted[:, ax]
+            snapped_positions[sort_idx[:, ax], ax] = pos_sorted[:, ax]
 
-            # Restore original order
-            cluster_id_sub = np.empty_like(pos_sorted, dtype=np.int32)
-            pos_unsort_sub = np.empty_like(pos_sorted)
-            for ax in range(3):
-                cluster_id_sub[sort_idx[:, ax], ax] = cluster_id_sorted[:, ax]
-                pos_unsort_sub[sort_idx[:, ax], ax] = pos_sorted[:, ax]
-
-            cluster_id[:, target_idx] = cluster_id_sub
-            positions_by_axis[:, target_idx] = pos_unsort_sub
-
-        return cluster_id, positions_by_axis
+        return cluster_id, snapped_positions

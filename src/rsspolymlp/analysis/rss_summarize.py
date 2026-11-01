@@ -22,7 +22,6 @@ from rsspolymlp.analysis.struct_matcher.identify_uniqstr import (
 )
 from rsspolymlp.analysis.utils.convert_data_format import (
     polymlp_struct_from_dict,
-    polymlp_struct_to_dict,
 )
 from rsspolymlp.common.composition import compute_composition
 from rsspolymlp.common.interface_vasp import Vasprun, parse_properties_from_vasprun
@@ -39,7 +38,7 @@ class RSSResultSummarizer:
         num_process: int = -1,
         backend: str = "loky",
         assign_method: Literal["redrep", "greedy", "HK", "pymatgen"] = "redrep",
-        primitive_symprecs: list[float] = [1e-5, 1e-4, 1e-3, 1e-2],
+        primitive_symprecs: list[float] = [1e-2],
         output_poscar: bool = False,
         thresholds: list[float] = None,
         parse_vasp: bool = False,
@@ -126,6 +125,7 @@ class RSSResultSummarizer:
                             pos_tol=pos_tol,
                             assign_method=self.assign_method,
                             primitive_symprecs=self.primitive_symprecs,
+                            num_process=self.num_process,
                             pre_analyzer=self.analyzer,
                         )
 
@@ -221,6 +221,7 @@ class RSSResultSummarizer:
                     pos_tol=pos_tol,
                     assign_method=self.assign_method,
                     primitive_symprecs=self.primitive_symprecs,
+                    num_process=self.num_process,
                     pre_analyzer=self.analyzer,
                 )
             time_finish = time() - time_start
@@ -266,7 +267,15 @@ class RSSResultSummarizer:
 
         processed_paths = []
         for r in rss_results:
-            r["structure"] = polymlp_struct_from_dict(r["structure"])
+            if "structure" in r:
+                r["structure"] = polymlp_struct_from_dict(r["structure"])
+                r["axis"] = r["structure"].axis.T
+                r["positions"] = r["structure"].positions.T
+                r["elements"] = r["structure"].elements
+            else:
+                r["axis"] = np.array(r["axis"])
+                r["positions"] = np.array(r["positions"])
+                r["elements"] = np.array(r["elements"])
             processed_paths.extend(r["dupstr_paths"])
             r["dupstr_paths"] = set(r["dupstr_paths"])
 
@@ -382,7 +391,15 @@ class RSSResultSummarizer:
             for r in loaded_dict["rss_results"]:
                 r["struct_path"] = resolve_path(base, r["struct_path"])
                 r["dupstr_paths"] = {resolve_path(base, p) for p in r["dupstr_paths"]}
-                r["structure"] = polymlp_struct_from_dict(r["structure"])
+                if "structure" in r:
+                    r["structure"] = polymlp_struct_from_dict(r["structure"])
+                    r["axis"] = r["structure"].axis.T
+                    r["positions"] = r["structure"].positions.T
+                    r["elements"] = r["structre"].elements
+                else:
+                    r["axis"] = np.array(r["axis"])
+                    r["positions"] = np.array(r["positions"])
+                    r["elements"] = np.array(r["elements"])
                 r["struct_tag"] = None
                 r["pressure"] = pressure
 
@@ -434,7 +451,9 @@ class RSSResultSummarizer:
             res_dict["struct_path"] = os.path.relpath(
                 path_name + "/vasprun.xml", os.getcwd()
             )
-            res_dict["structure"] = polymlp_st
+            res_dict["axis"] = polymlp_st.axis.T
+            res_dict["positions"] = polymlp_st.positions.T
+            res_dict["elements"] = polymlp_st.elements
             res_dict["energy"] = energy_dft
             res_dict["spg_list"] = spg_list
             res_dict["dupstr_paths"] = {res_dict["struct_path"]}
@@ -480,14 +499,18 @@ def dump_json_rss_results(
 
     rss_results = []
     for idx, _str in enumerate(struct_reps_list):
-        polymlp_st = _str.original_polymlp_st
-        objprop = PropUtil(polymlp_st.axis.T, polymlp_st.positions.T)
+        axis = _str.original_axis
+        positions = _str.original_positions
+        elements = _str.original_elements
+        objprop = PropUtil(axis, positions)
         rss_results.append(
             {
                 "struct_path": _str.struct_path,
                 "poscar_path": _str.struct_path,
-                "structure": polymlp_struct_to_dict(polymlp_st),
                 "energy": enthalpy_lists[idx],
+                "axis": axis.tolist(),
+                "positions": positions.tolist(),
+                "elements": elements.tolist(),
                 "axis_abc": objprop.abc,
                 "least_distance": objprop.least_distance,
                 "volume": objprop.volume,
@@ -498,7 +521,7 @@ def dump_json_rss_results(
             }
         )
     if len(struct_reps_list) > 0:
-        comp_res = compute_composition(struct_reps_list[0].original_polymlp_st.elements)
+        comp_res = compute_composition(elements)
         rss_result_all = {
             "elements": comp_res.unique_elements.tolist(),
             "comp_ratio": comp_res.comp_ratio,
@@ -558,10 +581,12 @@ def log_unique_structures(
                     e = enthalpy_lists[idx]
                 else:
                     e = None
-                polymlp_st = _str.original_polymlp_st
-                objprop = PropUtil(polymlp_st.axis.T, polymlp_st.positions.T)
-                dupstr_paths = list(_str.dupstr_paths)
 
+                axis = _str.original_axis
+                positions = _str.original_positions
+                elements = _str.original_elements
+                objprop = PropUtil(axis, positions)
+                dupstr_paths = list(_str.dupstr_paths)
                 print(f"  - struct_No: {_str.struct_tag}", file=f)
                 print(f"    struct_path: {_str.struct_path}", file=f)
                 if energy_min is not None:
@@ -570,14 +595,14 @@ def log_unique_structures(
                 print(f"    enthalpy: {e}", file=f)
                 print(f"    axis: {objprop.abc}", file=f)
                 print(
-                    f"    positions: {polymlp_st.positions.T.tolist()}",
+                    f"    positions: {positions.tolist()}",
                     file=f,
                 )
-                print(f"    elements: {polymlp_st.elements}", file=f)
+                print(f"    elements: {elements.tolist()}", file=f)
                 print(f"    space_group: {_str.spg_list}", file=f)
 
                 info = [
-                    f"{len(polymlp_st.elements)} atom",
+                    f"{len(elements)} atom",
                     f"distance {round(objprop.least_distance, 3)} (Ang.)",
                     f"volume {round(objprop.volume, 2)} (A^3/atom)",
                 ]
@@ -615,8 +640,10 @@ def log_all_unique_structures(
                     e = unique_str_prop[idx1][idx2]["energy"]
                 else:
                     e = None
-                polymlp_st = _str.original_polymlp_st
-                objprop = PropUtil(polymlp_st.axis.T, polymlp_st.positions.T)
+                axis = _str.original_axis
+                positions = _str.original_positions
+                elements = _str.original_elements
+                objprop = PropUtil(axis, positions)
                 print(f"    - sub_struct_No: '{idx1 + 1}_{idx2 + 1}'", file=f)
                 print(f"      struct_path: {_str.struct_path}", file=f)
                 print(
@@ -625,14 +652,14 @@ def log_all_unique_structures(
                 print(f"      enthalpy: {e}", file=f)
                 print(f"      axis: {objprop.abc}", file=f)
                 print(
-                    f"      positions: {polymlp_st.positions.T.tolist()}",
+                    f"      positions: {positions.tolist()}",
                     file=f,
                 )
-                print(f"      elements: {polymlp_st.elements}", file=f)
+                print(f"      elements: {elements}", file=f)
                 print(f"      space_group: {_str.spg_list}", file=f)
 
                 info = [
-                    f"{len(polymlp_st.elements)} atom",
+                    f"{len(elements)} atom",
                     f"distance {round(objprop.least_distance, 3)} (Ang.)",
                     f"volume {round(objprop.volume, 2)} (A^3/atom)",
                 ]
@@ -640,8 +667,9 @@ def log_all_unique_structures(
 
                 _res = {}
                 _res["struct_path"] = _str.struct_path
-                polymlp_st_dict = polymlp_struct_to_dict(polymlp_st)
-                _res["structure"] = polymlp_st_dict
+                _res["axis"] = axis
+                _res["positions"] = positions
+                _res["elements"] = elements
                 _res["energy"] = e
                 _res["pressure"] = None
                 _res["spg_list"] = _str.spg_list
@@ -651,13 +679,11 @@ def log_all_unique_structures(
             if unique_other_prop is not None:
                 print("    properties:", unique_other_prop[idx1], file=f)
 
-    comp_res = compute_composition(unique_structs[0][0].original_polymlp_st.elements)
-
+    comp_res = compute_composition(elements)
     rss_result_all = {
         "elements": comp_res.unique_elements.tolist(),
         "comp_ratio": comp_res.comp_ratio,
         "pressure": None,
         "rss_results": rss_results,
     }
-
     return rss_result_all

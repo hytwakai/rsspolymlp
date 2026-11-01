@@ -130,6 +130,7 @@ def test_rss_summarize(tmp_path, pressure):
     result_paths = sorted(glob.glob("./*/rss_result/rss_results.json"))
     rss_summarize(
         result_paths=result_paths,
+        num_process=1,
     )
 
     with open("Si1.yaml") as f:

@@ -38,7 +38,7 @@ def polymlp_struct_from_dict(polymlp_st_dict: dict):
         axis=np.array(d["axis"]),
         positions=np.array(d["positions"]),
         n_atoms=d["n_atoms"],
-        elements=d["elements"],
+        elements=np.array(d["elements"]),
         types=d["types"],
         volume=d.get("volume"),
         supercell_matrix=(

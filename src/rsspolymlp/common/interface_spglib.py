@@ -1,7 +1,5 @@
 """Interfaces for spglib."""
 
-from typing import Optional
-
 import numpy as np
 import spglib
 
@@ -11,12 +9,26 @@ class SymCell:
 
     def __init__(
         self,
-        axis: Optional[np.ndarray] = None,
-        positions: Optional[np.ndarray] = None,
-        elements: Optional[np.ndarray] = None,
+        axis: np.ndarray,
+        positions: np.ndarray,
+        elements: np.ndarray,
         symprec: float = 1e-4,
     ):
-        """Init method."""
+        """
+        Init method.
+
+        Parameters
+        ----------
+        axis : (3, 3) array_like
+            Each row represents one lattice vector (a, b, or c).
+            Equivalent to np.array([[a1, a2, a3], [b1, b2, b3], [c1, c2, c3]]).
+        positions : (N, 3) array_like
+            Fractional atomic coordinates within the unit cell.
+            Each row represents the coordinates of one atom.
+        elements : (N,) array_like
+            Chemical element symbols corresponding to the atomic positions.
+        """
+
         axis = np.array(axis)
         positions = np.array(positions)
         elements = np.array(elements)
