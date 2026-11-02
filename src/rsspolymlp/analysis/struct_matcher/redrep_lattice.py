@@ -1,9 +1,9 @@
 import itertools
 
 import numpy as np
-import spglib
 
 from rsspolymlp.analysis.struct_matcher.chiral_spg import is_chiral
+from rsspolymlp.analysis.struct_matcher.niggli_reduce import get_niggli_reduced_cell
 
 
 def get_reduced_lattice(
@@ -61,18 +61,15 @@ def niggli_reduce(
     axis = np.array(axis)
     positions = np.array(positions)
 
-    axis_niggli = spglib.niggli_reduce(
+    axis_niggli, P = get_niggli_reduced_cell(
         axis,
-        eps=symprec,
+        tol=symprec,
     )
-    M_float = axis_niggli @ np.linalg.inv(axis)
-    M = np.rint(M_float).astype(np.int64)
-    pos = positions @ np.linalg.inv(M)
+    pos = positions @ np.linalg.inv(P)
     pos %= 1.0
 
-    assert np.allclose(M @ axis, axis_niggli, atol=1e-5)
-    assert abs(round(np.linalg.det(M))) == 1
-    return axis_niggli, pos, M
+    assert abs(round(np.linalg.det(P))) == 1
+    return axis_niggli, pos, P
 
 
 def enumerate_integer_vectors(

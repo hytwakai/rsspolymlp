@@ -72,8 +72,6 @@ def get_primitive_cell(
 
     Notes
     -----
-    - This implementation assumes the input structure is translationally
-      periodic without changing elements.
     - For disordered/partial-occupancy sites, convert to an explicit ordered
       representation before using this function.
     - For strongly skewed, unreduced lattices, the +/-1 image replication used
@@ -117,10 +115,15 @@ def get_primitive_cell(
     for translation in candidate_translations:
         shifted_positions = np.mod(positions + translation, 1.0)
         shifted_cart = shifted_positions @ axis
-        if not _translation_is_valid(shifted_cart, elements, trees, tol):
+        is_valid, mean_translation = _translation_is_valid(
+            shifted_cart, elements, trees, tol
+        )
+        if not is_valid:
             continue
+        translation += mean_translation @ np.linalg.inv(axis)
         duplicate = any(
-            _periodic_translation_distance(translation, old, axis) <= translation_tol
+            _periodic_translation_distance(translation, old, axis)
+            <= translation_tol
             for old in valid_translations
         )
         if not duplicate:
@@ -188,19 +191,20 @@ def _translation_is_valid(
     elements: np.ndarray,
     trees: dict[str, tuple[cKDTree, np.ndarray]],
     tol: float,
-) -> bool:
+) -> tuple[bool, np.ndarray]:
     """Check whether a translation maps all sites onto same-elements sites."""
+    translations = []
     for element in np.unique(elements):
         target_ids = np.flatnonzero(elements == element)
         tree, image_to_atom_id = trees[str(element)]
         target_count = len(target_ids)
+
         candidate_rows: list[int] = []
         candidate_cols: list[int] = []
-
         neighbor_lists = tree.query_ball_point(shifted_cart[target_ids], r=tol)
         for shifted_atom_id, match_image_idxs in enumerate(neighbor_lists):
             if not match_image_idxs:
-                return False
+                return False, np.array([])
             match_atom_ids = np.unique(
                 image_to_atom_id[np.asarray(match_image_idxs, dtype=int)]
             )
@@ -216,8 +220,14 @@ def _translation_is_valid(
         )
         matching = maximum_bipartite_matching(graph, perm_type="column")
         if matching.shape[0] != target_count or np.any(matching < 0):
-            return False
-    return True
+            return False, np.array([])
+
+        matched_cart = shifted_cart[target_ids]
+        target_cart = shifted_cart[target_ids]
+        translations.extend(target_cart[matching] - matched_cart)
+
+    mean_translation = np.mean(translations, axis=0)
+    return True, mean_translation
 
 
 def _periodic_translation_distance(

@@ -149,7 +149,6 @@ def run():
             axis_tol=args.axis_tol,
             pos_tol=args.pos_tol,
             assign_method=args.assign_method,
-            refine_symprec=args.refine_symprec,
             reduced_symprecs=args.reduced_symprecs,
             normalize_axis=args.normalize_axis,
             verbose=not args.not_verbose,
