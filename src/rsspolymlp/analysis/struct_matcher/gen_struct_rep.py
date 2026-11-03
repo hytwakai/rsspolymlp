@@ -32,8 +32,8 @@ class StructReps:
     original_positions: np.ndarray
     original_elements: np.ndarray
     spg_list: list[str]
-    primitive_symprecs: list[float]
-    redrep_symprecs: list[float]
+    tol_sm: list[float]
+    tol_redpos: list[float]
     normalize_axis: bool
     struct_path: Optional[str]
     struct_tag: Optional[int]
@@ -44,13 +44,13 @@ class StructRepGenerator:
 
     def __init__(
         self,
-        primitive_symprecs: list[float] = [1e-2],
-        redrep_symprecs: list[float] = [1e-4, 1e-2, 1e-1],
+        tol_sm: list[float] = [1e-2],
+        tol_redpos: list[float] = [1e-4, 1e-2, 1e-1],
         normalize_axis: bool = False,
         verbose: bool = False,
     ):
-        self.primitive_symprecs = primitive_symprecs
-        self.redrep_symprecs = redrep_symprecs
+        self.tol_sm = tol_sm
+        self.tol_redpos = tol_redpos
         self.normalize_axis = normalize_axis
         self.verbose = verbose
 
@@ -101,8 +101,8 @@ class StructRepGenerator:
 
         struct_rep_list = []
         for i, primitive_st in enumerate(primitive_st_set):
-            redrep_symprecs = sorted(
-                self.redrep_symprecs,
+            tol_redpos = sorted(
+                self.tol_redpos,
                 key=lambda x: x if isinstance(x, (int, float)) else sum(x) / len(x),
             )
             struct_rep, log_redrep = self.generate_struct_rep(
@@ -129,8 +129,8 @@ class StructRepGenerator:
                 original_positions=positions,
                 original_elements=np.asarray(elements, dtype=str),
                 spg_list=spg_list,
-                primitive_symprecs=self.primitive_symprecs,
-                redrep_symprecs=redrep_symprecs,
+                tol_sm=self.tol_sm,
+                tol_redpos=tol_redpos,
                 normalize_axis=self.normalize_axis,
                 struct_path=struct_path,
                 struct_tag=struct_tag,
@@ -150,16 +150,16 @@ class StructRepGenerator:
         spg_number_set = []
         iter_refine = 0
         time_refine = 0
-        for symprec in self.primitive_symprecs:
+        for tol in self.tol_sm:
             t_start = time.time()
             primitive_cell = get_primitive_cell(
-                axis=axis, positions=positions, elements=elements, tol=symprec
+                axis=axis, positions=positions, elements=elements, tol=tol
             )
             symutil = SymCell(
                 primitive_cell.axis,
                 primitive_cell.positions,
                 primitive_cell.elements,
-                symprec=symprec,
+                symprec=tol,
             )
             spg_str = symutil.get_spacegroup()
             if spg_str is None:
@@ -189,28 +189,28 @@ class StructRepGenerator:
             "metric_tensors": [],
             "axis_abc": [],
             "positions": [],
-            "symprec": [],
+            "tol": [],
         }
         all_reps = {
             "metric_tensors": [],
             "axis_abc": [],
             "positions": [],
-            "symprec": [],
+            "tol": [],
         }
         iter_redrep = 0
         time_redrep = 0
 
-        symprec_set = self.redrep_symprecs
-        for symprec in symprec_set:
-            if isinstance(symprec, float):
-                input_symprec = [symprec] * 3
+        tol_set = self.tol_redpos
+        for tol in tol_set:
+            if isinstance(tol, float):
+                input_tol = [tol] * 3
             t_start = time.time()
             reducer = PositionRepReducer(
                 axis,
                 positions,
                 elements,
                 spg_number,
-                symprec=input_symprec,
+                tol=input_tol,
                 normalize_axis=self.normalize_axis,
                 verbose=self.verbose,
             )
@@ -241,12 +241,12 @@ class StructRepGenerator:
                 all_reps["metric_tensors"].append(metric_tensor)
                 all_reps["axis_abc"].append(axis_abc)
                 all_reps["positions"].append(all_posrep)
-                all_reps["symprec"].append(symprec)
+                all_reps["tol"].append(tol)
             if unique_metric or unique_pos:
                 reduced_reps["metric_tensors"].append(metric_tensor)
                 reduced_reps["axis_abc"].append(axis_abc)
                 reduced_reps["positions"].append(red_posrep)
-                reduced_reps["symprec"].append(symprec)
+                reduced_reps["tol"].append(tol)
 
         self.iter_redrep += iter_redrep
         self.time_redrep += time_redrep

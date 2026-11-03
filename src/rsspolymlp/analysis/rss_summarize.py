@@ -38,7 +38,7 @@ class RSSResultSummarizer:
         num_process: int = -1,
         backend: str = "loky",
         assign_method: Literal["redrep", "greedy", "HK", "pymatgen"] = "redrep",
-        primitive_symprecs: list[float] = [1e-2],
+        tol_sm: list[float] = [1e-2],
         output_poscar: bool = False,
         thresholds: list[float] = None,
         parse_vasp: bool = False,
@@ -52,7 +52,7 @@ class RSSResultSummarizer:
         self.num_process = num_process
         self.backend = backend
         self.assign_method = assign_method
-        self.primitive_symprecs = primitive_symprecs
+        self.tol_sm = tol_sm
         self.output_poscar = output_poscar
         self.thresholds = thresholds
         self.parse_vasp = parse_vasp
@@ -124,7 +124,7 @@ class RSSResultSummarizer:
                             axis_tol=axis_tol,
                             pos_tol=pos_tol,
                             assign_method=self.assign_method,
-                            primitive_symprecs=self.primitive_symprecs,
+                            tol_sm=self.tol_sm,
                             num_process=self.num_process,
                             pre_analyzer=self.analyzer,
                         )
@@ -220,7 +220,7 @@ class RSSResultSummarizer:
                     axis_tol=axis_tol,
                     pos_tol=pos_tol,
                     assign_method=self.assign_method,
-                    primitive_symprecs=self.primitive_symprecs,
+                    tol_sm=self.tol_sm,
                     num_process=self.num_process,
                     pre_analyzer=self.analyzer,
                 )
@@ -281,7 +281,7 @@ class RSSResultSummarizer:
 
         print("   - Converting reduced crystal structure representation...")
         generator = StructRepGenerator(
-            primitive_symprecs=self.primitive_symprecs,
+            tol_sm=self.tol_sm,
         )
         struct_reps_list = generator.generate_struct_reps_parallel(
             rss_results,

@@ -62,20 +62,14 @@ def run():
         help="Parallelization backend for joblib.",
     )
     parser.add_argument(
-        "--primitive_symprecs",
+        "--tol_sm",
         nargs="*",
         type=float,
         default=[1e-2],
         help="Symmetry tolerances for identifying distinct primitive cells",
     )
     parser.add_argument(
-        "--refine_symprec",
-        type=float,
-        default=1e-3,
-        help="Symmetry tolerance for identifying refine structure.",
-    )
-    parser.add_argument(
-        "--reduced_symprecs",
+        "--tol_redpos",
         nargs="*",
         type=float,
         default=None,
@@ -136,8 +130,8 @@ def run():
             assign_method=args.assign_method,
             num_process=args.num_process,
             backend=args.backend,
-            primitive_symprecs=args.primitive_symprecs,
-            reduced_symprecs=args.reduced_symprecs,
+            tom_sm=args.tol_sm,
+            tol_redpos=args.tol_redpos,
             normalize_axis=args.normalize_axis,
             output_file=args.output_file,
             log_all=args.log_all,
@@ -149,7 +143,7 @@ def run():
             axis_tol=args.axis_tol,
             pos_tol=args.pos_tol,
             assign_method=args.assign_method,
-            reduced_symprecs=args.reduced_symprecs,
+            tol_redpos=args.tol_redpos,
             normalize_axis=args.normalize_axis,
             verbose=not args.not_verbose,
         )

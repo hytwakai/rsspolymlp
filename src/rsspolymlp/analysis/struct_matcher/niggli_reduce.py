@@ -40,7 +40,7 @@ def get_niggli_reduced_cell(axis, tol: float = 1e-5):
         P = P @ C
         return G, P
 
-    G: np.ndarray = np.dot(axis, axis.T)
+    G = np.dot(axis, axis.T)
     P = np.eye(3, dtype=int)
     e = tol
 

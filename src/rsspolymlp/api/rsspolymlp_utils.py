@@ -27,8 +27,8 @@ def struct_matcher(
     assign_method: Literal["redrep", "greedy", "HK", "pymatgen"] = "redrep",
     num_process: int = -1,
     backend: str = "loky",
-    primitive_symprecs: list[float] = [1e-2],
-    reduced_symprecs: list[float] = None,
+    tol_sm: list[float] = [1e-2],
+    tol_redpos: list[float] = None,
     normalize_axis: bool = False,
     output_file: str = "unique_struct.yaml",
     print_duplicates: bool = False,
@@ -41,11 +41,11 @@ def struct_matcher(
     time_log = []
     time_refine = iter_refine = time_redrep = iter_redrep = 0
     if struct_reps_list is None:
-        if reduced_symprecs is None:
+        if tol_redpos is None:
             if not normalize_axis:
-                reduced_symprecs = [1e-4, 1e-2, 1e-1]
+                tol_redpos = [1e-4, 1e-2, 1e-1]
             else:
-                reduced_symprecs = [1e-5, 1e-3, 1e-2]
+                tol_redpos = [1e-5, 1e-3, 1e-2]
 
         if struct_list is None:
             struct_list = [{} for _ in poscar_paths]
@@ -58,8 +58,8 @@ def struct_matcher(
                 struct["struct_path"] = poscar_path
 
         generator = StructRepGenerator(
-            primitive_symprecs=primitive_symprecs,
-            redrep_symprecs=reduced_symprecs,
+            tol_sm=tol_sm,
+            tol_redpos=tol_redpos,
             normalize_axis=normalize_axis,
             verbose=verbose,
         )
@@ -151,7 +151,7 @@ def struct_compare(
     axis_tol: float = 0.01,
     pos_tol: float = 0.01,
     assign_method: Literal["redrep", "greedy", "HK", "pymatgen"] = "redrep",
-    reduced_symprecs: list[float] = None,
+    tol_redpos: list[float] = None,
     normalize_axis: bool = False,
     verbose: bool = True,
 ):
@@ -177,13 +177,13 @@ def struct_compare(
         print("- Positions:")
         print(positions2)
 
-    if reduced_symprecs is None:
+    if tol_redpos is None:
         if not normalize_axis:
-            reduced_symprecs = [1e-4, 1e-2, 1e-1]
+            tol_redpos = [1e-4, 1e-2, 1e-1]
         else:
-            reduced_symprecs = [1e-5, 1e-3, 1e-2]
+            tol_redpos = [1e-5, 1e-3, 1e-2]
     generator = StructRepGenerator(
-        redrep_symprecs=reduced_symprecs,
+        tol_redpos=tol_redpos,
         normalize_axis=normalize_axis,
     )
     struct_reps_1, _ = generator.generate_struct_reps(

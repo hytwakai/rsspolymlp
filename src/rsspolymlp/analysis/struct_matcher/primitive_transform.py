@@ -1,16 +1,4 @@
-"""Recover a primitive-cell transformation from translational symmetry.
-
-Convention:
-    axis stores lattice vectors as rows.
-    L_primitive = inv(M) @ L_original
-    frac_primitive = frac_original @ M
-
-The implementation is intended for structures whose translational symmetry is
-exact up to a user-specified Cartesian tolerance. It finds candidate
-translations by mapping one reference atom to atoms of the same elements,
-checks each candidate against the complete structure, and reconstructs M using
-an exact integer row-lattice HNF calculation.
-"""
+"""Get a primitive cell from translational symmetry."""
 
 from dataclasses import dataclass
 from itertools import product
@@ -27,12 +15,12 @@ from sympy.matrices.normalforms import hermite_normal_form
 class PrimitiveCell:
     """Result of primitive-cell transformation recovery."""
 
-    M: np.ndarray  # integer 3x3 matrix
-    index: int  # |det(M)|, number of original cells in primitive cell
-    translations: np.ndarray  # valid translations in original fractional coordinates
     axis: np.ndarray  # inv(M) @ original lattice matrix
     positions: np.ndarray  # unique sites in primitive-cell fractional coordinates
     elements: np.ndarray  # elements corresponding to primitive_positions
+    M: np.ndarray  # integer 3x3 matrix
+    index: int  # |det(M)|, number of original cells in primitive cell
+    translations: np.ndarray  # valid translations in original fractional coordinates
     mapped_positions: (
         np.ndarray
     )  # all original sites transformed by M, wrapped to [0, 1)
@@ -43,7 +31,6 @@ def get_primitive_cell(
     positions: np.ndarray,
     elements: np.ndarray | list[str],
     tol: float = 1e-2,
-    translation_tol: float | None = None,
     integer_tol: float = 1e-2,
     verbose: bool = True,
 ) -> PrimitiveCell:
@@ -59,8 +46,6 @@ def get_primitive_cell(
         Length-N sequence identifying each atom elements (e.g. ``["Si", "Si"]``).
     tol
         Cartesian distance tolerance in angstrom for atom matching.
-    translation_tol
-        Cartesian tolerance for deduplicating candidate translations.
     integer_tol
         Tolerance for checking that ``index * translation`` is integer-valued.
 
@@ -72,18 +57,12 @@ def get_primitive_cell(
 
     Notes
     -----
-    - For disordered/partial-occupancy sites, convert to an explicit ordered
-      representation before using this function.
     - For strongly skewed, unreduced lattices, the +/-1 image replication used
       by the KD-tree may be insufficient; reduce the lattice first or replace
       the image search with an exact nearest-image routine.
     """
     if tol <= 0:
         raise ValueError("tol must be positive.")
-    if translation_tol is None:
-        translation_tol = tol
-    if translation_tol <= 0:
-        raise ValueError("translation_tol must be positive.")
 
     axis = np.asarray(axis, dtype=float)
     positions = np.mod(np.asarray(positions, dtype=float), 1.0)
@@ -94,9 +73,6 @@ def get_primitive_cell(
         raise ValueError("positions must have shape (N, 3).")
     if len(elements) != len(positions):
         raise ValueError("elements and positions must have the same length.")
-    n_sites = len(positions)
-    if n_sites == 0:
-        raise ValueError("Cannot analyze an empty structure.")
 
     # Select a reference atom from the least-populated elements to minimize the
     # number of translation candidates.
@@ -122,8 +98,7 @@ def get_primitive_cell(
             continue
         translation += mean_translation @ np.linalg.inv(axis)
         duplicate = any(
-            _periodic_translation_distance(translation, old, axis)
-            <= translation_tol
+            _periodic_translation_distance(translation, old, axis) <= tol
             for old in valid_translations
         )
         if not duplicate:
@@ -147,7 +122,7 @@ def get_primitive_cell(
         mapped_positions, elements, primitive_lattice, tol
     )
 
-    expected_n_sites = n_sites // index
+    expected_n_sites = len(positions) // index
     if len(primitive_positions) != expected_n_sites:
         raise RuntimeError(
             "The recovered primitive cell has an unexpected number of unique sites: "
@@ -156,12 +131,12 @@ def get_primitive_cell(
         )
 
     return PrimitiveCell(
-        M=M,
-        index=index,
-        translations=translations,
         axis=primitive_lattice,
         positions=primitive_positions,
         elements=primitive_elements,
+        M=M,
+        index=index,
+        translations=translations,
         mapped_positions=mapped_positions,
     )
 

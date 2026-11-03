@@ -102,9 +102,9 @@ def struct_match(
                     pos_d_min = [
                         pos_max_abs,
                         [
-                            redreps1["symprec"][i],
+                            redreps1["tol"][i],
                             positions1[i],
-                            redreps2["symprec"][j],
+                            redreps2["tol"][j],
                             positions2[j],
                             pos_d[i, j],
                         ],
@@ -113,8 +113,8 @@ def struct_match(
     if verbose:
         print("Elapsed time:", np.round((time.time() - s_time) * 1000, 2), "ms")
 
-        def log_axis_positions(symprec, axis, positions, round_axis=4, round_pos=3):
-            print("    - symprec:", np.round(symprec, 5).tolist())
+        def log_axis_positions(tol, axis, positions, round_axis=4, round_pos=3):
+            print("    - tol:", np.round(tol, 5).tolist())
             print("      metric_tensor:", np.round(axis, round_axis).tolist())
             if len(positions) > 0:
                 print("      positions:")
@@ -136,7 +136,7 @@ def struct_match(
                     print("    representations:")
                     for h, pos in enumerate(st.reduced_reps["positions"]):
                         log_axis_positions(
-                            st.reduced_reps["symprec"][h],
+                            st.reduced_reps["tol"][h],
                             st.reduced_reps["metric_tensors"][h],
                             pos,
                         )

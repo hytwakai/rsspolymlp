@@ -10,19 +10,17 @@ def get_reduced_lattice(
     axis: np.ndarray,
     positions: np.ndarray,
     spg_number: int,
-    symprec: float = 1e-2,
+    tol: float = 1e-3,
 ):
-    axis_niggli, positions_niggli, _ = niggli_reduce(
-        axis=axis, positions=positions, symprec=symprec
+    axis_niggli, positions_niggli = niggli_reduce(
+        axis=axis, positions=positions, tol=tol
     )
     axis = axis_niggli
     positions = positions_niggli
 
-    metric_tensor = calc_metric_tensor(axis)
-    aa, bb, cc, ab, ac, bc = metric_tensor
-    G = np.array([[aa, ab, ac], [ab, bb, bc], [ac, bc, cc]], dtype=float)
+    G = np.dot(axis, axis.T)
     transformation_matrices = enumerate_metric_symmetries(
-        G, is_chiral(spg_number), tol=symprec
+        G, is_chiral(spg_number), tol=tol
     )
 
     w, U = np.linalg.eigh(G)
@@ -41,21 +39,10 @@ def get_reduced_lattice(
     return axis, positions, metric_tensor_sqrt, transformation_matrices
 
 
-def calc_metric_tensor(axis: np.ndarray):
-    a, b, c = np.array(axis)
-    aa = np.sum(a**2)
-    bb = np.sum(b**2)
-    cc = np.sum(c**2)
-    ab = a @ b
-    ac = a @ c
-    bc = b @ c
-    return np.array([aa, bb, cc, ab, ac, bc])
-
-
 def niggli_reduce(
     axis: np.ndarray,
     positions: np.ndarray,
-    symprec: float = 1e-5,
+    tol: float = 1e-3,
 ):
     """Niggli reduction."""
     axis = np.array(axis)
@@ -63,44 +50,19 @@ def niggli_reduce(
 
     axis_niggli, P = get_niggli_reduced_cell(
         axis,
-        tol=symprec,
+        tol=tol,
     )
     pos = positions @ np.linalg.inv(P)
     pos %= 1.0
 
     assert abs(round(np.linalg.det(P))) == 1
-    return axis_niggli, pos, P
-
-
-def enumerate_integer_vectors(
-    G: np.ndarray,
-    q: float,
-    tol: float = 1e-8,
-) -> np.ndarray:
-    """Enumerate integer vectors satisfying v.T @ G @ v ~= q."""
-    G = np.asarray(G, dtype=float)
-
-    # Upper bound from the minimum eigenvalue.
-    lambda_min = np.linalg.eigvalsh(G)[0]
-    if lambda_min <= 0:
-        raise ValueError("G must be positive definite.")
-
-    bound = int(np.ceil(np.sqrt((q + tol) / lambda_min)))
-
-    vectors = []
-    for v in itertools.product(range(-bound, bound + 1), repeat=3):
-        v = np.asarray(v, dtype=int)
-
-        if abs(v @ G @ v - q) <= tol:
-            vectors.append(v)
-
-    return np.asarray(vectors, dtype=int).reshape(-1, 3)
+    return axis_niggli, pos
 
 
 def enumerate_metric_symmetries(
     G: np.ndarray,
     is_chiral: bool = False,
-    tol: float = 1e-5,
+    tol: float = 1e-3,
 ) -> list[np.ndarray]:
     """Enumerate unimodular integer matrices satisfying M @ G @ M.T = G."""
     G = np.asarray(G, dtype=float)
@@ -138,3 +100,28 @@ def enumerate_metric_symmetries(
         matrices.append(M)
 
     return matrices
+
+
+def enumerate_integer_vectors(
+    G: np.ndarray,
+    q: float,
+    tol: float = 1e-8,
+) -> np.ndarray:
+    """Enumerate integer vectors satisfying v.T @ G @ v ~= q."""
+    G = np.asarray(G, dtype=float)
+
+    # Upper bound from the minimum eigenvalue.
+    lambda_min = np.linalg.eigvalsh(G)[0]
+    if lambda_min <= 0:
+        raise ValueError("G must be positive definite.")
+
+    bound = int(np.ceil(np.sqrt((q + tol) / lambda_min)))
+
+    vectors = []
+    for v in itertools.product(range(-bound, bound + 1), repeat=3):
+        v = np.asarray(v, dtype=int)
+
+        if abs(v @ G @ v - q) <= tol:
+            vectors.append(v)
+
+    return np.asarray(vectors, dtype=int).reshape(-1, 3)

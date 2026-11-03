@@ -180,8 +180,8 @@ def identify_unique_structure(
     pos_tol: float = 0.01,
     assign_method: Literal["redrep", "greedy", "HK", "pymatgen"] = "redrep",
     keep_unique: bool = False,
-    primitive_symprecs: list[float] = [1e-5, 1e-4, 1e-3, 1e-2],
-    redrep_symprecs: list[float] = [1e-4, 1e-2, 1e-1],
+    tol_sm: list[float] = [1e-5, 1e-4, 1e-3, 1e-2],
+    tol_redpos: list[float] = [1e-4, 1e-2, 1e-1],
     normalize_axis: bool = False,
     num_process: int = -1,
     backend: str = "loky",
@@ -215,8 +215,8 @@ def identify_unique_structure(
     if verbose:
         print("   - Converting reduced crystal structure representation...")
     generator = StructRepGenerator(
-        primitive_symprecs=primitive_symprecs,
-        redrep_symprecs=redrep_symprecs,
+        tol_sm=tol_sm,
+        tol_redpos=tol_redpos,
         normalize_axis=normalize_axis,
     )
     redreps_list = generator.generate_struct_reps_parallel(

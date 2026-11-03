@@ -40,7 +40,7 @@ def test_rss_mlp(tmp_path, pressure):
         c_maxiter=0,
         not_stop_rss=True,
     )
-    rss_uniq_struct()
+    rss_uniq_struct(num_process=1)
 
     with open("rss_result/rss_results.yaml") as f:
         yaml_data = yaml.safe_load(f)
@@ -124,7 +124,7 @@ def test_rss_summarize(tmp_path, pressure):
             c_maxiter=0,
             not_stop_rss=True,
         )
-        rss_uniq_struct()
+        rss_uniq_struct(num_process=1)
 
     os.chdir("../")
     result_paths = sorted(glob.glob("./*/rss_result/rss_results.json"))
@@ -199,7 +199,7 @@ def test_rss_uniq_struct(tmp_path, target_dir):
     shutil.copy(f"{ref_path}/{target_dir}/rss_result/finish.dat", "rss_result")
     shutil.copy(f"{ref_path}/{target_dir}/rss_result/success.dat", "rss_result")
 
-    rss_uniq_struct()
+    rss_uniq_struct(num_process=1)
     with open("./rss_result/rss_results.yaml") as f:
         yaml_data = yaml.safe_load(f)
 

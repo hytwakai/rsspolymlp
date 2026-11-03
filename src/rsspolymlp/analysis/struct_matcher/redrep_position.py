@@ -15,7 +15,7 @@ class PositionRepReducer:
         positions: np.ndarray,
         elements: np.ndarray,
         spg_number: int,
-        symprec: list[float] = [1e-4, 1e-4, 1e-4],
+        tol: list[float] = [1e-4, 1e-4, 1e-4],
         normalize_axis: bool = False,
         verbose: bool = False,
     ):
@@ -35,7 +35,7 @@ class PositionRepReducer:
             Chemical element symbols corresponding to the atomic positions.
         spg_number : int
             Space group number of the structure.
-        symprec : list of float, default=[1e-4, 1e-4, 1e-4]
+        tol : list of float, default=[1e-4, 1e-4, 1e-4]
             Tolerances used for structural matching along the three lattice
             directions.
         normalize_axis : bool, default=False
@@ -47,7 +47,7 @@ class PositionRepReducer:
         self.positions = np.asarray(positions, dtype=float)
         self.elements = np.asarray(elements, dtype=str)
         self.spg_number = spg_number
-        self.symprec = np.array(symprec)
+        self.tol = np.array(tol)
         self.normalize_axis = normalize_axis
         if self.normalize_axis:
             volume = abs(np.linalg.det(self.axis))
@@ -56,7 +56,7 @@ class PositionRepReducer:
         self.axis_abc = None
         if self.verbose:
             print("code: struct_matcher.redrep_position")
-            print("  symprec:", symprec)
+            print("  tol:", tol)
 
     def get_reduced_structure_representation(self) -> dict:
         """Derive the reduced representation of a crystal structure.
@@ -74,7 +74,7 @@ class PositionRepReducer:
                 Lengths of the three lattice vectors.
             - reduced_positions : ndarray
                 One-dimensional vector [X_a, X_b, X_c] that uniquely identifies
-                the structure up to the tolerance `symprec`.
+                the structure up to the tolerance `tol`.
             - all_positions : list[dict]
                 List of dictionaries, each containing:
                 - perm_mat : ndarray, shape (3, 3)
@@ -93,7 +93,7 @@ class PositionRepReducer:
                 self.axis,
                 self.positions,
                 self.spg_number,
-                np.max(self.symprec),
+                np.max(self.tol),
             )
         )
         if self.verbose:
@@ -280,7 +280,7 @@ class PositionRepReducer:
                 max_coord = sorted_one_coord[0]
 
                 is_near_max = np.where(
-                    np.abs(sorted_one_coord - max_coord) <= self.symprec[axis]
+                    np.abs(sorted_one_coord - max_coord) <= self.tol[axis]
                 )[0]
                 _target_vals = _target_vals[: is_near_max[-1] + 1, :]
                 _reduced_perm_cands = _reduced_perm_cands[: is_near_max[-1] + 1, :]
@@ -309,9 +309,9 @@ class PositionRepReducer:
         gap = np.roll(pos_sorted, -1, axis=0) - pos_sorted
         gap[-1, :] += 1.0
 
-        # New cluster starts where gap > symprec
+        # New cluster starts where gap > tol
         gap_normalized = gap * self.axis_abc
-        is_new_cluster = gap_normalized > self.symprec
+        is_new_cluster = gap_normalized > self.tol
         cluster_id_sorted = np.zeros_like(_positions, dtype=np.int32)
         cluster_id_sorted[1:, :] = np.cumsum(is_new_cluster[:-1, :], axis=0)
 
