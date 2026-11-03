@@ -32,7 +32,7 @@ def get_primitive_cell(
     elements: np.ndarray | list[str],
     tol: float = 1e-2,
     integer_tol: float = 1e-2,
-    verbose: bool = True,
+    verbose: bool = False,
 ) -> PrimitiveCell:
     """Find a primitive-cell transformation from lattice and atom arrays.
 

@@ -199,7 +199,7 @@ def test_rss_uniq_struct(tmp_path, target_dir):
     shutil.copy(f"{ref_path}/{target_dir}/rss_result/finish.dat", "rss_result")
     shutil.copy(f"{ref_path}/{target_dir}/rss_result/success.dat", "rss_result")
 
-    rss_uniq_struct(num_process=1)
+    rss_uniq_struct()
     with open("./rss_result/rss_results.yaml") as f:
         yaml_data = yaml.safe_load(f)
 

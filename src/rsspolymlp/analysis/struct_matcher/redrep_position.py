@@ -1,9 +1,11 @@
+import itertools
 import time
 from collections import Counter
+from typing import Optional
 
 import numpy as np
 
-from rsspolymlp.analysis.struct_matcher.redrep_lattice import get_reduced_lattice
+from rsspolymlp.analysis.struct_matcher.chiral_spg import is_chiral
 
 
 class PositionRepReducer:
@@ -15,8 +17,10 @@ class PositionRepReducer:
         positions: np.ndarray,
         elements: np.ndarray,
         spg_number: int,
+        tol_sm: float = 1e-2,
         tol: list[float] = [1e-4, 1e-4, 1e-4],
         normalize_axis: bool = False,
+        transformation_matrices: Optional[np.ndarray] = None,
         verbose: bool = False,
     ):
         """
@@ -47,11 +51,13 @@ class PositionRepReducer:
         self.positions = np.asarray(positions, dtype=float)
         self.elements = np.asarray(elements, dtype=str)
         self.spg_number = spg_number
+        self.tol_sm = tol_sm
         self.tol = np.array(tol)
         self.normalize_axis = normalize_axis
         if self.normalize_axis:
             volume = abs(np.linalg.det(self.axis))
             self.axis = self.axis / ((volume / len(self.elements)) ** (1 / 3))
+        self.transformation_matrices = transformation_matrices
         self.verbose = verbose
         self.axis_abc = None
         if self.verbose:
@@ -87,17 +93,15 @@ class PositionRepReducer:
                 atomic coordinates.
         """
 
-        t_lattice = time.time()
-        self.axis, self.positions, metric_tensor_sqrt, transformation_matrices = (
-            get_reduced_lattice(
-                self.axis,
-                self.positions,
-                self.spg_number,
-                np.max(self.tol),
+        G = np.dot(self.axis, self.axis.T)
+        metric_tensor = np.array([G[0, 0], G[1, 1], G[2, 2], G[1, 2], G[0, 2], G[0, 1]])
+        if self.transformation_matrices is None:
+            t_lattice = time.time()
+            transformation_matrices = enumerate_metric_symmetries(
+                G, is_chiral(self.spg_number), tol=self.tol_sm
             )
-        )
-        if self.verbose:
-            print(f"  Lattice: {round((time.time() - t_lattice) * 1000, 2)} ms")
+            if self.verbose:
+                print(f"  Lattice: {round((time.time() - t_lattice) * 1000, 2)} ms")
 
         a, b, c = np.array(self.axis)
         norm_a = np.linalg.norm(a)
@@ -118,7 +122,7 @@ class PositionRepReducer:
             )
 
         return {
-            "metric_tensor": metric_tensor_sqrt,
+            "metric_tensor": metric_tensor,
             "axis": self.axis,
             "axis_abc": self.axis_abc,
             "reduced_positions": reduced_positions,
@@ -331,3 +335,75 @@ class PositionRepReducer:
             snapped_positions[sort_idx[:, ax], ax] = pos_sorted[:, ax]
 
         return cluster_id, snapped_positions
+
+
+def enumerate_metric_symmetries(
+    G: np.ndarray,
+    is_chiral: bool = False,
+    tol: float = 1e-3,
+) -> list[np.ndarray]:
+    """Enumerate unimodular integer matrices satisfying M @ G @ M.T = G."""
+    if not np.allclose(G, G.T, atol=tol):
+        raise ValueError("G must be symmetric.")
+
+    if np.linalg.eigvalsh(G)[0] <= 0:
+        raise ValueError("G must be positive definite.")
+
+    norm_a = G[0, 0] ** 0.5
+    norm_b = G[1, 1] ** 0.5
+    norm_c = G[2, 2] ** 0.5
+    e_aa = tol * 2 * norm_a
+    e_bb = tol * 2 * norm_b
+    e_cc = tol * 2 * norm_c
+    e_bc = tol * (norm_b + norm_c)
+    e_ac = tol * (norm_a + norm_c)
+    e_ab = tol * (norm_a + norm_b)
+
+    # Enumerate candidate column vectors.
+    candidates = [
+        enumerate_integer_vectors(G, G[i, i], [e_aa, e_bb, e_cc][i]) for i in range(3)
+    ]
+    matrices = []
+
+    # Enumerate combinations of the three columns.
+    for m1, m2, m3 in itertools.product(*candidates):
+        if abs(m1 @ G @ m2 - G[0, 1]) > e_ab:
+            continue
+        if abs(m1 @ G @ m3 - G[0, 2]) > e_ac:
+            continue
+        if abs(m2 @ G @ m3 - G[1, 2]) > e_bc:
+            continue
+        M = np.column_stack((m1, m2, m3))
+
+        det = round(np.linalg.det(M))
+        if abs(det) != 1:
+            continue
+        if is_chiral and det == -1:
+            continue
+        matrices.append(M)
+
+    return matrices
+
+
+def enumerate_integer_vectors(
+    G: np.ndarray,
+    q: float,
+    tol: float = 1e-5,
+) -> np.ndarray:
+    """Enumerate integer vectors satisfying v.T @ G @ v ~= q."""
+    G = np.asarray(G, dtype=float)
+
+    # Upper bound from the minimum eigenvalue.
+    lambda_min = np.linalg.eigvalsh(G)[0]
+    if lambda_min <= 0:
+        raise ValueError("G must be positive definite.")
+
+    vectors = []
+    bound = int(np.ceil(np.sqrt((q + tol) / lambda_min)))
+    for v in itertools.product(range(-bound, bound + 1), repeat=3):
+        v = np.asarray(v, dtype=int)
+
+        if abs(v @ G @ v - q) <= tol:
+            vectors.append(v)
+
+    return np.asarray(vectors, dtype=int).reshape(-1, 3)

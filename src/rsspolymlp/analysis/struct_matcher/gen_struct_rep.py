@@ -7,6 +7,7 @@ from typing import Optional
 import joblib
 import numpy as np
 
+from rsspolymlp.analysis.struct_matcher.niggli_reduce import niggli_reduce
 from rsspolymlp.analysis.struct_matcher.primitive_transform import (
     PrimitiveCell,
     get_primitive_cell,
@@ -167,8 +168,15 @@ class StructRepGenerator:
             else:
                 spg_number = int(re.search(r"\((\d+)\)", spg_str).group(1))
 
+            axis_niggli, positions_niggli = niggli_reduce(
+                axis=primitive_cell.axis, positions=primitive_cell.positions, tol=tol
+            )
+            primitive_cell.axis = axis_niggli
+            primitive_cell.positions = positions_niggli
+
             primitive_st_set.append(primitive_cell)
             spg_number_set.append(spg_number)
+
             iter_refine += 1
             time_refine += time.time() - t_start
 
