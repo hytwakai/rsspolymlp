@@ -82,6 +82,11 @@ class LogfileLoader:
                 in_frac_coords = True
                 in_axis = False
                 continue
+            elif "Force and stress tensor residuals" in line and parse_struct is True:
+                parse_struct = False
+                in_frac_coords = False
+                in_axis = False
+                continue
 
             if in_axis and line.startswith("- ["):
                 if "np.float64" in line[2:]:

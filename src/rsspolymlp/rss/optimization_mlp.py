@@ -92,7 +92,8 @@ class OptimizationMLP:
                     )
                     break
 
-                print("Using", self.solver_method, "method", flush=True)
+                print("Trial", iteration, flush=True)
+                print("  Using", self.solver_method, "method", flush=True)
                 self.minobj, judge = self.minimize(unitcell, iteration, c1_set, c2_set)
 
                 if not judge:
@@ -112,23 +113,21 @@ class OptimizationMLP:
                 n_iter = self.minobj._res.nit
                 n_fev = self.minobj._res.nfev
                 n_jev = self.minobj._res.njev
-                print("Enthalpy (eV/atom):", enthalpy_current, flush=True)
-                print("Iterations:", n_iter)
-                print("Function evaluations:", n_fev)
-                print("Gradient evaluations:", n_jev)
+                print("  Enthalpy (eV/atom):", enthalpy_current, flush=True)
+                print("  Iterations:", n_iter)
+                print("  Function evaluations:", n_fev)
+                print("  Gradient evaluations:", n_jev)
                 if not self.write_refine_structure(self.opt_poscar):
                     self.log_computation_time()
                     return
 
                 enthalpy_diff = enthalpy_current - enthalpy_previous
                 print(
-                    "Emthalpy difference from the previous iteration:",
+                    "  Emthalpy difference from the previous iteration:",
                     enthalpy_diff,
                     flush=True,
                 )
                 if abs(enthalpy_diff) < 1e-8:
-                    print("Final function value (eV/atom):", enthalpy_current, flush=True)
-                    print("Geometry optimization succeeded", flush=True)
                     break
                 elif abs(enthalpy_diff) < 1e-3:
                     self.solver_method = "BFGS"
@@ -144,13 +143,16 @@ class OptimizationMLP:
                     return
 
             if not self._stop_rss:
+                print("---------------------------", flush=True)
+                print("Final function value (eV/atom):", enthalpy_current, flush=True)
                 self.print_final_structure_details()
-
                 judge = self.analyze_space_group(self.opt_poscar)
+                print("---------------------------", flush=True)
                 if judge is False:
                     self.log_computation_time()
                     return
 
+                print("Geometry optimization succeeded", flush=True)
                 self.log_computation_time()
                 with open("rss_result/success.dat", "a") as f:
                     print(self.poscar_name, file=f, flush=True)
@@ -167,9 +169,6 @@ class OptimizationMLP:
             pressure=self.pressure,
             verbose=False,
         )
-        if iteration == 0:
-            print("Initial structure", flush=True)
-            minobj.print_structure()
 
         maxiter = 300
         for c_count in range(3):
@@ -253,6 +252,9 @@ class OptimizationMLP:
 
     def print_final_structure_details(self):
         """Print residual forces, stress, and final structure."""
+        print("Final structure", flush=True)
+        self.print_structure(self.minobj.structure)
+        print("Force and stress tensor residuals in GO:", flush=True)
         if not self.minobj._basis._relax_cell:
             print("Residuals (force):")
             print(self.minobj.residual_forces.T)
@@ -277,8 +279,6 @@ class OptimizationMLP:
             print(
                 "Maximum absolute value in Residuals (stress):", np.max(np.abs(res_s))
             )
-        print("Final structure")
-        self.minobj.print_structure()
 
     def print_structure(self, polymlp_st):
         """Print structure."""
