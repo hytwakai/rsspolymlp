@@ -82,7 +82,7 @@ class OptimizationMLP:
             print("Energy (Initial structure):", e0, flush=True)
             print("E + PV (Initial structure):", h0, flush=True)
             print("---------------------------", flush=True)
-            energy_previous = h0
+            enthalpy_previous = h0
 
             for iteration in range(max_iteration):
                 self.check_opt_str()
@@ -94,37 +94,46 @@ class OptimizationMLP:
 
                 print("Using", self.solver_method, "method", flush=True)
                 self.minobj, judge = self.minimize(unitcell, iteration, c1_set, c2_set)
-                energy_current = self.minobj.energy / len(
-                    self.minobj.structure.elements
-                )
 
                 if not judge:
-                    print("Final function value (eV/atom):", energy_current, flush=True)
+                    print(
+                        "Final function value (eV/atom):",
+                        self.minobj._energy / len(self.minobj.structure.elements),
+                    )
                     print(
                         "Geometry optimization failed: Huge negative or zero energy value."
                     )
                     self.log_computation_time()
                     return
 
-                print("Energy (eV/atom):", energy_current, flush=True)
+                enthalpy_current = self.minobj.energy / len(
+                    self.minobj.structure.elements
+                )
+                n_iter = self.minobj._res.nit
+                n_fev = self.minobj._res.nfev
+                n_jev = self.minobj._res.njev
+                print("Enthalpy (eV/atom):", enthalpy_current, flush=True)
+                print("Iterations:", n_iter)
+                print("Function evaluations:", n_fev)
+                print("Gradient evaluations:", n_jev)
                 if not self.write_refine_structure(self.opt_poscar):
                     self.log_computation_time()
                     return
 
-                energy_convergence = energy_current - energy_previous
+                enthalpy_diff = enthalpy_current - enthalpy_previous
                 print(
-                    "Energy difference from the previous iteration:",
-                    energy_convergence,
+                    "Emthalpy difference from the previous iteration:",
+                    enthalpy_diff,
                     flush=True,
                 )
-                if abs(energy_convergence) < 1e-8:
-                    print("Final function value (eV/atom):", energy_current, flush=True)
+                if abs(enthalpy_diff) < 1e-8:
+                    print("Final function value (eV/atom):", enthalpy_current, flush=True)
                     print("Geometry optimization succeeded", flush=True)
                     break
-                elif abs(energy_convergence) < 1e-4:
+                elif abs(enthalpy_diff) < 1e-3:
                     self.solver_method = "BFGS"
 
-                energy_previous = self.minobj.energy / len(unitcell.elements)
+                enthalpy_previous = self.minobj.energy / len(unitcell.elements)
                 unitcell = Poscar(self.opt_poscar).structure
                 if iteration == max_iteration - 1:
                     print(
