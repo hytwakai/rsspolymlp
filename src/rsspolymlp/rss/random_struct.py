@@ -83,8 +83,8 @@ class GenerateRandomStructure:
 
         random_struct_list = []
         iteration = 1
-        max_iteration = 100
-        num_samples = 2000
+        max_iteration = 1000
+        num_samples = 5000
         while True:
             if iteration == max_iteration:
                 raise RuntimeError(
