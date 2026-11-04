@@ -56,6 +56,7 @@ class OptimizationMLP:
         self.poscar_name = poscar_path.split("/")[-1]
         self.opt_poscar = f"opt_struct/{self.poscar_name}"
         output_file = f"log/{self.poscar_name}.log"
+        solver_method = self.solver_method
 
         with open(output_file, "w") as f, redirect_stdout(f):
             self.time_initial = time.time()
@@ -93,8 +94,10 @@ class OptimizationMLP:
                     break
 
                 print("Trial", iteration, flush=True)
-                print("  Using", self.solver_method, "method", flush=True)
-                self.minobj, judge = self.minimize(unitcell, iteration, c1_set, c2_set)
+                print("  Using", solver_method, "method", flush=True)
+                self.minobj, judge = self.minimize(
+                    unitcell, iteration, solver_method, c1_set, c2_set
+                )
 
                 if not judge:
                     print(
@@ -129,8 +132,8 @@ class OptimizationMLP:
                 )
                 if abs(enthalpy_diff) < 1e-8:
                     break
-                elif abs(enthalpy_diff) < 1e-3:
-                    self.solver_method = "BFGS"
+                elif abs(enthalpy_diff) < 1e-2:
+                    solver_method = "BFGS"
 
                 enthalpy_previous = self.minobj.energy / len(unitcell.elements)
                 unitcell = Poscar(self.opt_poscar).structure
@@ -157,7 +160,7 @@ class OptimizationMLP:
                 with open("rss_result/success.dat", "a") as f:
                     print(self.poscar_name, file=f, flush=True)
 
-    def minimize(self, unitcell, iteration, c1_set, c2_set):
+    def minimize(self, unitcell, iteration, solver_method, c1_set, c2_set):
         """Run geometry optimization with different parameters until successful."""
         minobj = GeometryOptimization(
             unitcell,
@@ -181,7 +184,7 @@ class OptimizationMLP:
             try:
                 minobj.run(
                     gtol=self.gtol,
-                    method=self.solver_method,
+                    method=solver_method,
                     maxiter=maxiter,
                     c1=c1_set[c_count],
                     c2=c2_set[c_count],
