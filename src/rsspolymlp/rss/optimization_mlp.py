@@ -7,6 +7,7 @@ import numpy as np
 
 from pypolymlp.calculator.opt_geometry import GeometryOptimization
 from pypolymlp.calculator.properties import Properties
+from pypolymlp.core.units import EVtoGPa
 from rsspolymlp.common.interface_pypolymlp import gen_polymlp_structure
 from rsspolymlp.common.interface_spglib import SymCell
 from rsspolymlp.common.interface_vasp import Poscar
@@ -58,7 +59,6 @@ class OptimizationMLP:
 
         with open(output_file, "w") as f, redirect_stdout(f):
             self.time_initial = time.time()
-            energy_keep = None
             max_iteration = 30
             c1_set = [None, 0.9, 0.99]
             c2_set = [None, 0.99, 0.999]
@@ -74,6 +74,15 @@ class OptimizationMLP:
             print("Pressure (GPa):", self.pressure, flush=True)
 
             unitcell = Poscar(poscar_path).structure
+            e0, _, _ = self.properties.eval(unitcell)
+            h0 = e0 + self.pressure * unitcell.volume / EVtoGPa
+            print("---------------------------", flush=True)
+            print("Initial structure", flush=True)
+            self.print_structure(unitcell)
+            print("Energy (Initial structure):", e0, flush=True)
+            print("E + PV (Initial structure):", h0, flush=True)
+            print("---------------------------", flush=True)
+            energy_previous = h0
 
             for iteration in range(max_iteration):
                 self.check_opt_str()
@@ -83,23 +92,40 @@ class OptimizationMLP:
                     )
                     break
 
-                minobj = self.minimize(unitcell, iteration, c1_set, c2_set)
-                if minobj is None:
+                print("Using", self.solver_method, "method", flush=True)
+                self.minobj, judge = self.minimize(unitcell, iteration, c1_set, c2_set)
+                energy_current = self.minobj.energy / len(
+                    self.minobj.structure.elements
+                )
+
+                if not judge:
+                    print("Final function value (eV/atom):", energy_current, flush=True)
+                    print(
+                        "Geometry optimization failed: Huge negative or zero energy value."
+                    )
                     self.log_computation_time()
                     return
-                self.minobj = minobj
 
+                print("Energy (eV/atom):", energy_current, flush=True)
                 if not self.write_refine_structure(self.opt_poscar):
                     self.log_computation_time()
                     return
 
-                if self.check_convergence(energy_keep):
+                energy_convergence = energy_current - energy_previous
+                print(
+                    "Energy difference from the previous iteration:",
+                    energy_convergence,
+                    flush=True,
+                )
+                if abs(energy_convergence) < 1e-8:
+                    print("Final function value (eV/atom):", energy_current, flush=True)
                     print("Geometry optimization succeeded", flush=True)
                     break
+                elif abs(energy_convergence) < 1e-4:
+                    self.solver_method = "BFGS"
 
-                energy_keep = self.minobj.energy / len(unitcell.elements)
+                energy_previous = self.minobj.energy / len(unitcell.elements)
                 unitcell = Poscar(self.opt_poscar).structure
-
                 if iteration == max_iteration - 1:
                     print(
                         "Maximum number of relaxation iterations has been exceeded",
@@ -130,7 +156,7 @@ class OptimizationMLP:
             relax_positions=True,
             with_sym=self.with_symmetry,
             pressure=self.pressure,
-            verbose=True,
+            verbose=False,
         )
         if iteration == 0:
             print("Initial structure", flush=True)
@@ -152,33 +178,14 @@ class OptimizationMLP:
                     c1=c1_set[c_count],
                     c2=c2_set[c_count],
                 )
-
                 energy_per_atom = minobj._energy / len(minobj.structure.elements)
                 if energy_per_atom < -50:
-                    print(
-                        "Final function value (eV/atom):", energy_per_atom, flush=True
-                    )
-                    print(
-                        "Geometry optimization failed: Huge negative or zero energy value.",
-                        flush=True,
-                    )
-                    return None
-
-                return minobj
+                    return minobj, False
+                return minobj, True
 
             except RuntimeError:
                 if c_count == 2:
-                    print(
-                        "Final function value (eV/atom):",
-                        minobj._energy / len(minobj.structure.elements),
-                        flush=True,
-                    )
-                    print(
-                        "Geometry optimization failed: Huge negative or zero energy value.",
-                        flush=True,
-                    )
-                    return None
-
+                    return minobj, False
                 print(
                     "Change [c1, c2] to",
                     c1_set[c_count + 1],
@@ -190,10 +197,6 @@ class OptimizationMLP:
     def write_refine_structure(self, poscar_path):
         """Refine the crystal structure with increasing symmetry precision."""
         self.minobj.write_poscar(filename=self.opt_poscar)
-        if not wait_for_file_lines(self.opt_poscar):
-            print("Reading file failed.", flush=True)
-            return False
-
         symprec_list = [1e-5, 1e-4, 1e-3, 1e-2, 1e-1]
         refine_success = False
         for sp in symprec_list:
@@ -216,27 +219,7 @@ class OptimizationMLP:
             return False
         else:
             self.minobj.write_poscar(filename=self.opt_poscar)
-            if not wait_for_file_lines(self.opt_poscar):
-                print("Reading file failed.", flush=True)
-                return False
             return True
-
-    def check_convergence(self, energy_keep):
-        """Check if the energy difference is below the threshold."""
-        energy_per_atom = self.minobj.energy / len(self.minobj.structure.elements)
-        print("Energy (eV/atom):", energy_per_atom, flush=True)
-
-        if energy_keep is not None:
-            energy_convergence = energy_per_atom - energy_keep
-            print(
-                "Energy difference from the previous iteration:",
-                energy_convergence,
-                flush=True,
-            )
-            if abs(energy_convergence) < 1e-8:
-                print("Final function value (eV/atom):", energy_per_atom, flush=True)
-                return True
-        return False
 
     def analyze_space_group(self, poscar_path):
         """Analyze space group symmetry with different tolerances."""
@@ -252,11 +235,9 @@ class OptimizationMLP:
                 continue
             except IndexError:
                 continue
-
         if spg_sets == []:
             print("Analyzing space group failed.", flush=True)
             return False
-
         print("Space group set:")
         print(spg_sets)
         return True
@@ -290,6 +271,18 @@ class OptimizationMLP:
         print("Final structure")
         self.minobj.print_structure()
 
+    def print_structure(self, polymlp_st):
+        """Print structure."""
+        structure = polymlp_st
+        np.set_printoptions(suppress=True)
+        print("Axis basis vectors:", flush=True)
+        for a in structure.axis.T:
+            print("-", a.tolist(), flush=True)
+        print("Fractional coordinates:", flush=True)
+        for p, e in zip(structure.positions.T, structure.elements):
+            print("-", e, p.tolist(), flush=True)
+        return self
+
     def log_computation_time(self):
         """Log computational time."""
         time_fin = time.time() - self.time_initial
@@ -308,34 +301,3 @@ class OptimizationMLP:
             self._stop_rss = True
         if len(glob.glob("initial_struct/*")) == len(glob.glob("log/*")):
             self._stop_rss = True
-
-
-def wait_for_file_lines(file_path, timeout=20, interval=0.1):
-    """
-    Waits until its contents (lines) can be read.
-
-    Parameters:
-        file_path (str): The path of the file to be read.
-        timeout (int, optional): The maximum number of seconds to wait before timing out.
-        interval (float, optional): The interval in seconds between checks.
-    """
-    start_time = time.time()
-
-    while True:
-        try:
-            with open(file_path, "r") as f:
-                lines = f.readlines()
-            # Return the lines if the list is not empty
-            if lines:
-                return True
-        except Exception:
-            # If there's an error (such as the file being in use),
-            # ignore and retry after the interval
-            pass
-
-        # Check if the timeout has been exceeded
-        if time.time() - start_time > timeout:
-            return False
-
-        # Wait for the specified interval before retrying
-        time.sleep(interval)
