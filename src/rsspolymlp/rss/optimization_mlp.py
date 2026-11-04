@@ -309,7 +309,7 @@ class OptimizationMLP:
         with open("rss_result/success.dat") as f:
             success_str = sum(1 for _ in f)
         residual_str = self.n_opt_str - success_str
-        if residual_str < 0:
+        if residual_str <= 0:
             self._stop_rss = True
         if len(glob.glob("initial_struct/*")) == len(glob.glob("log/*")):
             self._stop_rss = True
