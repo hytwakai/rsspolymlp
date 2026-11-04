@@ -210,15 +210,13 @@ class StructRepGenerator:
 
         tol_set = self.tol_redpos
         for tol in tol_set:
-            if isinstance(tol, float):
-                input_tol = [tol] * 3
             t_start = time.time()
             reducer = PositionRepReducer(
                 axis,
                 positions,
                 elements,
                 spg_number,
-                tol=input_tol,
+                tol=tol,
                 normalize_axis=self.normalize_axis,
                 verbose=self.verbose,
             )

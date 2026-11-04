@@ -99,9 +99,15 @@ class UniqueStructIdentifier:
                         pos_tol=self.pos_tol,
                     )
                 elif self.assign_method == "pymatgen":
-                    st1 = self.pymat.polymlp_to_pymat_st(uniq_str.original_polymlp_st)
-                    st2 = self.pymat.polymlp_to_pymat_st(
-                        struct_reps.original_polymlp_st
+                    st1 = self.pymat.parameter_to_pymat_st(
+                        uniq_str.original_axis,
+                        uniq_str.original_positions,
+                        uniq_str.original_elements,
+                    )
+                    st2 = self.pymat.parameter_to_pymat_st(
+                        struct_reps.original_axis,
+                        struct_reps.original_positions,
+                        struct_reps.original_elements,
                     )
                     judge_duplicate = self.pymat.match_str(st1, st2)
                 else:
@@ -180,7 +186,7 @@ def identify_unique_structure(
     pos_tol: float = 0.01,
     assign_method: Literal["redrep", "greedy", "HK", "pymatgen"] = "redrep",
     keep_unique: bool = False,
-    tol_sm: list[float] = [1e-5, 1e-4, 1e-3, 1e-2],
+    tol_sm: list[float] = [1e-2],
     tol_redpos: list[float] = [1e-4, 1e-2, 1e-1],
     normalize_axis: bool = False,
     num_process: int = -1,

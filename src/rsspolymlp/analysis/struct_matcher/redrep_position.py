@@ -18,7 +18,7 @@ class PositionRepReducer:
         elements: np.ndarray,
         spg_number: int,
         tol_sm: float = 1e-2,
-        tol: list[float] = [1e-4, 1e-4, 1e-4],
+        tol: float = 1e-4,
         normalize_axis: bool = False,
         transformation_matrices: Optional[np.ndarray] = None,
         verbose: bool = False,
@@ -39,7 +39,7 @@ class PositionRepReducer:
             Chemical element symbols corresponding to the atomic positions.
         spg_number : int
             Space group number of the structure.
-        tol : list of float, default=[1e-4, 1e-4, 1e-4]
+        tol : float
             Tolerances used for structural matching along the three lattice
             directions.
         normalize_axis : bool, default=False
@@ -52,7 +52,7 @@ class PositionRepReducer:
         self.elements = np.asarray(elements, dtype=str)
         self.spg_number = spg_number
         self.tol_sm = tol_sm
-        self.tol = np.array(tol)
+        self.tol = tol
         self.normalize_axis = normalize_axis
         if self.normalize_axis:
             volume = abs(np.linalg.det(self.axis))
@@ -192,8 +192,8 @@ class PositionRepReducer:
             )
             mask = np.where(sorted_types == 0)[0]
             for redperm_positions in redperm_positions_list:
-                reduced_perm_cands.append(redperm_positions.T.reshape(-1))
-                target_vals.append(redperm_positions[0 : len(mask), :].T.reshape(-1))
+                reduced_perm_cands.append(redperm_positions[:, ::-1].T.reshape(-1))
+                target_vals.append(redperm_positions[0 : len(mask), ::-1].T.reshape(-1))
             all_positions.append(
                 {
                     "perm_mat": pos_cand["perm_mat"],
@@ -210,6 +210,7 @@ class PositionRepReducer:
             reduced_perm_cands,
             target_vals,
         )
+        reduced_positions = reduced_positions.reshape(3, -1)[::-1, :].reshape(-1)
         if self.verbose:
             print(f"  Translation: {round((time.time() - t_translation) * 1000, 2)} ms")
 
@@ -284,7 +285,7 @@ class PositionRepReducer:
                 max_coord = sorted_one_coord[0]
 
                 is_near_max = np.where(
-                    np.abs(sorted_one_coord - max_coord) <= self.tol[axis]
+                    np.abs(sorted_one_coord - max_coord) <= self.tol
                 )[0]
                 _target_vals = _target_vals[: is_near_max[-1] + 1, :]
                 _reduced_perm_cands = _reduced_perm_cands[: is_near_max[-1] + 1, :]
@@ -315,6 +316,11 @@ class PositionRepReducer:
 
         # New cluster starts where gap > tol
         gap_normalized = gap * self.axis_abc
+        """print("gap")
+        print(np.round(gap_normalized.T, 3).tolist()[0])
+        print(np.round(gap_normalized.T, 3).tolist()[1])
+        print(np.round(gap_normalized.T, 3).tolist()[2])"""
+        # is_new_cluster = gap_normalized > [self.tol * 0.01, self.tol * 0.1, self.tol]
         is_new_cluster = gap_normalized > self.tol
         cluster_id_sorted = np.zeros_like(_positions, dtype=np.int32)
         cluster_id_sorted[1:, :] = np.cumsum(is_new_cluster[:-1, :], axis=0)
