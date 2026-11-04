@@ -4,8 +4,8 @@ import os
 import numpy as np
 from scipy.linalg import cholesky
 
+from rsspolymlp.common.interface_vasp import write_poscar
 from rsspolymlp.common.property import PropUtil
-from rsspolymlp.utils.vasp_util.write_poscar import write_poscar
 
 
 class GenerateRandomStructure:
@@ -83,8 +83,13 @@ class GenerateRandomStructure:
 
         random_struct_list = []
         iteration = 1
+        max_iteration = 100
         num_samples = 2000
         while True:
+            if iteration == max_iteration:
+                raise RuntimeError(
+                    "Random structure generation exceeded the maximum number of iterations."
+                )
             print(f"----- Iteration {iteration} -----")
 
             # Define volume constraints based on atomic packing fraction
