@@ -119,7 +119,10 @@ def get_primitive_cell(
     primitive_lattice = np.linalg.inv(M.astype(float)) @ axis
     mapped_positions = np.mod(positions @ M, 1.0)
     primitive_positions, primitive_elements = _extract_primitive_positions(
-        mapped_positions, elements, primitive_lattice, tol
+        mapped_positions,
+        elements,
+        primitive_lattice,
+        index,
     )
 
     expected_n_sites = len(positions) // index
@@ -278,56 +281,41 @@ def _extract_primitive_positions(
     mapped_positions: np.ndarray,
     elements: np.ndarray,
     primitive_lattice: np.ndarray,
-    tol: float,
+    index: int,
 ) -> tuple[np.ndarray, np.ndarray]:
     """Merge equivalent sites in the primitive lattice using mean coordinates."""
-    matched_positions: list[list[np.ndarray]] = []
-    primitive_elements: list[str] = []
-    for coord, element in zip(mapped_positions, elements):
-        coord = np.asarray(coord, dtype=float)
-        is_duplicate = False
-        for positions, old_element in zip(matched_positions, primitive_elements):
-            if element != old_element:
-                continue
-            if (
-                _periodic_cartesian_distance_frac(
-                    coord, positions[0], primitive_lattice
-                )
-                <= tol
-            ):
-                positions.append(coord)
-                is_duplicate = True
-                break
-        if not is_duplicate:
-            matched_positions.append([coord])
-            primitive_elements.append(str(element))
-
     primitive_positions = []
-    shifts = np.asarray(list(product((-1, 0, 1), repeat=3)), dtype=int)
-    for cluster in matched_positions:
-        # Find periodic images nearest to the reference coordinate.
-        cluster_array = np.asarray(cluster, dtype=float)
-        delta = cluster_array - cluster[0]
-        fracs_candidates = delta[:, None, :] + shifts[None, :, :]
-        distances = np.linalg.norm(fracs_candidates, axis=2)
-        best_shifts = shifts[np.argmin(distances, axis=1)]
+    primitive_elements = []
 
-        # Average coordinates after applying periodic corrections.
-        unwrapped = cluster_array + best_shifts
-        mean_coord = np.mean(unwrapped, axis=0) % 1.0
-        primitive_positions.append(mean_coord)
+    for element in np.unique(elements):
+        target_ids = np.flatnonzero(elements == element)
+        target_positions = mapped_positions[target_ids] % 1.0
+        pos_diff = target_positions[:, None, :] - target_positions[None, :, :]
+        pos_diff -= np.round(pos_diff)
+
+        cart_diff = pos_diff @ primitive_lattice
+        distances = np.linalg.norm(cart_diff, axis=2)
+
+        neighbor_ids = np.argsort(distances, axis=1)
+        unassigned = np.ones(len(target_positions), dtype=bool)
+        mean_positions = []
+        while np.any(unassigned):
+            i = np.flatnonzero(unassigned)[0]
+
+            # Select index nearest unassigned atoms
+            ids = neighbor_ids[i]
+            ids = ids[unassigned[ids]][:index]
+            if len(ids) < index:
+                break
+            mean_position = (target_positions[i] - pos_diff[i, ids]).mean(axis=0) % 1.0
+            mean_positions.append(mean_position)
+            unassigned[ids] = False
+        mean_positions = np.array(mean_positions)
+
+        primitive_positions.extend(mean_positions)
+        primitive_elements.extend([str(element)] * len(mean_positions))
 
     return (
-        np.asarray(primitive_positions, dtype=float).reshape(-1, 3),
+        np.asarray(primitive_positions, dtype=float),
         np.asarray(primitive_elements, dtype=str),
     )
-
-
-def _periodic_cartesian_distance_frac(
-    frac1: np.ndarray, frac2: np.ndarray, axis: np.ndarray
-) -> float:
-    """Minimum Cartesian distance between two fractional coordinates."""
-    delta = np.asarray(frac1, dtype=float) - np.asarray(frac2, dtype=float)
-    shifts = np.asarray(list(product((-1, 0, 1), repeat=3)), dtype=float)
-    cart = (delta[None, :] + shifts) @ axis
-    return float(np.min(np.linalg.norm(cart, axis=1)))

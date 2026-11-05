@@ -17,8 +17,8 @@ def apply_rand_disp(
     disp_mode: Literal["uniform", "fixed"] = "uniform",
     tol=1e-2,
 ):
-    pos_rep = positions.copy()
-    _elements = elements.copy()
+    pos_rep = np.asarray(positions, dtype=float).copy()
+    _elements = np.asarray(elements, dtype=str).copy()
 
     if spg_number is None:
         symutil = SymCell(
