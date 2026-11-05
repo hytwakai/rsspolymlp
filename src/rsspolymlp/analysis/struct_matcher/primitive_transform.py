@@ -82,7 +82,7 @@ def get_primitive_cell(
     reference_frac = positions[reference_id]
     reference_targets = np.flatnonzero(elements == reference_element)
 
-    trees = _build_periodic_elements_trees(positions, elements, axis)
+    trees = _build_periodic_elements_trees(positions, elements, axis, tol * 2)
     candidate_translations = [
         np.mod((positions[j] - reference_frac), 1.0) for j in reference_targets
     ]
@@ -148,19 +148,34 @@ def _build_periodic_elements_trees(
     positions: np.ndarray,
     elements: np.ndarray,
     axis: np.ndarray,
+    tol: float,
 ) -> dict[str, tuple[cKDTree, np.ndarray]]:
     """Build periodic Cartesian KD-trees."""
-    image_shifts = np.asarray(
-        list(product((-1, 0, 1), repeat=3)), dtype=float
-    )  # shape-(27, 3)
+    inv_axis = np.linalg.inv(axis)
+    frac_tol = tol * np.linalg.norm(inv_axis, axis=0)
     trees: dict[str, tuple[cKDTree, np.ndarray]] = {}
     for element in np.unique(elements):
         target_ids = np.flatnonzero(elements == element)
         base = positions[target_ids]
-        images = (base[:, None, :] + image_shifts[None, :, :]).reshape(-1, 3)
-        image_to_atom_id = np.repeat(np.arange(len(target_ids)), len(image_shifts))
-        cart_images = images @ axis
-        trees[str(element)] = (cKDTree(cart_images), image_to_atom_id)
+
+        images = []
+        image_to_atom_id = []
+        for atom_id, position in enumerate(base):
+            shift_candidates = [
+                ([1] if x < frac_tol[i] else [])
+                + ([0])
+                + ([-1] if x > 1.0 - frac_tol[i] else [])
+                for i, x in enumerate(position)
+            ]
+            atom_shifts = np.array(list(product(*shift_candidates)), dtype=float)
+            images.append(position + atom_shifts)
+            image_to_atom_id.extend([atom_id] * len(atom_shifts))
+        cart_images = np.concatenate(images) @ axis
+        trees[str(element)] = (
+            cKDTree(cart_images),
+            np.asarray(image_to_atom_id),
+        )
+
     return trees
 
 
