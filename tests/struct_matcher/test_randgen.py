@@ -5,11 +5,12 @@ import yaml
 from rsspolymlp.analysis.struct_matcher.gen_struct_rep import (
     StructRepGenerator,
 )
-from rsspolymlp.analysis.struct_matcher.redrep_lattice import (
-    get_reduced_lattice,
-)
 from rsspolymlp.analysis.struct_matcher.test.gen_lattice import (
     generate_lattice,
+)
+from rsspolymlp.analysis.struct_matcher.test.gen_rand_position import (
+    apply_rand_disp,
+    gen_random_elements,
 )
 from rsspolymlp.api.rsspolymlp_utils import struct_matcher
 
@@ -35,52 +36,27 @@ def test_sm_random_struct(tmp_path, crystal_system):
         n_struct_reps = 10 * n_elements
         n_element_duplicates = 5
         n_duplicates = 5
-        element_cands = ["A", "B", "C", "D", "E", "F"]
 
         axis = generate_lattice(crystal_system, n_atom * 10)
 
         struct_reps = []
         for i in range(n_struct_reps):
             if i % n_element_duplicates == 0:
-                random_n = np.sort(
-                    np.random.choice(
-                        n_atom + n_elements - 1, size=n_elements - 1, replace=False
-                    )
-                )
-                random_n = (
-                    np.diff(np.concatenate(([0], random_n, [n_atom + n_elements]))) - 1
-                )
-                elements = []
-                for i, n in enumerate(random_n):
-                    e = [element_cands[i]] * n
-                    elements.extend(e)
-                elements = np.array(elements)
-            random_positions = np.random.rand(n_atom, 3)
+                elements = gen_random_elements(n_atom, n_elements)
 
+            random_positions = np.random.rand(n_atom, 3)
             for h in range(n_duplicates):
                 pos_rep = random_positions.copy()
                 _elements = elements.copy()
 
-                random_translation = np.random.rand(1, 3)
-                pos_rep = (pos_rep + random_translation) % 1.0
-
-                random_permutation = np.random.permutation(n_atom)
-                pos_rep = pos_rep[random_permutation]
-                _elements = _elements[random_permutation]
-
-                _axis, pos_rep, _, trans_matrices = get_reduced_lattice(
-                    axis, pos_rep, spg_number=1
+                rand_pos, rand_elements = apply_rand_disp(
+                    axis, pos_rep, _elements, spg_number=1, max_disp=0
                 )
-                random_transformation = trans_matrices[
-                    np.random.randint(len(trans_matrices))
-                ]
-                pos_rep = pos_rep @ np.linalg.inv(random_transformation)
-                pos_rep %= 1.0
                 struct_reps.append(
                     {
-                        "axis": _axis,
-                        "positions": pos_rep,
-                        "elements": _elements.tolist(),
+                        "axis": axis,
+                        "positions": rand_pos,
+                        "elements": rand_elements,
                         "struct_path": f"{i}_{h}",
                     }
                 )

@@ -1,5 +1,7 @@
 """Interfaces for spglib."""
 
+import re
+
 import numpy as np
 import spglib
 
@@ -109,6 +111,14 @@ class SymCell:
         except spglib._spglib.SpglibCppError:
             spg = None
         return spg
+
+    def get_spg_number(self):
+        spg_str = self.get_spacegroup()
+        if spg_str is None:
+            spg_number = 1
+        else:
+            spg_number = int(re.search(r"\((\d+)\)", spg_str).group(1))
+        return spg_number
 
     def get_spacegroup_multiple_prec(self, symprecs=[1e-2, 1e-3, 1e-4, 1e-5]):
         """Return list of space groups using multiple precisions."""

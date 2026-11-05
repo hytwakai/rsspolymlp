@@ -74,7 +74,7 @@ class GenerateRandomStructure:
         """
         str_count = len(glob.glob("initial_struct/*"))
         if str_count >= max_init_struct:
-            return
+            return None
 
         # Define initial structure constraints
         vol_constraint_max = self.max_volume * self.num_atom  # A^3

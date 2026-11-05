@@ -93,12 +93,12 @@ class PositionRepReducer:
                 atomic coordinates.
         """
 
-        G = np.dot(self.axis, self.axis.T)
+        G = self.axis @ self.axis.T
         metric_tensor = np.array([G[0, 0], G[1, 1], G[2, 2], G[1, 2], G[0, 2], G[0, 1]])
         if self.transformation_matrices is None:
             t_lattice = time.time()
             transformation_matrices = enumerate_metric_symmetries(
-                G, is_chiral(self.spg_number), tol=self.tol_sm
+                self.axis, self.axis, self.spg_number, tol=self.tol_sm
             )
             if self.verbose:
                 print(f"  Lattice: {round((time.time() - t_lattice) * 1000, 2)} ms")
@@ -162,11 +162,14 @@ class PositionRepReducer:
 
         t_pos_cands = time.time()
         positions = self.positions.copy()
-        sorted_positions = positions[sort_idx, :]
+        positions = positions[sort_idx, :]
         position_cands = []
         for trans_mat in transformation_matrices:
-            cluster_id, position_cand = self._assign_clusters(
-                sorted_positions, trans_mat
+            _positions = positions.copy()
+            _positions = _positions @ np.linalg.inv(trans_mat)
+            _positions %= 1.0
+            cluster_id, position_cand = assign_clusters(
+                _positions, self.axis_abc, self.tol
             )
             position_cands.append(
                 {
@@ -295,69 +298,98 @@ class PositionRepReducer:
         reduced_perm_cands = _reduced_perm_cands[0, :]
         return reduced_perm_cands
 
-    def _assign_clusters(
-        self,
-        positions: np.ndarray,
-        transformation_matrix: np.ndarray,
-    ):
-        """
-        Assigns cluster IDs along each axis; atoms at identical positions share the same ID.
-        """
-        _positions = positions.copy()
-        _positions = _positions @ np.linalg.inv(transformation_matrix)
-        _positions %= 1.0
 
-        sort_idx = np.argsort(_positions, axis=0, kind="mergesort")
-        pos_sorted = np.take_along_axis(_positions, sort_idx, axis=0)
+def assign_clusters(
+    positions: np.ndarray,
+    axis_abc: np.ndarray,
+    tol: float,
+    verbose: bool = False,
+):
+    """
+    Assigns cluster IDs along each axis; atoms at identical positions share the same ID.
+    """
+    _positions = positions.copy()
+    sort_idx = np.argsort(_positions, axis=0, kind="mergesort")
+    pos_sorted = np.take_along_axis(_positions, sort_idx, axis=0)
 
-        # Compute forward differences with periodic wrapping
-        gap = np.roll(pos_sorted, -1, axis=0) - pos_sorted
-        gap[-1, :] += 1.0
+    # Compute forward differences with periodic wrapping
+    gap = np.roll(pos_sorted, -1, axis=0) - pos_sorted
+    gap[-1, :] += 1.0
 
-        # New cluster starts where gap > tol
-        gap_normalized = gap * self.axis_abc
-        """print("gap")
+    # New cluster starts where gap > tol
+    gap_normalized = gap * axis_abc
+    proper_tol = []
+    for idx_axis in range(3):
+        proper_tol.append(find_proper_tolerance(gap_normalized.T[idx_axis], tol))
+    is_new_cluster = gap_normalized > np.array(proper_tol)
+    cluster_id_sorted = np.zeros_like(_positions, dtype=np.int32)
+    cluster_id_sorted[1:, :] = np.cumsum(is_new_cluster[:-1, :], axis=0)
+    if verbose:
+        print("Position differences (Ang.):")
         print(np.round(gap_normalized.T, 3).tolist()[0])
         print(np.round(gap_normalized.T, 3).tolist()[1])
-        print(np.round(gap_normalized.T, 3).tolist()[2])"""
-        # is_new_cluster = gap_normalized > [self.tol * 0.01, self.tol * 0.1, self.tol]
-        is_new_cluster = gap_normalized > self.tol
-        cluster_id_sorted = np.zeros_like(_positions, dtype=np.int32)
-        cluster_id_sorted[1:, :] = np.cumsum(is_new_cluster[:-1, :], axis=0)
+        print(np.round(gap_normalized.T, 3).tolist()[2])
+        print("Proper tolerances:")
+        print(proper_tol)
 
-        # Merge last cluster if gap is small (periodic condition)
-        merge_mask = ~is_new_cluster[-1, :]
-        for ax in np.where(merge_mask)[0]:
-            max_id = cluster_id_sorted[-1, ax]
-            merged = cluster_id_sorted[:, ax] == max_id
-            pos_sorted[merged, ax] -= 1.0
-            cluster_id_sorted[merged, ax] = 0
+    # Merge last cluster if gap is small (periodic condition)
+    merge_mask = ~is_new_cluster[-1, :]
+    for ax in np.where(merge_mask)[0]:
+        max_id = cluster_id_sorted[-1, ax]
+        merged = cluster_id_sorted[:, ax] == max_id
+        pos_sorted[merged, ax] -= 1.0
+        cluster_id_sorted[merged, ax] = 0
 
-        # Restore original order
-        cluster_id = np.empty_like(pos_sorted, dtype=np.int32)
-        snapped_positions = np.empty_like(pos_sorted)
-        for ax in range(3):
-            cluster_id[sort_idx[:, ax], ax] = cluster_id_sorted[:, ax]
-            snapped_positions[sort_idx[:, ax], ax] = pos_sorted[:, ax]
+    # Restore original order
+    cluster_id = np.empty_like(pos_sorted, dtype=np.int32)
+    snapped_positions = np.empty_like(pos_sorted)
+    for ax in range(3):
+        cluster_id[sort_idx[:, ax], ax] = cluster_id_sorted[:, ax]
+        snapped_positions[sort_idx[:, ax], ax] = pos_sorted[:, ax]
 
-        return cluster_id, snapped_positions
+    return cluster_id, snapped_positions
+
+
+def find_proper_tolerance(
+    differences,
+    tol: float,
+    window: float = 0.1,
+    range: list = [0.5, 1.5],
+    num_points: int = 19,
+):
+    differences = np.sort(np.asarray(differences).ravel())
+    tolerance_range = [range[0] * tol, range[1] * tol]
+    tolerances = np.linspace(*tolerance_range, num_points)
+
+    tol_window = tol * window
+    densities = np.array(
+        [
+            np.count_nonzero(
+                (differences >= t - tol_window) & (differences <= t + tol_window)
+            )
+            for t in tolerances
+        ]
+    )
+    min_indices = np.where(densities == densities.min())[0]
+    idx = min_indices[np.argmin(np.abs(tolerances[min_indices] - tol))]
+    return float(tolerances[idx])
 
 
 def enumerate_metric_symmetries(
-    G: np.ndarray,
-    is_chiral: bool = False,
+    axis_1: np.ndarray,
+    axis_2: np.ndarray,
+    spg_number: int,
     tol: float = 1e-3,
 ) -> list[np.ndarray]:
-    """Enumerate unimodular integer matrices satisfying M @ G @ M.T = G."""
-    if not np.allclose(G, G.T, atol=tol):
+    """Enumerate unimodular integer matrices satisfying M @ G_1 @ M.T = G_2."""
+    G_1 = axis_1 @ axis_1.T
+    G_2 = axis_2 @ axis_2.T
+    if not (np.allclose(G_1, G_1.T, atol=tol) and np.allclose(G_2, G_2.T, atol=tol)):
         raise ValueError("G must be symmetric.")
 
-    if np.linalg.eigvalsh(G)[0] <= 0:
-        raise ValueError("G must be positive definite.")
-
-    norm_a = G[0, 0] ** 0.5
-    norm_b = G[1, 1] ** 0.5
-    norm_c = G[2, 2] ** 0.5
+    norm_a = G_1[0, 0] ** 0.5
+    norm_b = G_1[1, 1] ** 0.5
+    norm_c = G_1[2, 2] ** 0.5
     e_aa = tol * 2 * norm_a
     e_bb = tol * 2 * norm_b
     e_cc = tol * 2 * norm_c
@@ -367,24 +399,25 @@ def enumerate_metric_symmetries(
 
     # Enumerate candidate column vectors.
     candidates = [
-        enumerate_integer_vectors(G, G[i, i], [e_aa, e_bb, e_cc][i]) for i in range(3)
+        enumerate_integer_vectors(G_1, G_2[i, i], [e_aa, e_bb, e_cc][i])
+        for i in range(3)
     ]
     matrices = []
 
     # Enumerate combinations of the three columns.
     for m1, m2, m3 in itertools.product(*candidates):
-        if abs(m1 @ G @ m2 - G[0, 1]) > e_ab:
+        if abs(m1 @ G_1 @ m2 - G_2[0, 1]) > e_ab:
             continue
-        if abs(m1 @ G @ m3 - G[0, 2]) > e_ac:
+        if abs(m1 @ G_1 @ m3 - G_2[0, 2]) > e_ac:
             continue
-        if abs(m2 @ G @ m3 - G[1, 2]) > e_bc:
+        if abs(m2 @ G_1 @ m3 - G_2[1, 2]) > e_bc:
             continue
         M = np.column_stack((m1, m2, m3))
 
         det = round(np.linalg.det(M))
         if abs(det) != 1:
             continue
-        if is_chiral and det == -1:
+        if is_chiral(spg_number) and det == -1:
             continue
         matrices.append(M)
 
@@ -408,7 +441,6 @@ def enumerate_integer_vectors(
     bound = int(np.ceil(np.sqrt((q + tol) / lambda_min)))
     for v in itertools.product(range(-bound, bound + 1), repeat=3):
         v = np.asarray(v, dtype=int)
-
         if abs(v @ G @ v - q) <= tol:
             vectors.append(v)
 

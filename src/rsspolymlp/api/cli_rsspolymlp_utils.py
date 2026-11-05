@@ -130,7 +130,7 @@ def run():
             assign_method=args.assign_method,
             num_process=args.num_process,
             backend=args.backend,
-            tom_sm=args.tol_sm,
+            tol_sm=args.tol_sm,
             tol_redpos=args.tol_redpos,
             normalize_axis=args.normalize_axis,
             output_file=args.output_file,

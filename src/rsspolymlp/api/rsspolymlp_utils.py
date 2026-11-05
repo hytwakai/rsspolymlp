@@ -109,7 +109,7 @@ def struct_matcher(
         unique_structs = analyzer.unique_str
         unique_structs_sorted = sorted(
             unique_structs,
-            key=lambda x: len(x.original_positions.T),
+            key=lambda x: len(x.original_positions),
             reverse=False,
         )
 

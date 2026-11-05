@@ -1,4 +1,3 @@
-import re
 import time
 from collections import Counter
 from dataclasses import dataclass
@@ -162,11 +161,7 @@ class StructRepGenerator:
                 primitive_cell.elements,
                 symprec=tol,
             )
-            spg_str = symutil.get_spacegroup()
-            if spg_str is None:
-                spg_number = 1
-            else:
-                spg_number = int(re.search(r"\((\d+)\)", spg_str).group(1))
+            spg_number = symutil.get_spg_number()
 
             axis_niggli, positions_niggli = niggli_reduce(
                 axis=primitive_cell.axis, positions=primitive_cell.positions, tol=tol

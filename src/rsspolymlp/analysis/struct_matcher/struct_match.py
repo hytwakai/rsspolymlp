@@ -66,17 +66,17 @@ def struct_match(
 
             redreps1 = st_1.reduced_reps
             redreps2 = st_2.reduced_reps
-            axis1 = np.stack(redreps1["metric_tensors"], axis=0)
-            axis2 = np.stack(redreps2["metric_tensors"], axis=0)
+            axis1 = normalize_metric_tensors(redreps1["metric_tensors"])
+            axis2 = normalize_metric_tensors(redreps2["metric_tensors"])
             positions1 = np.stack(redreps1["positions"], axis=0)
             positions2 = np.stack(redreps2["positions"], axis=0)
 
             axis_d = axis1[:, None, :] - axis2[None, :, :]  # (N_symp1, N_symp2, 6)
             axis_d_flat = axis_d.reshape(-1, axis_d.shape[2])  # (N_symp1*N_symp2, 6)
-            l2_norm = np.linalg.norm(axis_d_flat, axis=1)
-            min_axis_l2_norm = min(min_axis_l2_norm, np.min(l2_norm))
+            axis_diff_max = np.max(np.abs(axis_d_flat), axis=1)
+            min_axis_l2_norm = min(min_axis_l2_norm, np.min(axis_diff_max))
 
-            match_axis = l2_norm < axis_tol
+            match_axis = axis_diff_max < axis_tol
             if not np.any(match_axis):
                 continue
 
@@ -93,7 +93,7 @@ def struct_match(
                     struct_match = True
 
                 if verbose and (pos_d_min is None or pos_d_min[0] > pos_max_abs):
-                    axis_l2_norm = l2_norm[match_axis][min_idx]
+                    axis_l2_norm = axis_diff_max[match_axis][min_idx]
                     i, j = divmod(np.where(match_axis)[0][min_idx], positions2.shape[0])
                     axis_d_min = [
                         axis_l2_norm,
@@ -205,8 +205,8 @@ def struct_match_allrep(
 
             allreps1 = st_1.all_reps
             allreps2 = st_2.all_reps
-            axis1 = np.stack(allreps1["metric_tensors"], axis=0)
-            axis2 = np.stack(allreps2["metric_tensors"], axis=0)
+            axis1 = normalize_metric_tensors(allreps1["metric_tensors"])
+            axis2 = normalize_metric_tensors(allreps2["metric_tensors"])
             axis_abc_list1 = allreps1["axis_abc"]
             allpos_list1 = allreps1["positions"]
             allpos_list2 = allreps2["positions"]
@@ -269,7 +269,7 @@ def struct_match_allrep(
                                 pos_tol,
                             )
                         elif assign_method == "HK":
-                            judge_st_match = bottleneck_assignment(
+                            judge_st_match, max_diff = bottleneck_assignment(
                                 pos_reps1[i2],
                                 pos_reps2[j2],
                                 elements1,
@@ -285,9 +285,22 @@ def struct_match_allrep(
                         iter_match += 1
             if verbose:
                 print("Iterations of matching:", iter_match)
+                print("Max difference (Ang.):", np.round(max_diff, 3))
                 if iter_match > 0:
                     print(
                         f"Time average of matching: {round((t_match / iter_match) * 1000, 2)} ms"
                     )
                 print("--- Matching finished ---")
     return judge_st_match
+
+
+def normalize_metric_tensors(metric_tensors):
+    metric_tensors = np.asarray(metric_tensors)
+    lengths = np.sqrt(metric_tensors[:, :3])
+
+    metric_tensors[:, :3] /= 2 * lengths
+    metric_tensors[:, 3] /= lengths[:, 1] + lengths[:, 2]
+    metric_tensors[:, 4] /= lengths[:, 0] + lengths[:, 2]
+    metric_tensors[:, 5] /= lengths[:, 0] + lengths[:, 1]
+
+    return metric_tensors

@@ -153,6 +153,7 @@ def bottleneck_assignment(
         matching = maximum_bipartite_matching(graph, perm_type="column")
         return matching
 
+    max_diff = 0
     inv_axis_abc = 1 / axis_abc
     for el in np.unique(elements1):
         targets1 = np.where(elements1 == el)[0]
@@ -171,35 +172,31 @@ def bottleneck_assignment(
             )
 
         col_ind = []
-        for _ in range(10):
+        t_start_m = time.time()
+        for n_iter in range(10):
             pos_d = np.max(np.abs(diff), axis=2)
 
             sorted_pos_d = np.sort(pos_d, axis=0)
             pos_d_minmax = np.max(sorted_pos_d[0])
             if pos_d_minmax > 2 * pos_tol:
-                return False
+                return False, None
 
-            t_start_m = time.time()
             _pos_tol = pos_tol
             matching = get_matching(_pos_tol, pos_d)
-            if verbose:
-                print(f"  Matching: {round((time.time() - t_start_m) * 1000, 2)} ms")
 
             if np.all(matching >= 0):
-                return True
+                _max_diff = np.max(pos_d[np.arange(len(matching)), matching])
+                if _max_diff > max_diff:
+                    max_diff = _max_diff
+                break
             else:
-                t_start_m = time.time()
                 _pos_tol *= 2
                 matching = get_matching(_pos_tol, pos_d)
-                if verbose:
-                    print(
-                        f"  Matching: {round((time.time() - t_start_m) * 1000, 2)} ms"
-                    )
 
             if not np.all(matching >= 0):
-                return False
+                return False, None
             if np.array_equal(matching, col_ind):
-                return False
+                return False, None
 
             row_ind = np.arange(len(matching))
             col_ind = matching
@@ -210,35 +207,29 @@ def bottleneck_assignment(
             diff = diff - translation_correction
             diff -= axis_abc * np.round(diff * inv_axis_abc)
 
-    return True
+        if verbose:
+            print(
+                f"  Matching: {round((time.time() - t_start_m) * 1000 / (n_iter + 1), 2)} ms"
+            )
+
+    return True, max_diff
 
 
 def optimize_translation(diffs):
-    """Find a translation minimizing the maximum displacement.
-
-    Args:
-        diffs: Displacement vectors of matched atom pairs, shape (N, 3).
-
-    Returns:
-        translation: Optimal translation correction, shape (3,).
-        max_displacement: Minimum achievable maximum displacement.
-    """
-
-    diffs = np.asarray(diffs, dtype=float)
+    """Find a translation minimizing the maximum displacement."""
 
     def objective(translation):
         corrected = diffs - translation
         return np.max(np.linalg.norm(corrected, axis=1))
 
+    diffs = np.asarray(diffs, dtype=float)
     initial_translation = np.mean(diffs, axis=0)
-
     result = minimize(
         objective,
         initial_translation,
         method="Nelder-Mead",
         options={"xatol": 1e-10, "maxiter": 10000},
     )
-
     translation = result.x
     max_displacement = objective(translation)
 
