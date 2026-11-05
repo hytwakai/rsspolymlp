@@ -30,7 +30,7 @@ def get_primitive_cell(
     positions: np.ndarray,
     elements: np.ndarray | list[str],
     tol: float = 1e-2,
-    integer_tol: float = 1e-2,
+    integer_tol: float = 0.02,
     verbose: bool = False,
 ) -> PrimitiveCell:
     """Find a primitive-cell transformation from lattice and atom arrays.
@@ -88,14 +88,11 @@ def get_primitive_cell(
 
     valid_translations: list[np.ndarray] = []
     for translation in candidate_translations:
-        shifted_positions = np.mod(positions + translation, 1.0)
-        shifted_cart = shifted_positions @ axis
-        is_valid, mean_translation = _translation_is_valid(
-            shifted_cart, elements, images, tol
+        is_valid, translation = _translation_is_valid(
+            translation, axis, positions, elements, images, tol
         )
         if not is_valid:
             continue
-        translation += mean_translation @ np.linalg.inv(axis)
         duplicate = any(
             _periodic_translation_distance(translation, old, axis) <= tol
             for old in valid_translations
@@ -178,14 +175,18 @@ def _build_periodic_elements_images(
 
 
 def _translation_is_valid(
-    shifted_cart: np.ndarray,
+    translation: np.ndarray,
+    axis: np.ndarray,
+    positions: np.ndarray,
     elements: np.ndarray,
     images_dict: dict[str, tuple[np.ndarray, np.ndarray]],
     tol: float,
 ) -> tuple[bool, np.ndarray]:
     """Check whether a translation maps all sites onto same-elements sites."""
-    translations = []
+    shifted_positions = np.mod(positions + translation, 1.0)
+    shifted_cart = shifted_positions @ axis
 
+    translations = []
     for element in np.unique(elements):
         target_ids = np.flatnonzero(elements == element)
         target_cart = shifted_cart[target_ids]
@@ -212,9 +213,13 @@ def _translation_is_valid(
         matching = maximum_bipartite_matching(graph, perm_type="column")
         if np.any(matching < 0):
             return False, np.array([])
-
         translations.extend(target_cart[matching] - target_cart)
-    return True, np.mean(translations, axis=0)
+
+    translations = translations @ np.linalg.inv(axis)
+    translations -= translation
+    translations -= np.round(translations)
+    mean_translation = (translation + translations.mean(axis=0)) % 1.0
+    return True, mean_translation
 
 
 def _periodic_translation_distance(
@@ -279,7 +284,7 @@ def _get_transformation_matrix(
     # translation when transformed by M.
     transformed = translations @ M
     residual_M = np.abs(transformed - np.rint(transformed))
-    if np.any(residual_M > max(integer_tol, 10 * np.finfo(float).eps)):
+    if np.any(residual_M > integer_tol * index):
         raise ValueError(
             "Transformation matrix does not map all observed translations to integer vectors."
         )

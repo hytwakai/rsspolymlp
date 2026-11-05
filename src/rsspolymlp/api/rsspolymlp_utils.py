@@ -27,7 +27,7 @@ def struct_matcher(
     assign_method: Literal["redrep", "greedy", "HK", "pymatgen"] = "redrep",
     num_process: int = -1,
     backend: str = "loky",
-    tol_sm: list[float] = [1e-2],
+    tol_sm: list[float] = None,
     tol_redpos: list[float] = None,
     normalize_axis: bool = False,
     output_file: str = "unique_struct.yaml",
@@ -41,6 +41,8 @@ def struct_matcher(
     time_log = []
     time_refine = iter_refine = time_redrep = iter_redrep = 0
     if struct_reps_list is None:
+        if tol_sm is None:
+            tol_sm = [max([axis_tol, pos_tol])]
         if tol_redpos is None:
             if not normalize_axis:
                 tol_redpos = [1e-4, 1e-2, 1e-1]
@@ -152,6 +154,7 @@ def struct_compare(
     pos_tol: float = 0.01,
     assign_method: Literal["redrep", "greedy", "HK", "pymatgen"] = "redrep",
     tol_redpos: list[float] = None,
+    tol_sm: list[float] = None,
     normalize_axis: bool = False,
     verbose: bool = True,
 ):
@@ -182,7 +185,10 @@ def struct_compare(
             tol_redpos = [1e-4, 1e-2, 1e-1]
         else:
             tol_redpos = [1e-5, 1e-3, 1e-2]
+    if tol_sm is None:
+        tol_sm = [max([axis_tol, pos_tol])]
     generator = StructRepGenerator(
+        tol_sm=tol_sm,
         tol_redpos=tol_redpos,
         normalize_axis=normalize_axis,
     )
