@@ -63,6 +63,27 @@ def sort_match_screen(
     return matched
 
 
+def greedy_matching(pos_d, pos_tol):
+    pos_d_res = pos_d.copy()
+    pos_d_max = np.max(np.abs(pos_d), axis=2)
+
+    used1 = np.zeros(pos_d_max.shape[0], dtype=bool)
+    matching = np.full(len(pos_d_max), -1, dtype=int)
+    while not np.all(used1):
+        i, j = np.unravel_index(
+            np.argmin(pos_d_max),
+            pos_d_max.shape,
+        )
+        if pos_d_max[i, j] >= pos_tol:
+            return None, None
+        matching[i] = j
+        pos_d_max[i, :] = np.inf
+        pos_d_max[:, j] = np.inf
+        used1[i] = True
+    pos_d_res = pos_d_res[np.arange(len(matching)), matching]
+    return pos_d_res, matching
+
+
 def greedy_match(
     pos1: np.ndarray,
     pos2: np.ndarray,
@@ -72,29 +93,7 @@ def greedy_match(
     pos_tol: float,
     verbose: bool = False,
 ):
-    def get_matching(diff, pos_tol):
-        pos_d = np.max(np.abs(diff), axis=2)
-
-        used1 = np.zeros(diff.shape[0], dtype=bool)
-        used2 = np.zeros(diff.shape[1], dtype=bool)
-        matching = np.full(len(targets1), -1, dtype=int)
-        while not np.all(used1):
-            pos_d_masked = pos_d.copy()
-            pos_d_masked[used1, :] = np.inf
-            pos_d_masked[:, used2] = np.inf
-            i, j = np.unravel_index(
-                np.argmin(pos_d_masked),
-                pos_d_masked.shape,
-            )
-            if pos_d_masked[i, j] >= pos_tol:
-                return None, False
-            matching[i] = j
-            used1[i] = True
-            used2[j] = True
-        return matching, True
-
-    inv_axis_abc = 1 / axis_abc
-
+    max_diff = 0
     t_start_g = time.time()
     for el in np.unique(elements1):
         targets1 = np.where(elements1 == el)[0]
@@ -102,34 +101,31 @@ def greedy_match(
         pos1_sub = pos1[targets1]
         pos2_sub = pos2[targets2]
 
-        diff = pos1_sub[:, None, :] - pos2_sub[None, :, :]
         col_ind = []
+        inv_axis_abc = 1 / axis_abc
+        pos_d = pos1_sub[:, None, :] - pos2_sub[None, :, :]
+        pos_d -= axis_abc * np.round(pos_d * inv_axis_abc)
         for _ in range(10):
-            diff -= axis_abc * np.round(diff * inv_axis_abc)
-            matching, judge = get_matching(diff, pos_tol=pos_tol * 2)
-            if not judge:
-                return False
+            pos_d_res, matching = greedy_matching(pos_d, pos_tol=pos_tol * 2)
+            if matching is None:
+                return False, None
 
-            row_ind = np.arange(len(targets1))
-            matched_diff = diff[row_ind, matching]
-            if np.max(matched_diff) < pos_tol:
+            if np.max(np.abs(pos_d_res)) < pos_tol:
+                if max_diff < np.max(np.abs(pos_d_res)):
+                    max_diff = np.max(np.abs(pos_d_res))
                 break
             if np.array_equal(matching, col_ind):
-                return False
+                return False, None
 
             col_ind = matching
-            translation_correction, max_displacement = optimize_translation(
-                matched_diff
-            )
-            diff = diff - translation_correction
+            translation_correction, max_displacement = optimize_translation(pos_d_res)
+            pos_d = pos_d - translation_correction
 
-        if not judge:
-            break
     if verbose:
         print("code: greedy_match")
         print(f"  Matching: {round((time.time() - t_start_g) * 1000, 2)} ms")
 
-    return True
+    return True, max_diff
 
 
 def bottleneck_assignment(

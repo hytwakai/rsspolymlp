@@ -15,7 +15,7 @@ def apply_rand_disp(
     spg_number: Optional[int] = None,
     max_disp: float = 1e-2,
     disp_mode: Literal["uniform", "fixed"] = "uniform",
-    tol=1e-2,
+    tol=1e-5,
 ):
     pos_rep = np.asarray(positions, dtype=float).copy()
     _elements = np.asarray(elements, dtype=str).copy()
@@ -55,7 +55,7 @@ def apply_rand_disp(
         axis,
         axis,
         spg_number,
-        tol=tol,
+        tol=1e-5,
     )
     selected_i = np.random.randint(len(transformation_matrices))
     random_transformation = transformation_matrices[selected_i]
