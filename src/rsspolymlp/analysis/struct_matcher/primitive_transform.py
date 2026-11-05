@@ -6,7 +6,6 @@ from itertools import product
 import numpy as np
 from scipy.sparse import csr_matrix
 from scipy.sparse.csgraph import maximum_bipartite_matching
-from scipy.spatial import cKDTree
 from sympy import Matrix
 from sympy.matrices.normalforms import hermite_normal_form
 
@@ -82,7 +81,7 @@ def get_primitive_cell(
     reference_frac = positions[reference_id]
     reference_targets = np.flatnonzero(elements == reference_element)
 
-    trees = _build_periodic_elements_trees(positions, elements, axis, tol * 2)
+    images = _build_periodic_elements_images(positions, elements, axis, tol * 2)
     candidate_translations = [
         np.mod((positions[j] - reference_frac), 1.0) for j in reference_targets
     ]
@@ -92,7 +91,7 @@ def get_primitive_cell(
         shifted_positions = np.mod(positions + translation, 1.0)
         shifted_cart = shifted_positions @ axis
         is_valid, mean_translation = _translation_is_valid(
-            shifted_cart, elements, trees, tol
+            shifted_cart, elements, images, tol
         )
         if not is_valid:
             continue
@@ -144,16 +143,17 @@ def get_primitive_cell(
     )
 
 
-def _build_periodic_elements_trees(
+def _build_periodic_elements_images(
     positions: np.ndarray,
     elements: np.ndarray,
     axis: np.ndarray,
     tol: float,
-) -> dict[str, tuple[cKDTree, np.ndarray]]:
-    """Build periodic Cartesian KD-trees."""
+) -> dict[str, tuple[np.ndarray, np.ndarray]]:
+    """Build periodic Cartesian images."""
     inv_axis = np.linalg.inv(axis)
     frac_tol = tol * np.linalg.norm(inv_axis, axis=0)
-    trees: dict[str, tuple[cKDTree, np.ndarray]] = {}
+
+    images_dict = {}
     for element in np.unique(elements):
         target_ids = np.flatnonzero(elements == element)
         base = positions[target_ids]
@@ -163,45 +163,43 @@ def _build_periodic_elements_trees(
         for atom_id, position in enumerate(base):
             shift_candidates = [
                 ([1] if x < frac_tol[i] else [])
-                + ([0])
+                + [0]
                 + ([-1] if x > 1.0 - frac_tol[i] else [])
                 for i, x in enumerate(position)
             ]
             atom_shifts = np.array(list(product(*shift_candidates)), dtype=float)
             images.append(position + atom_shifts)
             image_to_atom_id.extend([atom_id] * len(atom_shifts))
-        cart_images = np.concatenate(images) @ axis
-        trees[str(element)] = (
-            cKDTree(cart_images),
+        images_dict[str(element)] = (
+            np.concatenate(images) @ axis,
             np.asarray(image_to_atom_id),
         )
-
-    return trees
+    return images_dict
 
 
 def _translation_is_valid(
     shifted_cart: np.ndarray,
     elements: np.ndarray,
-    trees: dict[str, tuple[cKDTree, np.ndarray]],
+    images_dict: dict[str, tuple[np.ndarray, np.ndarray]],
     tol: float,
 ) -> tuple[bool, np.ndarray]:
     """Check whether a translation maps all sites onto same-elements sites."""
     translations = []
+
     for element in np.unique(elements):
         target_ids = np.flatnonzero(elements == element)
-        tree, image_to_atom_id = trees[str(element)]
+        target_cart = shifted_cart[target_ids]
+        images, image_to_atom_id = images_dict[str(element)]
         target_count = len(target_ids)
 
-        candidate_rows: list[int] = []
-        candidate_cols: list[int] = []
-        neighbor_lists = tree.query_ball_point(shifted_cart[target_ids], r=tol)
-        for shifted_atom_id, match_image_idxs in enumerate(neighbor_lists):
-            if not match_image_idxs:
+        candidate_rows = []
+        candidate_cols = []
+        for i, cart in enumerate(target_cart):
+            distances_sq = np.sum((cart - images) ** 2, axis=1)
+            match_atom_ids = np.unique(image_to_atom_id[distances_sq <= tol**2])
+            if len(match_atom_ids) == 0:
                 return False, np.array([])
-            match_atom_ids = np.unique(
-                image_to_atom_id[np.asarray(match_image_idxs, dtype=int)]
-            )
-            candidate_rows.extend([shifted_atom_id] * len(match_atom_ids))
+            candidate_rows.extend([i] * len(match_atom_ids))
             candidate_cols.extend(match_atom_ids.tolist())
 
         graph = csr_matrix(
@@ -212,15 +210,11 @@ def _translation_is_valid(
             shape=(target_count, target_count),
         )
         matching = maximum_bipartite_matching(graph, perm_type="column")
-        if matching.shape[0] != target_count or np.any(matching < 0):
+        if np.any(matching < 0):
             return False, np.array([])
 
-        matched_cart = shifted_cart[target_ids]
-        target_cart = shifted_cart[target_ids]
-        translations.extend(target_cart[matching] - matched_cart)
-
-    mean_translation = np.mean(translations, axis=0)
-    return True, mean_translation
+        translations.extend(target_cart[matching] - target_cart)
+    return True, np.mean(translations, axis=0)
 
 
 def _periodic_translation_distance(
