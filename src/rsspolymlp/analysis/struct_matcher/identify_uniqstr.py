@@ -4,7 +4,7 @@ from typing import Literal, Optional
 
 from rsspolymlp.analysis.struct_matcher.gen_struct_rep import (
     StructRepGenerator,
-    StructReps,
+    StructRep,
 )
 from rsspolymlp.analysis.struct_matcher.struct_match import (
     struct_match,
@@ -48,16 +48,16 @@ class UniqueStructIdentifier:
 
             self.pymat = PymatUtil()
 
-        self.unique_str: list[StructReps] = []  # Store unique structures
+        self.unique_str: list[StructRep] = []  # Store unique structures
         self.unique_str_prop: list[dict] = []  # Store unique structure properties
-        self.unique_str_keep: list[list[StructReps]] = []
+        self.unique_str_keep: list[list[StructRep]] = []
         self.unique_str_prop_keep: list[list[dict]] = []
         self.time_match = 0
         self.iter_match = 0
 
     def identify_duplicate_struct(
         self,
-        struct_reps: StructReps,
+        struct_rep: StructRep,
         other_properties: Optional[dict] = None,
     ):
         """
@@ -67,7 +67,7 @@ class UniqueStructIdentifier:
 
         Parameters
         ----------
-        struct_reps : StructReps
+        struct_rep : StructRep
             The structure to be compared and registered if unique.
         other_properties : Optional[dict]
             Additional metadata associated with the structure.
@@ -94,7 +94,7 @@ class UniqueStructIdentifier:
                 if self.assign_method == "redrep":
                     judge_duplicate = struct_match(
                         uniq_str,
-                        struct_reps,
+                        struct_rep,
                         axis_tol=self.axis_tol,
                         pos_tol=self.pos_tol,
                     )
@@ -105,15 +105,15 @@ class UniqueStructIdentifier:
                         uniq_str.original_elements,
                     )
                     st2 = self.pymat.parameter_to_pymat_st(
-                        struct_reps.original_axis,
-                        struct_reps.original_positions,
-                        struct_reps.original_elements,
+                        struct_rep.original_axis,
+                        struct_rep.original_positions,
+                        struct_rep.original_elements,
                     )
                     judge_duplicate = self.pymat.match_str(st1, st2)
                 else:
                     judge_duplicate = struct_match_allrep(
                         uniq_str,
-                        struct_reps,
+                        struct_rep,
                         axis_tol=self.axis_tol,
                         pos_tol=self.pos_tol,
                         assign_method=self.assign_method,
@@ -124,7 +124,7 @@ class UniqueStructIdentifier:
 
                 if judge_duplicate:
                     is_unique = False
-                    if self._spg_count(struct_reps.spg_list) > self._spg_count(
+                    if self._spg_count(struct_rep.spg_list) > self._spg_count(
                         uniq_str.spg_list
                     ):
                         is_change_struct = True
@@ -134,22 +134,22 @@ class UniqueStructIdentifier:
                 break
 
         if not is_unique:
-            if struct_reps.struct_path not in self.unique_str[idx].dupstr_paths:
-                self.unique_str[idx].dupstr_paths.add(struct_reps.struct_path)
+            if struct_rep.struct_path not in self.unique_str[idx].dupstr_paths:
+                self.unique_str[idx].dupstr_paths.add(struct_rep.struct_path)
             if is_change_struct:
                 # Update duplicate count and replace with better data if necessary
-                struct_reps.dupstr_paths = self.unique_str[idx].dupstr_paths
-                struct_reps.struct_tag = self.unique_str[idx].struct_tag
-                self.unique_str[idx] = struct_reps
+                struct_rep.dupstr_paths = self.unique_str[idx].dupstr_paths
+                struct_rep.struct_tag = self.unique_str[idx].struct_tag
+                self.unique_str[idx] = struct_rep
                 self.unique_str_prop[idx] = other_properties
             if self.keep_unique:
-                self.unique_str_keep[idx].append(struct_reps)
+                self.unique_str_keep[idx].append(struct_rep)
                 self.unique_str_prop_keep[idx].append(other_properties)
         else:
-            self.unique_str.append(struct_reps)
+            self.unique_str.append(struct_rep)
             self.unique_str_prop.append(other_properties)
             if self.keep_unique:
-                self.unique_str_keep.append([struct_reps])
+                self.unique_str_keep.append([struct_rep])
                 self.unique_str_prop_keep.append([other_properties])
 
         if is_unique and len(self.unique_str) % 500 == 0:
@@ -169,7 +169,7 @@ class UniqueStructIdentifier:
 
     def _initialize_unique_structs(
         self,
-        unique_structs: list[StructReps],
+        unique_structs: list[StructRep],
         unique_str_prop: Optional[list[dict]] = None,
     ):
         """Initialize unique structures and their associated properties."""
@@ -225,7 +225,7 @@ def identify_unique_structure(
         tol_redpos=tol_redpos,
         normalize_axis=normalize_axis,
     )
-    redreps_list = generator.generate_struct_reps_parallel(
+    struct_rep_list = generator.generate_struct_rep_parallel(
         struct_list,
         num_process=num_process,
         backend=backend,
@@ -233,7 +233,7 @@ def identify_unique_structure(
 
     if verbose:
         print("   - Eliminating duplicate structures...")
-    for idx, redreps in enumerate(redreps_list):
+    for idx, redreps in enumerate(struct_rep_list):
         analyzer.identify_duplicate_struct(
             redreps,
             other_properties=struct_list[idx],

@@ -254,7 +254,7 @@ class RSSResultAnalyzer:
         backend: str = "locky",
     ):
         generator = StructRepGenerator()
-        struct_reps_list = generator.generate_struct_reps_parallel(
+        struct_reps_list = generator.generate_struct_rep_parallel(
             struct_properties,
             num_process=num_process,
             backend=backend,

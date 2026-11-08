@@ -1,22 +1,21 @@
-import itertools
 import time
 from collections import Counter
 from typing import Optional
 
 import numpy as np
 
-from rsspolymlp.analysis.struct_matcher.chiral_spg import is_chiral
+from rsspolymlp.analysis.struct_matcher.position_allrep import matching_metric_tensor
 
 
 class PositionRepReducer:
-    """Identify the reduced crystal structure representation."""
+    """Identify the reduced atomic position representation."""
 
     def __init__(
         self,
         axis: np.ndarray,
         positions: np.ndarray,
         elements: np.ndarray,
-        spg_number: int,
+        spg_number: int = 1,
         tol_sm: float = 1e-2,
         tol: float = 1e-4,
         normalize_axis: bool = False,
@@ -64,40 +63,27 @@ class PositionRepReducer:
             print("code: struct_matcher.redrep_position")
             print("  tol:", tol)
 
-    def get_reduced_structure_representation(self) -> dict:
+    def get_reduced_position_representation(self) -> dict:
         """Derive the reduced representation of a crystal structure.
 
         Returns
         -------
         result : dict
             Dictionary containing the following entries:
-            - metric_tensor : ndarray, shape (6,)
-                Independent components of the matrix square root of the
-                metric tensor, ordered as [aa, bb, cc, ab, ac, bc].
-            - axis : ndarray
-                Lattice vectors.
-            - axis_abc : ndarray, shape (3,)
-                Lengths of the three lattice vectors.
             - reduced_positions : ndarray
                 One-dimensional vector [X_a, X_b, X_c] that uniquely identifies
                 the structure up to the tolerance `tol`.
-            - all_positions : list[dict]
-                List of dictionaries, each containing:
-                - perm_mat : ndarray, shape (3, 3)
-                    Permutation matrix.
-                - pos_reps : list of ndarray
-                    List of position representations.
+            - all_positions : ndarray
+                Array of atomic positions for all structure representations,
+                with shape (N_reps, N_atom, 3).
             - elements : ndarray
                 Chemical element symbols ordered starting from the least frequent element
                 (alphabetically first in case of ties), corresponding to the order of
                 atomic coordinates.
         """
-
-        G = self.axis @ self.axis.T
-        metric_tensor = np.array([G[0, 0], G[1, 1], G[2, 2], G[1, 2], G[0, 2], G[0, 1]])
         if self.transformation_matrices is None:
             t_lattice = time.time()
-            transformation_matrices = enumerate_metric_symmetries(
+            self.transformation_matrices = matching_metric_tensor(
                 self.axis, self.axis, self.spg_number, tol=self.tol_sm
             )
             if self.verbose:
@@ -117,14 +103,11 @@ class PositionRepReducer:
         else:
             reduced_positions, all_positions, sorted_elements = (
                 self.get_reduced_positions(
-                    transformation_matrices,
+                    self.transformation_matrices,
                 )
             )
 
         return {
-            "metric_tensor": metric_tensor,
-            "axis": self.axis,
-            "axis_abc": self.axis_abc,
             "reduced_positions": reduced_positions,
             "all_positions": all_positions,
             "elements": sorted_elements,
@@ -197,12 +180,8 @@ class PositionRepReducer:
             for redperm_positions in redperm_positions_list:
                 reduced_perm_cands.append(redperm_positions[:, ::-1].T.reshape(-1))
                 target_vals.append(redperm_positions[0 : len(mask), ::-1].T.reshape(-1))
-            all_positions.append(
-                {
-                    "perm_mat": pos_cand["perm_mat"],
-                    "pos_reps": redperm_positions_list,
-                }
-            )
+            all_positions.extend(redperm_positions_list)
+
         if self.verbose:
             print(f"  Permutation: {round((time.time() - t_permutation) * 1000, 2)} ms")
 
@@ -217,7 +196,7 @@ class PositionRepReducer:
         if self.verbose:
             print(f"  Translation: {round((time.time() - t_translation) * 1000, 2)} ms")
 
-        return reduced_positions, all_positions, sorted_elements
+        return reduced_positions, np.array(all_positions), sorted_elements
 
     def _reduced_permutations(
         self,
@@ -355,7 +334,7 @@ def find_proper_tolerance(
     tol: float,
     window: float = 0.1,
     range: list = [0.5, 1.5],
-    num_points: int = 19,
+    num_points: int = 9,
 ):
     differences = np.sort(np.asarray(differences).ravel())
     tolerance_range = [range[0] * tol, range[1] * tol]
@@ -373,75 +352,3 @@ def find_proper_tolerance(
     min_indices = np.where(densities == densities.min())[0]
     idx = min_indices[np.argmin(np.abs(tolerances[min_indices] - tol))]
     return float(tolerances[idx])
-
-
-def enumerate_metric_symmetries(
-    axis_1: np.ndarray,
-    axis_2: np.ndarray,
-    spg_number: int,
-    tol: float = 1e-3,
-) -> list[np.ndarray]:
-    """Enumerate unimodular integer matrices satisfying M @ G_1 @ M.T = G_2."""
-    G_1 = axis_1 @ axis_1.T
-    G_2 = axis_2 @ axis_2.T
-    if not (np.allclose(G_1, G_1.T, atol=tol) and np.allclose(G_2, G_2.T, atol=tol)):
-        raise ValueError("G must be symmetric.")
-
-    norm_a = G_1[0, 0] ** 0.5
-    norm_b = G_1[1, 1] ** 0.5
-    norm_c = G_1[2, 2] ** 0.5
-    e_aa = tol * 2 * norm_a
-    e_bb = tol * 2 * norm_b
-    e_cc = tol * 2 * norm_c
-    e_bc = tol * (norm_b + norm_c)
-    e_ac = tol * (norm_a + norm_c)
-    e_ab = tol * (norm_a + norm_b)
-
-    # Enumerate candidate column vectors.
-    candidates = [
-        enumerate_integer_vectors(G_1, G_2[i, i], [e_aa, e_bb, e_cc][i])
-        for i in range(3)
-    ]
-    matrices = []
-
-    # Enumerate combinations of the three columns.
-    for m1, m2, m3 in itertools.product(*candidates):
-        if abs(m1 @ G_1 @ m2 - G_2[0, 1]) > e_ab:
-            continue
-        if abs(m1 @ G_1 @ m3 - G_2[0, 2]) > e_ac:
-            continue
-        if abs(m2 @ G_1 @ m3 - G_2[1, 2]) > e_bc:
-            continue
-        M = np.column_stack((m1, m2, m3))
-
-        det = round(np.linalg.det(M))
-        if abs(det) != 1:
-            continue
-        if is_chiral(spg_number) and det == -1:
-            continue
-        matrices.append(M)
-
-    return matrices
-
-
-def enumerate_integer_vectors(
-    G: np.ndarray,
-    q: float,
-    tol: float = 1e-5,
-) -> np.ndarray:
-    """Enumerate integer vectors satisfying v.T @ G @ v ~= q."""
-    G = np.asarray(G, dtype=float)
-
-    # Upper bound from the minimum eigenvalue.
-    lambda_min = np.linalg.eigvalsh(G)[0]
-    if lambda_min <= 0:
-        raise ValueError("G must be positive definite.")
-
-    vectors = []
-    bound = int(np.ceil(np.sqrt((q + tol) / lambda_min)))
-    for v in itertools.product(range(-bound, bound + 1), repeat=3):
-        v = np.asarray(v, dtype=int)
-        if abs(v @ G @ v - q) <= tol:
-            vectors.append(v)
-
-    return np.asarray(vectors, dtype=int).reshape(-1, 3)

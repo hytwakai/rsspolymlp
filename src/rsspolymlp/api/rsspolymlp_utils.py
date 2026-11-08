@@ -21,13 +21,13 @@ from rsspolymlp.rss.optimization_mlp import OptimizationMLP
 def struct_matcher(
     poscar_paths: Optional[list[str]] = None,
     struct_list: Optional[list[dict]] = None,
-    struct_reps_list: Optional[list[dict]] = None,
+    struct_rep_list: Optional[list[dict]] = None,
     axis_tol: float = 0.05,
     pos_tol: float = 0.03,
     assign_method: Literal["redrep", "greedy", "HK", "pymatgen"] = "redrep",
     num_process: int = -1,
     backend: str = "loky",
-    tol_sm: list[float] = None,
+    tol_sm: float = None,
     tol_redpos: list[float] = None,
     normalize_axis: bool = False,
     output_file: str = "unique_struct.yaml",
@@ -35,14 +35,14 @@ def struct_matcher(
     log_all: bool = False,
     verbose: bool = False,
 ):
-    if poscar_paths is None and struct_list is None and struct_reps_list is None:
+    if poscar_paths is None and struct_list is None and struct_rep_list is None:
         raise ValueError("Set poscar_paths, struct_list, or struct_reps_list")
 
     time_log = []
     time_refine = iter_refine = time_redrep = iter_redrep = 0
-    if struct_reps_list is None:
+    if struct_rep_list is None:
         if tol_sm is None:
-            tol_sm = [max([axis_tol, pos_tol])]
+            tol_sm = max([axis_tol, pos_tol])
         if tol_redpos is None:
             if not normalize_axis:
                 tol_redpos = [1e-4, 1e-2, 1e-1]
@@ -65,7 +65,7 @@ def struct_matcher(
             normalize_axis=normalize_axis,
             verbose=verbose,
         )
-        struct_reps_list = generator.generate_struct_reps_parallel(
+        struct_rep_list = generator.generate_struct_rep_parallel(
             struct_list,
             num_process=num_process,
             backend=backend,
@@ -84,9 +84,9 @@ def struct_matcher(
         assign_method=assign_method,
         verbose=verbose,
     )
-    for struct_reps in struct_reps_list:
+    for struct_rep in struct_rep_list:
         analyzer.identify_duplicate_struct(
-            struct_reps=struct_reps,
+            struct_rep=struct_rep,
         )
     time_match = analyzer.time_match
     iter_match = analyzer.iter_match
@@ -154,7 +154,7 @@ def struct_compare(
     pos_tol: float = 0.01,
     assign_method: Literal["redrep", "greedy", "HK", "pymatgen"] = "redrep",
     tol_redpos: list[float] = None,
-    tol_sm: list[float] = None,
+    tol_sm: float = None,
     normalize_axis: bool = False,
     verbose: bool = True,
 ):
@@ -186,19 +186,19 @@ def struct_compare(
         else:
             tol_redpos = [1e-5, 1e-3, 1e-2]
     if tol_sm is None:
-        tol_sm = [max([axis_tol, pos_tol])]
+        tol_sm = max([axis_tol, pos_tol])
     generator = StructRepGenerator(
         tol_sm=tol_sm,
         tol_redpos=tol_redpos,
         normalize_axis=normalize_axis,
     )
-    struct_reps_1, _ = generator.generate_struct_reps(
+    struct_rep_1, _ = generator.generate_struct_rep(
         axis=axis1,
         positions=positions1,
         elements=elements1,
         struct_path="st1",
     )
-    struct_reps_2, _ = generator.generate_struct_reps(
+    struct_rep_2, _ = generator.generate_struct_rep(
         axis=axis2,
         positions=positions2,
         elements=elements2,
@@ -207,16 +207,16 @@ def struct_compare(
 
     if assign_method == "redrep":
         judge = struct_match(
-            struct_reps_1,
-            struct_reps_2,
+            struct_rep_1,
+            struct_rep_2,
             axis_tol=axis_tol,
             pos_tol=pos_tol,
             verbose=verbose,
         )
     else:
         judge = struct_match_allrep(
-            struct_reps_1,
-            struct_reps_2,
+            struct_rep_1,
+            struct_rep_2,
             axis_tol=axis_tol,
             pos_tol=pos_tol,
             assign_method=assign_method,

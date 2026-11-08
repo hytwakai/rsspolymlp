@@ -185,7 +185,7 @@ def rss_summarize(
     num_process=-1,
     backend="loky",
     assign_method: Literal["redrep", "greedy", "HK", "pymatgen"] = "redrep",
-    tol_sm: list[float] = [1e-2],
+    tol_sm: float = 1e-2,
     output_poscar: bool = False,
     thresholds: list[float] = None,
     parse_vasp: bool = False,

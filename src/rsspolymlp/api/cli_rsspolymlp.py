@@ -219,11 +219,10 @@ def run():
         "reduced representation, greedy, or Hopcroft-Karp",
     )
     parser.add_argument(
-        "--primitive_symprecs",
-        nargs="*",
+        "--tol_sm",
         type=float,
-        default=[1e-2],
-        help="List of symmetry tolerances used to identify distinct primitive cells.",
+        default=1e-2,
+        help="Symmetry tolerances for identifying distinct primitive cells",
     )
     parser.add_argument(
         "--output_poscar",
@@ -322,7 +321,7 @@ def run():
             num_process=args.num_process,
             backend=args.backend,
             assign_method=args.assign_method,
-            primitive_symprecs=args.primitive_symprecs,
+            tol_sm=args.tol_sm,
             output_poscar=args.output_poscar,
             thresholds=args.thresholds,
             parse_vasp=args.parse_vasp,

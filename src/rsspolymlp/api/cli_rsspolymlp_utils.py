@@ -63,9 +63,8 @@ def run():
     )
     parser.add_argument(
         "--tol_sm",
-        nargs="*",
         type=float,
-        default=[1e-2],
+        default=1e-2,
         help="Symmetry tolerances for identifying distinct primitive cells",
     )
     parser.add_argument(

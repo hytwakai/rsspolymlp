@@ -61,14 +61,14 @@ def test_sm_random_struct(tmp_path, crystal_system):
                     }
                 )
         generator = StructRepGenerator()
-        struct_reps_list = generator.generate_struct_reps_parallel(
+        struct_rep_list = generator.generate_struct_rep_parallel(
             struct_reps,
             verbose=True,
         )
         for assign_method in ["redrep", "greedy", "HK"]:
             print("assign_method:", assign_method)
             struct_matcher(
-                struct_reps_list=struct_reps_list,
+                struct_rep_list=struct_rep_list,
                 assign_method=assign_method,
                 output_file=f"{tmp_path}/{assign_method}.yaml",
             )

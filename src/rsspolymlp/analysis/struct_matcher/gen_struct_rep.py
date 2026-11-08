@@ -7,32 +7,32 @@ import joblib
 import numpy as np
 
 from rsspolymlp.analysis.struct_matcher.niggli_reduce import niggli_reduce
+from rsspolymlp.analysis.struct_matcher.position_allrep import matching_metric_tensor
+from rsspolymlp.analysis.struct_matcher.position_redrep import (
+    PositionRepReducer,
+)
 from rsspolymlp.analysis.struct_matcher.primitive_transform import (
     PrimitiveCell,
     get_primitive_cell,
 )
-from rsspolymlp.analysis.struct_matcher.redrep_position import PositionRepReducer
 from rsspolymlp.common.interface_spglib import SymCell
 from rsspolymlp.common.property import PropUtil
 
 
 @dataclass
 class StructRep:
-    reduced_reps: dict
-    all_reps: dict
+    axis: np.ndarray
+    metric_tensor: np.ndarray
+    reduced_posreps: dict
+    all_posreps: dict
     elements: np.ndarray
     element_count: Counter[str]
     spg_number: int
-
-
-@dataclass
-class StructReps:
-    struct_rep_list: list[StructRep]
     original_axis: np.ndarray
     original_positions: np.ndarray
     original_elements: np.ndarray
     spg_list: list[str]
-    tol_sm: list[float]
+    tol_sm: float
     tol_redpos: list[float]
     normalize_axis: bool
     struct_path: Optional[str]
@@ -44,7 +44,7 @@ class StructRepGenerator:
 
     def __init__(
         self,
-        tol_sm: list[float] = [1e-2],
+        tol_sm: float = 1e-2,
         tol_redpos: list[float] = [1e-4, 1e-2, 1e-1],
         normalize_axis: bool = False,
         verbose: bool = False,
@@ -59,7 +59,7 @@ class StructRepGenerator:
         self.iter_redrep = 0
         self.time_redrep = 0
 
-    def generate_struct_reps(
+    def generate_struct_rep(
         self,
         axis: np.ndarray,
         positions: np.ndarray,
@@ -67,7 +67,7 @@ class StructRepGenerator:
         struct_path: str,
         struct_tag: Optional[str] = None,
         dupstr_paths: Optional[set[str]] = None,
-    ) -> tuple[StructReps, dict]:
+    ) -> tuple[StructRep, dict]:
         """
         Parameters
         ----------
@@ -91,27 +91,24 @@ class StructRepGenerator:
         objprop = PropUtil(axis, positions)
         spg_list = objprop.analyze_space_group(elements)
 
-        primitive_st_set, spg_number_set, log_refine = self.generate_primitive_cells(
+        primitive_st, spg_number, log_refine = self.generate_reduced_cell(
             axis,
             positions,
             elements,
         )
-        if primitive_st_set == []:
+        if primitive_st is None:
             return None
 
-        struct_rep_list = []
-        for i, primitive_st in enumerate(primitive_st_set):
-            tol_redpos = sorted(
-                self.tol_redpos,
-                key=lambda x: x if isinstance(x, (int, float)) else sum(x) / len(x),
-            )
-            struct_rep, log_redrep = self.generate_struct_rep(
+        G = primitive_st.axis @ primitive_st.axis.T
+        metric_tensor = (G[0, 0], G[1, 1], G[2, 2], G[1, 2], G[0, 2], G[0, 1])
+        reduced_posreps, all_posreps, sorted_elements, log_redrep = (
+            self.generate_reduced_position(
                 primitive_st.axis,
                 primitive_st.positions,
                 primitive_st.elements,
-                spg_number_set[i],
+                spg_number,
             )
-            struct_rep_list.append(struct_rep)
+        )
 
         calc_log = {
             "iter_refine": log_refine[0],
@@ -123,14 +120,20 @@ class StructRepGenerator:
         if dupstr_paths is None:
             dupstr_paths = set([struct_path])
         return (
-            StructReps(
-                struct_rep_list=struct_rep_list,
+            StructRep(
+                axis=primitive_st.axis,
+                metric_tensor=metric_tensor,
+                reduced_posreps=reduced_posreps,
+                all_posreps=all_posreps,
+                elements=sorted_elements,
+                element_count=Counter(sorted_elements),
+                spg_number=spg_number,
                 original_axis=axis,
                 original_positions=positions,
                 original_elements=np.asarray(elements, dtype=str),
                 spg_list=spg_list,
                 tol_sm=self.tol_sm,
-                tol_redpos=tol_redpos,
+                tol_redpos=self.tol_redpos,
                 normalize_axis=self.normalize_axis,
                 struct_path=struct_path,
                 struct_tag=struct_tag,
@@ -139,48 +142,45 @@ class StructRepGenerator:
             calc_log,
         )
 
-    def generate_primitive_cells(
+    def generate_reduced_cell(
         self,
         axis: np.ndarray,
         positions: np.ndarray,
         elements: np.ndarray,
     ) -> tuple[list[PrimitiveCell], list[int], tuple]:
         """Generate primitive cells of a given structure under different symmetry tolerances."""
-        primitive_st_set = []
-        spg_number_set = []
         iter_refine = 0
         time_refine = 0
-        for tol in self.tol_sm:
-            t_start = time.time()
-            primitive_cell = get_primitive_cell(
-                axis=axis, positions=positions, elements=elements, tol=tol
-            )
-            symutil = SymCell(
-                primitive_cell.axis,
-                primitive_cell.positions,
-                primitive_cell.elements,
-                symprec=tol,
-            )
-            spg_number = symutil.get_spg_number()
 
-            axis_niggli, positions_niggli = niggli_reduce(
-                axis=primitive_cell.axis, positions=primitive_cell.positions, tol=tol
-            )
-            primitive_cell.axis = axis_niggli
-            primitive_cell.positions = positions_niggli
+        t_start = time.time()
+        primitive_cell = get_primitive_cell(
+            axis=axis, positions=positions, elements=elements, tol=self.tol_sm
+        )
+        symutil = SymCell(
+            primitive_cell.axis,
+            primitive_cell.positions,
+            primitive_cell.elements,
+            symprec=self.tol_sm,
+        )
+        spg_number = symutil.get_spg_number()
 
-            primitive_st_set.append(primitive_cell)
-            spg_number_set.append(spg_number)
+        axis_niggli, positions_niggli = niggli_reduce(
+            axis=primitive_cell.axis,
+            positions=primitive_cell.positions,
+            tol=self.tol_sm,
+        )
+        primitive_cell.axis = axis_niggli
+        primitive_cell.positions = positions_niggli
 
-            iter_refine += 1
-            time_refine += time.time() - t_start
+        iter_refine += 1
+        time_refine += time.time() - t_start
 
         self.iter_refine += iter_refine
         self.time_refine += time_refine
 
-        return primitive_st_set, spg_number_set, (iter_refine, time_refine)
+        return primitive_cell, spg_number, (iter_refine, time_refine)
 
-    def generate_struct_rep(
+    def generate_reduced_position(
         self,
         axis: np.ndarray,
         positions: np.ndarray,
@@ -188,20 +188,17 @@ class StructRepGenerator:
         spg_number: int,
     ) -> tuple[StructRep, tuple]:
         """Generate an StructRep object for a structure under different symmetry tolerances."""
-        reduced_reps = {
-            "metric_tensors": [],
-            "axis_abc": [],
-            "positions": [],
-            "tol": [],
-        }
-        all_reps = {
-            "metric_tensors": [],
-            "axis_abc": [],
-            "positions": [],
-            "tol": [],
-        }
+        transformation_matrices = matching_metric_tensor(
+            axis, axis, spg_number, tol=self.tol_sm
+        )
+
+        reduced_posreps = {"positions": [], "tol": []}
         iter_redrep = 0
         time_redrep = 0
+
+        transformation_matrices = matching_metric_tensor(
+            axis, axis, spg_number, tol=self.tol_sm
+        )
 
         tol_set = self.tol_redpos
         for tol in tol_set:
@@ -210,63 +207,41 @@ class StructRepGenerator:
                 axis,
                 positions,
                 elements,
-                spg_number,
-                tol=tol,
                 normalize_axis=self.normalize_axis,
+                transformation_matrices=transformation_matrices,
                 verbose=self.verbose,
             )
-            res = reducer.get_reduced_structure_representation()
-            metric_tensor = res["metric_tensor"]
-            axis_abc = res["axis_abc"]
+            res = reducer.get_reduced_position_representation()
             red_posrep = res["reduced_positions"]
-            all_posrep = res["all_positions"]
+            all_posreps = res["all_positions"]
             sorted_elements = res["elements"]
 
             iter_redrep += 1
             time_redrep += time.time() - t_start
 
-            unique_metric = True
-            for mt_ref in reduced_reps["metric_tensors"]:
-                diffs = np.abs(mt_ref - metric_tensor)
-                if np.all(diffs < 1e-4):
-                    unique_metric = False
-                    break
             unique_pos = True
-            if not unique_metric and len(red_posrep) > 0:
-                for ps_ref in reduced_reps["positions"]:
+            if len(red_posrep) > 0:
+                for ps_ref in reduced_posreps["positions"]:
                     diffs = np.abs(ps_ref - red_posrep)
                     if np.all(diffs < 1e-4):
                         unique_pos = False
                         break
-            if unique_metric:
-                all_reps["metric_tensors"].append(metric_tensor)
-                all_reps["axis_abc"].append(axis_abc)
-                all_reps["positions"].append(all_posrep)
-                all_reps["tol"].append(tol)
-            if unique_metric or unique_pos:
-                reduced_reps["metric_tensors"].append(metric_tensor)
-                reduced_reps["axis_abc"].append(axis_abc)
-                reduced_reps["positions"].append(red_posrep)
-                reduced_reps["tol"].append(tol)
+            if unique_pos:
+                reduced_posreps["positions"].append(red_posrep)
+                reduced_posreps["tol"].append(tol)
 
         self.iter_redrep += iter_redrep
         self.time_redrep += time_redrep
 
-        return StructRep(
-            reduced_reps=reduced_reps,
-            all_reps=all_reps,
-            elements=sorted_elements,
-            element_count=Counter(sorted_elements),
-            spg_number=spg_number,
-        ), (iter_redrep, time_redrep)
+        return reduced_posreps, all_posreps, sorted_elements, (iter_redrep, time_redrep)
 
-    def generate_struct_reps_parallel(
+    def generate_struct_rep_parallel(
         self,
         struct_list: list[dict],
         num_process: int = -1,
         backend: str = "loky",
         verbose: bool = False,
-    ) -> list[StructReps]:
+    ) -> list[StructRep]:
         """
         Generate a list of StructReps objects.
 
@@ -288,10 +263,10 @@ class StructRepGenerator:
             Backend used by joblib.
         """
         if num_process == 1:
-            redreps_list = []
+            struct_rep_list = []
             for res in struct_list:
-                redreps_list.append(
-                    self.generate_struct_reps(
+                struct_rep_list.append(
+                    self.generate_struct_rep(
                         axis=res["axis"],
                         positions=res["positions"],
                         elements=res["elements"],
@@ -308,7 +283,7 @@ class StructRepGenerator:
             joblib_results = joblib.Parallel(
                 n_jobs=num_process, backend=backend, verbose=joblib_verbose
             )(
-                joblib.delayed(self.generate_struct_reps)(
+                joblib.delayed(self.generate_struct_rep)(
                     axis=res["axis"],
                     positions=res["positions"],
                     elements=res["elements"],
@@ -318,10 +293,10 @@ class StructRepGenerator:
                 )
                 for res in struct_list
             )
-            redreps_list = []
+            struct_rep_list = []
             for res in joblib_results:
                 if res[0] is not None:
-                    redreps_list.append(res[0])
+                    struct_rep_list.append(res[0])
                 self.iter_refine += res[1]["iter_refine"]
                 self.time_refine += res[1]["time_refine"]
                 self.iter_redrep += res[1]["iter_redrep"]
@@ -340,4 +315,4 @@ class StructRepGenerator:
                     f"    {name:<7} {iterations:>12} "
                     f"{avg_time:>15.2f} {total_time:>15.2f}"
                 )
-        return redreps_list
+        return struct_rep_list
