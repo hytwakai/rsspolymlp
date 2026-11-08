@@ -1,4 +1,3 @@
-import math
 import time
 from contextlib import redirect_stdout
 from typing import Literal
@@ -6,8 +5,7 @@ from typing import Literal
 import numpy as np
 
 from rsspolymlp.analysis.struct_matcher.assignment_algo import (
-    bottleneck_assignment,
-    greedy_match,
+    position_matching,
     sort_match_screen,
 )
 from rsspolymlp.analysis.struct_matcher.gen_struct_rep import (
@@ -104,13 +102,14 @@ def struct_match(
                         _pos2 = pos2.reshape(3, -1).T[target_idxs]
                         _e1 = elements1[target_idxs + 1]
                         _e2 = elements2[target_idxs + 1]
-                        judge, pos_max_abs = greedy_match(
+                        judge, pos_max_abs = position_matching(
                             _pos1,
                             _pos2,
                             _e1,
                             _e2,
                             axis_abc,
                             pos_tol,
+                            assign_method="greedy",
                         )
                         if judge:
                             struct_match = True
@@ -169,9 +168,7 @@ def struct_match(
                     pos_d_min[1][3],
                 )
                 print("    diffs:")
-                log_axis_positions(
-                    [], axis_d_min[1][2], pos_d_min[1][4]
-                )
+                log_axis_positions([], axis_d_min[1][2], pos_d_min[1][4])
             print("Match:", struct_match)
         print(f"{output_file} is generated.")
 
@@ -255,28 +252,15 @@ def struct_match_allrep(
                         if judge_st_match:
                             break
                         t_start_match = time.time()
-                        if assign_method == "greedy":
-                            judge_st_match, max_diff = greedy_match(
-                                pos_reps1[i2],
-                                pos_reps2[j2],
-                                elements1,
-                                elements2,
-                                axis_abc,
-                                pos_tol,
-                            )
-                        elif assign_method == "HK":
-                            judge_st_match, max_diff = bottleneck_assignment(
-                                pos_reps1[i2],
-                                pos_reps2[j2],
-                                elements1,
-                                elements2,
-                                axis_abc,
-                                pos_tol,
-                            )
-                        else:
-                            raise ValueError(
-                                f"Unknown assignment method: {assign_method}"
-                            )
+                        judge_st_match, max_diff = position_matching(
+                            pos_reps1[i2],
+                            pos_reps2[j2],
+                            elements1,
+                            elements2,
+                            axis_abc,
+                            pos_tol,
+                            assign_method=assign_method,
+                        )
                         t_match += time.time() - t_start_match
                         iter_match += 1
             if verbose:
