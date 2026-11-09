@@ -11,6 +11,7 @@ from rsspolymlp.analysis.struct_matcher.assignment_algo import (
 from rsspolymlp.analysis.struct_matcher.gen_struct_rep import (
     StructRep,
 )
+from rsspolymlp.analysis.struct_matcher.position_allrep import matching_metric_tensor
 
 
 def struct_match(
@@ -55,34 +56,57 @@ def struct_match(
 
     redreps1 = st_1.reduced_posreps
     redreps2 = st_2.reduced_posreps
-    axis1 = normalize_metric_tensor(st_1.metric_tensor)
-    axis2 = normalize_metric_tensor(st_2.metric_tensor)
+    norm_metric_tensor1 = normalize_metric_tensor(st_1.metric_tensor)
+    norm_metric_tensor2 = normalize_metric_tensor(st_2.metric_tensor)
     axis_abc1 = np.sqrt(st_1.metric_tensor[:3])
     positions1 = np.stack(redreps1["positions"], axis=0)
     positions2 = np.stack(redreps2["positions"], axis=0)
     elements1 = st_1.elements[1:]
     elements2 = st_2.elements[1:]
 
-    axis_d = axis1 - axis2
+    judge = False
+    axis_d = norm_metric_tensor1 - norm_metric_tensor2
     axis_diff_max = np.max(np.abs(axis_d))
-    axis_results = [axis_diff_max, [axis1, axis2, axis_d]]
-    if not axis_diff_max < axis_tol:
+    if axis_diff_max < axis_tol:
+        judge = True
+
+    if not judge:
+        if verbose:
+            output_log(
+                axis_tol,
+                pos_tol,
+                st_1,
+                st_2,
+                judge,
+                axis_diff_max,
+                output_file=output_file,
+            )
         return False
 
     if len(st_1.elements) == 1:
+        judge = True
+        if verbose:
+            output_log(
+                axis_tol,
+                pos_tol,
+                st_1,
+                st_2,
+                judge,
+                axis_diff_max,
+                output_file=output_file,
+            )
         return True
 
-    pos_results = None
     pos_max_abs = 1e6
-    struct_match = False
+    judge = False
     for pos1, tol1 in zip(positions1, redreps1["tol"]):
-        if struct_match:
+        if judge:
             break
         for pos2, tol2 in zip(positions2, redreps2["tol"]):
             pos_d = pos1 - pos2
             if np.all(np.abs(pos_d) < pos_tol):
                 pos_max_abs = np.max(np.abs(pos_d))
-                struct_match = True
+                judge = True
             match_idxs = np.max(np.abs(pos_d.reshape(3, -1).T), axis=1) < pos_tol
             if np.any(match_idxs):
                 target_idxs = np.where(
@@ -92,7 +116,7 @@ def struct_match(
                 _pos2 = pos2.reshape(3, -1).T[target_idxs]
                 _e1 = elements1[target_idxs]
                 _e2 = elements2[target_idxs]
-                judge, pos_max_abs = position_matching(
+                _judge, pos_max_abs = position_matching(
                     _pos1,
                     _pos2,
                     _e1,
@@ -101,16 +125,26 @@ def struct_match(
                     pos_tol,
                     assign_method="greedy",
                 )
-                if judge:
-                    struct_match = True
+                if _judge:
+                    judge = True
                     break
 
     pos_results = [pos_max_abs, [tol1, pos1, tol2, pos2, pos_d]]
     if verbose:
         print("Elapsed time:", np.round((time.time() - s_time) * 1000, 2), "ms")
+        output_log(
+            axis_tol,
+            pos_tol,
+            st_1,
+            st_2,
+            judge,
+            axis_diff_max,
+            pos_diff=pos_results,
+            output_file=output_file,
+        )
         print(f"{output_file} is generated.")
 
-    return struct_match
+    return judge
 
 
 def struct_match_allrep(
@@ -118,25 +152,46 @@ def struct_match_allrep(
     st_2: StructRep,
     axis_tol: float = 0.01,
     pos_tol: float = 0.01,
-    spg_match: bool = True,
     assign_method: Literal["greedy", "HK"] = "greedy",
+    match_metric_tensor: bool = True,
     verbose: bool = False,
 ) -> bool:
-    axis1 = normalize_metric_tensor(st_1.metric_tensor)
-    axis2 = normalize_metric_tensor(st_2.metric_tensor)
+    norm_metric_tensor1 = normalize_metric_tensor(st_1.metric_tensor)
+    norm_metric_tensor2 = normalize_metric_tensor(st_2.metric_tensor)
     axis_abc1 = np.sqrt(st_1.metric_tensor[:3])
-    positions1 = st_1.all_posreps
-    positions2 = st_2.all_posreps
+    positions1 = np.array(st_1.all_posreps)
+    positions2 = np.array(st_2.all_posreps)
     elements1 = st_1.elements[1:]
     elements2 = st_2.elements[1:]
 
     if st_1.element_count != st_2.element_count:
         return False
 
-    axis_d = axis1 - axis2
+    axis_d = norm_metric_tensor1 - norm_metric_tensor2
     axis_diff_max = np.max(np.abs(axis_d))
     if not axis_diff_max < axis_tol:
-        return False
+        if match_metric_tensor:
+            m1 = st_1.metric_tensor
+            m2 = st_2.metric_tensor
+            G_1 = [[m1[0], m1[5], m1[4]], [m1[5], m1[1], m1[3]], [m1[4], m1[3], m1[2]]]
+            G_2 = [[m2[0], m2[5], m2[4]], [m2[5], m2[1], m2[3]], [m2[4], m2[3], m2[2]]]
+            transformation_matrices = matching_metric_tensor(
+                G_1,
+                G_2,
+                spg_number=st_1.spg_number,
+                tol=axis_tol,
+            )
+            if len(transformation_matrices) == 0:
+                return False
+            else:
+                all_positions = []
+                for trans_mat in transformation_matrices:
+                    pos1 = positions1 @ np.linalg.inv(trans_mat)
+                    all_positions.append(pos1)
+                all_positions = np.concatenate(all_positions, axis=0)
+                positions1 = all_positions
+        else:
+            return False
 
     if len(st_1.elements) == 1:
         return True
@@ -201,16 +256,16 @@ def normalize_metric_tensor(metric_tensor):
 def output_log(
     axis_tol,
     pos_tol,
-    strep_list1,
-    strep_list2,
-    axis_d_min,
-    pos_d_min,
+    strep_1,
+    strep_2,
+    judge,
+    axis_diff,
+    pos_diff=None,
     output_file: str = "struct_matcher.yaml",
 ):
 
-    def log_axis_positions(tol, axis, positions, round_axis=4, round_pos=3):
+    def log_positions(tol, positions, round_pos=3):
         print("    - tol:", np.round(tol, 5).tolist())
-        print("      metric_tensor:", np.round(axis, round_axis).tolist())
         if len(positions) > 0:
             print("      positions:")
             for p in positions.reshape(3, -1).tolist():
@@ -222,34 +277,31 @@ def output_log(
         print("  axis_tol:", axis_tol)
         print("  pos_tol:", pos_tol)
         print("structures:")
-        for i, st_list in enumerate([strep_list1, strep_list2]):
+        for i, st in enumerate([strep_1, strep_2]):
             print(f"  - struct_No: {i + 1}")
-            for st in st_list:
-                print("    spg_number:", st.spg_number)
-                print("    representations:")
-                for h, pos in enumerate(st.reduced_reps["positions"]):
-                    log_axis_positions(
-                        st.reduced_reps["tol"][h],
-                        st.reduced_reps["metric_tensors"][h],
-                        pos,
-                    )
-        if axis_d_min is not None:
-            x_pos = abs(float(pos_d_min[0])) if pos_d_min[0] is not None else 1e6
-            print("difference_log:")
-            print("  - axis_diff_max:", np.round(axis_d_min[0], 5))
+            print("    metric_tensor:", np.round(st.metric_tensor, 4).tolist())
+            print("    spg_number:", st.spg_number)
+            print("    representations:")
+            for h, pos in enumerate(st.reduced_posreps["positions"]):
+                log_positions(
+                    st.reduced_posreps["tol"][h],
+                    pos,
+                )
+        print("Match:", judge)
+        print("difference_log:")
+        print("  - axis_diff_max:", np.round(axis_diff, 5))
+        if pos_diff is not None:
+            x_pos = abs(float(pos_diff[0])) if pos_diff[0] is not None else 1e6
             print("    pos_max_abs:", np.round(x_pos, 5))
             print("    structure_1:")
-            log_axis_positions(
-                pos_d_min[1][0],
-                axis_d_min[1][0],
-                pos_d_min[1][1],
+            log_positions(
+                pos_diff[1][0],
+                pos_diff[1][1],
             )
             print("    structure_2:")
-            log_axis_positions(
-                pos_d_min[1][2],
-                axis_d_min[1][1],
-                pos_d_min[1][3],
+            log_positions(
+                pos_diff[1][2],
+                pos_diff[1][3],
             )
             print("    diffs:")
-            log_axis_positions([], axis_d_min[1][2], pos_d_min[1][4])
-        print("Match:", struct_match)
+            log_positions([], pos_diff[1][4])

@@ -188,18 +188,14 @@ class StructRepGenerator:
         spg_number: int,
     ) -> tuple[StructRep, tuple]:
         """Generate an StructRep object for a structure under different symmetry tolerances."""
+        G = axis @ axis.T
         transformation_matrices = matching_metric_tensor(
-            axis, axis, spg_number, tol=self.tol_sm
+            G, G, spg_number, tol=self.tol_sm
         )
 
         reduced_posreps = {"positions": [], "tol": []}
         iter_redrep = 0
         time_redrep = 0
-
-        transformation_matrices = matching_metric_tensor(
-            axis, axis, spg_number, tol=self.tol_sm
-        )
-
         tol_set = self.tol_redpos
         for tol in tol_set:
             t_start = time.time()

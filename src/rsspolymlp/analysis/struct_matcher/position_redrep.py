@@ -83,8 +83,9 @@ class PositionRepReducer:
         """
         if self.transformation_matrices is None:
             t_lattice = time.time()
+            G = self.axis @ self.axis.T
             self.transformation_matrices = matching_metric_tensor(
-                self.axis, self.axis, self.spg_number, tol=self.tol_sm
+                G, G, self.spg_number, tol=self.tol_sm
             )
             if self.verbose:
                 print(f"  Lattice: {round((time.time() - t_lattice) * 1000, 2)} ms")

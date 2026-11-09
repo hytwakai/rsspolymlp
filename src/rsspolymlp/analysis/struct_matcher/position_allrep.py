@@ -43,8 +43,9 @@ def get_all_position_representations(
     axis_abc = np.array([norm_a, norm_b, norm_c])
 
     if transformation_matrices is None:
+        G = axis @ axis.T
         transformation_matrices = matching_metric_tensor(
-            axis, axis, spg_number, tol=tol_sm
+            G, G, spg_number, tol=tol_sm
         )
 
     all_posrep = []
@@ -65,14 +66,14 @@ def get_all_position_representations(
 
 
 def matching_metric_tensor(
-    axis_1: np.ndarray,
-    axis_2: np.ndarray,
+    G_1: np.ndarray,
+    G_2: np.ndarray,
     spg_number: int,
     tol: float = 1e-3,
 ) -> list[np.ndarray]:
     """Enumerate unimodular integer matrices satisfying M @ G_1 @ M.T = G_2."""
-    G_1 = axis_1 @ axis_1.T
-    G_2 = axis_2 @ axis_2.T
+    G_1 = np.asarray(G_1, dtype=float)
+    G_2 = np.asarray(G_2, dtype=float)
     if not (np.allclose(G_1, G_1.T, atol=tol) and np.allclose(G_2, G_2.T, atol=tol)):
         raise ValueError("G must be symmetric.")
 
