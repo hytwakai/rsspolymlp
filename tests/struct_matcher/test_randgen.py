@@ -5,8 +5,8 @@ import yaml
 from rsspolymlp.analysis.struct_matcher.gen_struct_rep import (
     StructRepGenerator,
 )
-from rsspolymlp.analysis.struct_matcher.test.gen_lattice import (
-    generate_lattice,
+from rsspolymlp.analysis.struct_matcher.test.gen_rand_lattice import (
+    generate_random_lattice,
 )
 from rsspolymlp.analysis.struct_matcher.test.gen_rand_position import (
     apply_rand_disp,
@@ -20,7 +20,7 @@ from rsspolymlp.api.rsspolymlp_utils import struct_matcher
     [
         "triclinic",
         "monoclinic",
-        "monoclinic",
+        "orthorhombic",
         "tetragonal",
         "hexagonal",
         "rhombohedral",
@@ -37,7 +37,7 @@ def test_sm_random_struct(tmp_path, crystal_system):
         n_element_duplicates = 5
         n_duplicates = 5
 
-        axis = generate_lattice(crystal_system, n_atom * 10)
+        axis = generate_random_lattice(crystal_system, n_atom * 10)
 
         struct_reps = []
         for i in range(n_struct_reps):

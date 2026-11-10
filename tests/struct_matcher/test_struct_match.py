@@ -1,9 +1,15 @@
 import glob
 import os
 
+import numpy as np
 import pytest
 import yaml
 
+from rsspolymlp.analysis.struct_matcher.struct_match import matching_metric_tensor
+from rsspolymlp.analysis.struct_matcher.test.gen_rand_lattice import (
+    generate_random_lattice,
+    generate_random_unimodular_matrix,
+)
 from rsspolymlp.api.rsspolymlp_utils import struct_compare, struct_matcher
 
 test_dir = os.path.dirname(os.path.abspath(__file__))
@@ -49,3 +55,25 @@ def test_struct_compare(tmp_path):
             poscar_paths=glob.glob(file),
         )
         assert judge is True
+
+
+def test_metric_tensor_matching():
+    crystal_systems = [
+        "triclinic",
+        "monoclinic",
+        "orthorhombic",
+        "tetragonal",
+        "hexagonal",
+        "rhombohedral",
+        "cubic",
+    ]
+    for crystal_system in crystal_systems:
+        for i in range(10):
+            rand_axis = generate_random_lattice(crystal_system, 100)
+            rand_U = generate_random_unimodular_matrix()
+            trans_axis = rand_U @ rand_axis
+            G1 = rand_axis @ rand_axis.T
+            G2 = trans_axis @ trans_axis.T
+            M = matching_metric_tensor(G1, G2, spg_number=1)
+            judge = (np.array_equal(m, rand_U) for m in M)
+            assert any(judge)
