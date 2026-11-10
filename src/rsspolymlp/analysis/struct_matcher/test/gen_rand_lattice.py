@@ -1,7 +1,7 @@
 import numpy as np
 
 
-def generate_lattice(crystal_system: str, volume: float, rng=None, axis_abc=None):
+def generate_random_lattice(crystal_system: str, volume: float, rng=None, axis_abc=None):
     """Generate a random lattice for a specified crystal system."""
     if rng is None:
         rng = np.random.default_rng()
@@ -51,3 +51,26 @@ def generate_lattice(crystal_system: str, volume: float, rng=None, axis_abc=None
     )
     lattice *= (volume / np.linalg.det(lattice)) ** (1.0 / 3.0)
     return lattice
+
+
+def generate_random_unimodular_matrix(
+    min_operations=1,
+    max_operations=5,
+    seed=None,
+):
+    rng = np.random.default_rng(seed)
+
+    num_operations = rng.integers(
+        min_operations,
+        max_operations + 1,
+    )
+
+    U = np.eye(3, dtype=int)
+
+    for _ in range(num_operations):
+        i, j = rng.choice(3, size=2, replace=False)
+        k = rng.choice([-2, -1, 1, 2])
+
+        U[i] += k * U[j]
+
+    return U

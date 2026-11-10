@@ -4,7 +4,7 @@ from typing import Optional
 
 import numpy as np
 
-from rsspolymlp.analysis.struct_matcher.position_allrep import matching_metric_tensor
+from rsspolymlp.analysis.struct_matcher.struct_match import matching_metric_tensor
 
 
 class PositionRepReducer:
@@ -353,3 +353,59 @@ def find_proper_tolerance(
     min_indices = np.where(densities == densities.min())[0]
     idx = min_indices[np.argmin(np.abs(tolerances[min_indices] - tol))]
     return float(tolerances[idx])
+
+
+def get_all_position_representations(
+    axis: np.ndarray,
+    positions: np.ndarray,
+    elements: np.ndarray,
+    tol_sm: float = 1e-2,
+    spg_number: int = 1,
+    transformation_matrices: Optional[np.ndarray] = None,
+    normalize_axis: bool = False,
+):
+    positions = np.asarray(positions, dtype=float)
+    elements = np.asarray(elements, dtype=float)
+
+    unique_elements = np.sort(np.unique(elements))
+    types = np.array([np.where(unique_elements == el)[0][0] for el in elements])
+
+    counts = Counter(elements)
+    min_count = min(counts.values())
+    least_elements = [el for el, cnt in counts.items() if cnt == min_count]
+    target_element = sorted(least_elements)[0]
+    target_type = np.where(unique_elements == target_element)[0][0]
+    types = (types - target_type) % (np.max(types) + 1)
+
+    sort_idx = np.argsort(types)
+    sorted_positions = positions[sort_idx]
+    sorted_elements = elements[sort_idx]
+
+    if normalize_axis:
+        volume = abs(np.linalg.det(axis))
+        axis = axis / ((volume / len(positions)) ** (1 / 3))
+    a, b, c = np.array(axis)
+    norm_a = np.linalg.norm(a)
+    norm_b = np.linalg.norm(b)
+    norm_c = np.linalg.norm(c)
+    axis_abc = np.array([norm_a, norm_b, norm_c])
+
+    if transformation_matrices is None:
+        G = axis @ axis.T
+        transformation_matrices = matching_metric_tensor(G, G, spg_number, tol=tol_sm)
+
+    all_posrep = []
+    target_indices = np.where(types == 0)[0]
+    for trans_mat in transformation_matrices:
+        _positions = sorted_positions.copy()
+        _positions = _positions @ np.linalg.inv(trans_mat)
+        _positions %= 1.0
+
+        pos_cands = _positions[None, :, :] - _positions[target_indices, None, :]
+        pos_cands %= 1.0
+        pos_cands = pos_cands * axis_abc
+        for pos in pos_cands:
+            all_posrep.append(pos)
+    all_posrep = np.array(all_posrep)
+
+    return all_posrep, sorted_elements

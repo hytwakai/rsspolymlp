@@ -1,4 +1,6 @@
+import itertools
 import time
+from collections import Counter
 from contextlib import redirect_stdout
 from typing import Literal
 
@@ -8,10 +10,8 @@ from rsspolymlp.analysis.struct_matcher.assignment_algo import (
     position_matching,
     sort_match_screen,
 )
-from rsspolymlp.analysis.struct_matcher.gen_struct_rep import (
-    StructRep,
-)
-from rsspolymlp.analysis.struct_matcher.position_allrep import matching_metric_tensor
+from rsspolymlp.analysis.struct_matcher.chiral_spg import is_chiral
+from rsspolymlp.analysis.struct_matcher.dataclass import StructRep
 
 
 def struct_match(
@@ -51,7 +51,7 @@ def struct_match(
         tolerances, False otherwise.
     """
     s_time = time.time()
-    if st_1.element_count != st_2.element_count:
+    if Counter(st_1.elements) != Counter(st_2.elements):
         return False
 
     redreps1 = st_1.reduced_posreps
@@ -164,7 +164,7 @@ def struct_match_allrep(
     elements1 = st_1.elements[1:]
     elements2 = st_2.elements[1:]
 
-    if st_1.element_count != st_2.element_count:
+    if Counter(st_1.elements) != Counter(st_2.elements):
         return False
 
     axis_d = norm_metric_tensor1 - norm_metric_tensor2
@@ -239,6 +239,78 @@ def struct_match_allrep(
             )
         print("--- Matching finished ---")
     return judge_st_match
+
+
+def matching_metric_tensor(
+    G_1: np.ndarray,
+    G_2: np.ndarray,
+    spg_number: int,
+    tol: float = 1e-3,
+) -> list[np.ndarray]:
+    """Enumerate unimodular integer matrices satisfying M @ G_1 @ M.T = G_2."""
+
+    def _enumerate_integer_vectors(
+        G: np.ndarray,
+        q: float,
+        tol: float = 1e-5,
+    ) -> np.ndarray:
+        """Enumerate integer vectors satisfying v.T @ G @ v ~= q."""
+        G = np.asarray(G, dtype=float)
+
+        # Upper bound from the minimum eigenvalue.
+        lambda_min = np.linalg.eigvalsh(G)[0]
+        if lambda_min <= 0:
+            raise ValueError("G must be positive definite.")
+
+        vectors = []
+        bound = int(np.ceil(np.sqrt((q + tol) / lambda_min)))
+        for v in itertools.product(range(-bound, bound + 1), repeat=3):
+            v = np.asarray(v, dtype=int)
+            if abs(v @ G @ v - q) <= tol:
+                vectors.append(v)
+
+        return np.asarray(vectors, dtype=int).reshape(-1, 3)
+
+    G_1 = np.asarray(G_1, dtype=float)
+    G_2 = np.asarray(G_2, dtype=float)
+    if not (np.allclose(G_1, G_1.T, atol=tol) and np.allclose(G_2, G_2.T, atol=tol)):
+        raise ValueError("G must be symmetric.")
+
+    norm_a = G_1[0, 0] ** 0.5
+    norm_b = G_1[1, 1] ** 0.5
+    norm_c = G_1[2, 2] ** 0.5
+    e_aa = tol * 2 * norm_a
+    e_bb = tol * 2 * norm_b
+    e_cc = tol * 2 * norm_c
+    e_bc = tol * (norm_b + norm_c)
+    e_ac = tol * (norm_a + norm_c)
+    e_ab = tol * (norm_a + norm_b)
+
+    # Enumerate candidate column vectors.
+    candidates = [
+        _enumerate_integer_vectors(G_1, G_2[i, i], [e_aa, e_bb, e_cc][i])
+        for i in range(3)
+    ]
+    transformation_matrices = []
+
+    # Enumerate combinations of the three columns.
+    for m1, m2, m3 in itertools.product(*candidates):
+        if abs(m1 @ G_1 @ m2 - G_2[0, 1]) > e_ab:
+            continue
+        if abs(m1 @ G_1 @ m3 - G_2[0, 2]) > e_ac:
+            continue
+        if abs(m2 @ G_1 @ m3 - G_2[1, 2]) > e_bc:
+            continue
+        M = np.array([m1, m2, m3])
+
+        det = round(np.linalg.det(M))
+        if abs(det) != 1:
+            continue
+        if is_chiral(spg_number) and det == -1:
+            continue
+        transformation_matrices.append(M)
+
+    return transformation_matrices
 
 
 def normalize_metric_tensor(metric_tensor):

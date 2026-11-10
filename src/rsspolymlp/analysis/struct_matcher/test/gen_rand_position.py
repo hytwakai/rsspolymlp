@@ -2,9 +2,7 @@ from typing import Literal, Optional
 
 import numpy as np
 
-from rsspolymlp.analysis.struct_matcher.redrep_position import (
-    enumerate_metric_symmetries,
-)
+from rsspolymlp.analysis.struct_matcher.struct_match import matching_metric_tensor
 from rsspolymlp.common.interface_spglib import SymCell
 
 
@@ -51,12 +49,8 @@ def apply_rand_disp(
     pos_rep = pos_rep[sort_idx]
     _elements = _elements[sort_idx].tolist()
 
-    transformation_matrices = enumerate_metric_symmetries(
-        axis,
-        axis,
-        spg_number,
-        tol=1e-5,
-    )
+    G = axis @ axis.T
+    transformation_matrices = matching_metric_tensor(G, G, spg_number, tol=1e-5)
     selected_i = np.random.randint(len(transformation_matrices))
     random_transformation = transformation_matrices[selected_i]
     pos_rep = pos_rep @ np.linalg.inv(random_transformation)

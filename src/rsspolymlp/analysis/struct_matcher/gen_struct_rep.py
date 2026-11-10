@@ -1,13 +1,11 @@
 import time
-from collections import Counter
-from dataclasses import dataclass
 from typing import Optional
 
 import joblib
 import numpy as np
 
+from rsspolymlp.analysis.struct_matcher.dataclass import StructRep
 from rsspolymlp.analysis.struct_matcher.niggli_reduce import niggli_reduce
-from rsspolymlp.analysis.struct_matcher.position_allrep import matching_metric_tensor
 from rsspolymlp.analysis.struct_matcher.position_redrep import (
     PositionRepReducer,
 )
@@ -15,29 +13,9 @@ from rsspolymlp.analysis.struct_matcher.primitive_transform import (
     PrimitiveCell,
     get_primitive_cell,
 )
+from rsspolymlp.analysis.struct_matcher.struct_match import matching_metric_tensor
 from rsspolymlp.common.interface_spglib import SymCell
 from rsspolymlp.common.property import PropUtil
-
-
-@dataclass
-class StructRep:
-    axis: np.ndarray
-    metric_tensor: np.ndarray
-    reduced_posreps: dict
-    all_posreps: dict
-    elements: np.ndarray
-    element_count: Counter[str]
-    spg_number: int
-    original_axis: np.ndarray
-    original_positions: np.ndarray
-    original_elements: np.ndarray
-    spg_list: list[str]
-    tol_sm: float
-    tol_redpos: list[float]
-    normalize_axis: bool
-    struct_path: Optional[str]
-    struct_tag: Optional[int]
-    dupstr_paths: set[str]
 
 
 class StructRepGenerator:
@@ -126,12 +104,11 @@ class StructRepGenerator:
                 reduced_posreps=reduced_posreps,
                 all_posreps=all_posreps,
                 elements=sorted_elements,
-                element_count=Counter(sorted_elements),
                 spg_number=spg_number,
+                spg_list=spg_list,
                 original_axis=axis,
                 original_positions=positions,
                 original_elements=np.asarray(elements, dtype=str),
-                spg_list=spg_list,
                 tol_sm=self.tol_sm,
                 tol_redpos=self.tol_redpos,
                 normalize_axis=self.normalize_axis,

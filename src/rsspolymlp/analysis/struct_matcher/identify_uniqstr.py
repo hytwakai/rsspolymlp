@@ -2,9 +2,9 @@ import re
 import time
 from typing import Literal, Optional
 
+from rsspolymlp.analysis.struct_matcher.dataclass import StructRep
 from rsspolymlp.analysis.struct_matcher.gen_struct_rep import (
     StructRepGenerator,
-    StructRep,
 )
 from rsspolymlp.analysis.struct_matcher.struct_match import (
     struct_match,
