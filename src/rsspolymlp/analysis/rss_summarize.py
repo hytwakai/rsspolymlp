@@ -91,12 +91,13 @@ class RSSResultSummarizer:
             axis_tol = 0.1
             pos_tol = 0.1
 
-        self.analyzer = UniqueStructIdentifier(
-            axis_tol=axis_tol,
-            pos_tol=pos_tol,
-            assign_method=self.assign_method,
-        )
         for comp_tag, res_paths in json_paths_c.items():
+            self.analyzer = UniqueStructIdentifier(
+                axis_tol=axis_tol,
+                pos_tol=pos_tol,
+                assign_method=self.assign_method,
+            )
+
             print(f"Composition {comp_tag}: summarizing...")
             time_start = time()
 
