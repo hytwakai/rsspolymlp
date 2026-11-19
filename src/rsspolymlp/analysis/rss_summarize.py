@@ -441,7 +441,7 @@ class RSSResultSummarizer:
                 continue
 
             energy_dft /= len(polymlp_st.elements)
-            if energy_dft < -10:
+            if energy_dft < -20:
                 print(path_name, "exhibits an unphysically low energy. Skipping.")
                 continue
 
