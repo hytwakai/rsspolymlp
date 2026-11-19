@@ -21,7 +21,7 @@ def niggli_reduce(
     return axis_niggli, pos
 
 
-def get_niggli_reduced_cell(axis, tol: float = 1e-5):
+def get_niggli_reduced_cell(axis, tol: float = 1e-5, verbose: bool = False):
     """
     Get the Niggli-reduced cell using a numerically stable algorithm.
 
@@ -72,6 +72,7 @@ def get_niggli_reduced_cell(axis, tol: float = 1e-5):
     e_bc = tol * (norm_b + norm_c)
     e_ac = tol * (norm_a + norm_c)
     e_ab = tol * (norm_a + norm_b)
+    e = max([e_aa, e_bb, e_cc, e_bc, e_ac, e_ab])
 
     iteration = 100
     for n_iter in range(iteration):
@@ -81,24 +82,22 @@ def get_niggli_reduced_cell(axis, tol: float = 1e-5):
         aa, bb, cc, bc, ac, ab = get_G_components(G)
 
         # A1: Main condition: aa <= bb; Special condition: |bc| < |ac|
-        if bb + e_aa + e_bb < aa or (
-            abs(aa - bb) < e_aa + e_bb and abs(bc) > abs(ac) + e_bc + e_ac
-        ):
+        if bb + e < aa or (abs(aa - bb) < e and abs(bc) > abs(ac) + e):
             C = np.array([[0, -1, 0], [-1, 0, 0], [0, 0, -1]])
             G, P = convert_G_and_P(C, G, P)
             aa, bb, cc, bc, ac, ab = get_G_components(G)
 
         # A2: Main condition: bb <= cc; Special condition: |ac| < |ab|
-        if cc + e_bb + e_cc < bb or (
-            abs(bb - cc) < e_bb + e_cc and abs(ac) > abs(ab) + e_ac + e_ab
-        ):
+        if (cc + e < bb) or (abs(bb - cc) < e and abs(ac) > abs(ab) + e):
             C = np.array([[-1, 0, 0], [0, 0, -1], [0, -1, 0]])
             G, P = convert_G_and_P(C, G, P)
+            if verbose:
+                print("A2: Continue to the next iteration.")
             continue
 
-        ell = 0 if abs(bc) < e_bc else bc / abs(bc)
-        m = 0 if abs(ac) < e_ac else ac / abs(ac)
-        n = 0 if abs(ab) < e_ab else ab / abs(ab)
+        ell = 0 if abs(bc) < e else bc / abs(bc)
+        m = 0 if abs(ac) < e else ac / abs(ac)
+        n = 0 if abs(ab) < e else ab / abs(ab)
 
         # A3: Main condition: bc > 0, ac > 0, ab > 0 (Type I)
         if ell * m * n == 1:
@@ -130,9 +129,9 @@ def get_niggli_reduced_cell(axis, tol: float = 1e-5):
         # Special conditions: if bc = bb: ab/2 <= ac,
         # elif bc = -bb: ab = 0 (otherwise, convert to Type I)
         if (
-            abs(bc) > bb + e_bc + e_bb
-            or (abs(bc - bb) < e_bc + e_bb and ab - e_ab - e_ac > 2 * ac)
-            or (abs(bc + bb) < e_bc + e_bb and -e_ab > ab)
+            abs(bc) > bb + e
+            or (abs(bc - bb) < e and ab - e > 2 * ac)
+            or (abs(bc + bb) < e and -e > ab)
         ):
             # Basis transformation: c' = c - sign(bc) * b
             #   cc' = cc + bb - |bc|
@@ -147,15 +146,17 @@ def get_niggli_reduced_cell(axis, tol: float = 1e-5):
             # A6 and A7 follow by analogous arguments.
             C = np.array([[1, 0, 0], [0, 1, -bc / abs(bc)], [0, 0, 1]])
             G, P = convert_G_and_P(C, G, P)
+            if verbose:
+                print("A5: Continue to the next iteration.")
             continue
 
         # A6: Main condition: |ac| <= aa;
         # Special conditions: if ac = aa: ab/2 <= bc,
         # elif ac = -aa: ab = 0 (otherwise, convert to Type I)
         if (
-            abs(ac) > aa + e_aa + e_ac
-            or (abs(aa - ac) < e_aa + e_ac and ab - e_ab - e_bc > 2 * bc)
-            or (abs(aa + ac) < e_aa + e_ac and -e_ab > ab)
+            abs(ac) > aa + e
+            or (abs(aa - ac) < e and ab - e > 2 * bc)
+            or (abs(aa + ac) < e and -e > ab)
         ):
             # Basis transformation: c' = c - sign(ac) * a
             #   cc' = cc + aa - |ac|
@@ -163,15 +164,17 @@ def get_niggli_reduced_cell(axis, tol: float = 1e-5):
             #   bc' = bc/2 - sign(ac) * ab/2
             C = np.array([[1, 0, -ac / abs(ac)], [0, 1, 0], [0, 0, 1]])
             G, P = convert_G_and_P(C, G, P)
+            if verbose:
+                print("A6: Continue to the next iteration.")
             continue
 
         # A7: Main condition: |ab| <= aa;
         # Special conditions: if ab = aa: ac/2 <= bc,
         # elif ab = -aa: ac = 0 (otherwise, convert to Type I)
         if (
-            abs(ab) > aa + e_aa + e_ab
-            or (abs(aa - ab) < e_aa + e_ab and ac - e_ac - e_bc > 2 * bc)
-            or (abs(aa + ab) < e_aa + e_ab and -e_ac > ac)
+            abs(ab) > aa + e
+            or (abs(aa - ab) < e and ac - e > 2 * bc)
+            or (abs(aa + ab) < e and -e > ac)
         ):
             # Basis transformation: b' = b - sign(ab) * a
             #   bb' = bb + aa - |ab|
@@ -179,15 +182,15 @@ def get_niggli_reduced_cell(axis, tol: float = 1e-5):
             #   bc' = bc/2 - sign(ab) * ac/2
             C = np.array([[1, -ab / abs(ab), 0], [0, 1, 0], [0, 0, 1]])
             G, P = convert_G_and_P(C, G, P)
+            if verbose:
+                print("A7: Continue to the next iteration.")
             continue
 
         # A8: Main condition: |bc| + |ac| + |ab| <= aa + bb (Type II);
         # Special condition: if |bc| + |ac| + |ab| = aa + bb: aa <= |ac| + |ab/2|
         # (otherwise, convert to Type I)
-        if -(e_bc + e_ac + e_ab + e_aa + e_bb) > bc + ac + ab + aa + bb or (
-            abs(bc + ac + ab + aa + bb)
-            < (e_bc + e_ac + e_ab + e_aa + e_bb)
-            < ab + (aa + ac) * 2
+        if -e > bc + ac + ab + aa + bb or (
+            abs(bc + ac + ab + aa + bb) < e < ab + (aa + ac) * 2
         ):
             # Basis transformation: c' = a + b + c
             #   cc' = cc + aa + bb + ab + ac + bc
@@ -195,6 +198,8 @@ def get_niggli_reduced_cell(axis, tol: float = 1e-5):
             #   bc' = 2 * bb + ab + bc (special condition: bc' < 0)
             C = np.array([[1, 0, 1], [0, 1, 1], [0, 0, 1]])
             G, P = convert_G_and_P(C, G, P)
+            if verbose:
+                print("A8: Continue to the next iteration.")
             continue
 
         break
