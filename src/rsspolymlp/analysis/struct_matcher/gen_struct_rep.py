@@ -11,6 +11,7 @@ from rsspolymlp.analysis.struct_matcher.position_redrep import (
 )
 from rsspolymlp.analysis.struct_matcher.primitive_transform import (
     PrimitiveCell,
+    TranslationError,
     get_primitive_cell,
 )
 from rsspolymlp.analysis.struct_matcher.struct_match import matching_metric_tensor
@@ -130,9 +131,21 @@ class StructRepGenerator:
         time_refine = 0
 
         t_start = time.time()
-        primitive_cell = get_primitive_cell(
-            axis=axis, positions=positions, elements=elements, tol=self.tol_sm
-        )
+        primitive_tol = self.tol_sm
+        for _iter in range(11):
+            if _iter == 10:
+                raise TranslationError(
+                    "Failed to obtain a primitive cell after 10 attempts."
+                )
+            try:
+                primitive_cell = get_primitive_cell(
+                    axis=axis, positions=positions, elements=elements, tol=primitive_tol
+                )
+                break
+            except TranslationError:
+                primitive_tol = primitive_tol / 2
+                print(f"Retrying with primitive_tol = {primitive_tol}")
+
         symutil = SymCell(
             primitive_cell.axis,
             primitive_cell.positions,

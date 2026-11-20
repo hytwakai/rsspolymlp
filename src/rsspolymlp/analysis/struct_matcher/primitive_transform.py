@@ -25,6 +25,10 @@ class PrimitiveCell:
     )  # all original sites transformed by M, wrapped to [0, 1)
 
 
+class TranslationError(ValueError):
+    """Raised when the detected translations are inconsistent."""
+
+
 def get_primitive_cell(
     axis: np.ndarray,
     positions: np.ndarray,
@@ -106,7 +110,7 @@ def get_primitive_cell(
 
     index = len(translations)
     if any(int(count) % index != 0 for count in counts):
-        raise ValueError(
+        raise TranslationError(
             f"Detected {index} translations, but this does not divide all elements counts "
             f"{counts.tolist()}. Consider tightening tol."
         )
